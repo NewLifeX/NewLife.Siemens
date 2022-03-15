@@ -1,19 +1,15 @@
 ﻿# NewLife.Siemens
 
-![GitHub top language](https://img.shields.io/github/languages/top/newlifex/newlife.modbus?logo=github)
-![GitHub License](https://img.shields.io/github/license/newlifex/newlife.modbus?logo=github)
-![Nuget Downloads](https://img.shields.io/nuget/dt/newlife.modbus?logo=nuget)
-![Nuget](https://img.shields.io/nuget/v/newlife.modbus?logo=nuget)
-![Nuget (with prereleases)](https://img.shields.io/nuget/vpre/newlife.modbus?label=dev%20nuget&logo=nuget)
+![GitHub top language](https://img.shields.io/github/languages/top/newlifex/NewLife.Panasonic?logo=github)
+![GitHub License](https://img.shields.io/github/license/newlifex/NewLife.Panasonic?logo=github)
+![Nuget Downloads](https://img.shields.io/nuget/dt/NewLife.Panasonic?logo=nuget)
+![Nuget](https://img.shields.io/nuget/v/NewLife.Panasonic?logo=nuget)
+![Nuget (with prereleases)](https://img.shields.io/nuget/vpre/NewLife.Panasonic?label=dev%20nuget&logo=nuget)
 
-![Nuget Downloads](https://img.shields.io/nuget/dt/newlife.modbusRTU?logo=nuget)
-![Nuget](https://img.shields.io/nuget/v/newlife.modbusRTU?logo=nuget)
-![Nuget (with prereleases)](https://img.shields.io/nuget/vpre/newlife.modbusRTU?label=dev%20nuget&logo=nuget)
+西门子PLC协议  
 
-西门子PLC协议实现  
-
-源码： https://github.com/NewLifeX/NewLife.Modbus  
-Nuget：NewLife.Modbus / NewLife.ModbusRT  
+源码： https://github.com/NewLifeX/NewLife.Panasonic  
+Nuget：NewLife.Panasonic  
 
 
 ## 新生命项目矩阵

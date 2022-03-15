@@ -3,7 +3,6 @@ name: publish-beta
 on:
   push:
     branches: [ master ]
-    tags-ignore: [ v* ]
 
 jobs:
   build-publish:
@@ -19,12 +18,10 @@ jobs:
         include-prerelease: true
     - name: Restore
       run: |
-        dotnet restore NewLife.Modbus/NewLife.Modbus.csproj
-        dotnet restore NewLife.ModbusRTU/NewLife.ModbusRTU.csproj
+        dotnet restore NewLife.Panasonic/NewLife.Panasonic.csproj
     - name: Build
       run: |
-        dotnet pack --no-restore --version-suffix $(date "+%Y.%m%d-beta%H%M") -c Release -o out NewLife.Modbus/NewLife.Modbus.csproj
-        dotnet pack --no-restore --version-suffix $(date "+%Y.%m%d-beta%H%M") -c Release -o out NewLife.ModbusRTU/NewLife.ModbusRTU.csproj
+        dotnet pack --no-restore --version-suffix $(date "+%Y.%m%d-beta%H%M") -c Release -o out NewLife.Panasonic/NewLife.Panasonic.csproj
     - name: Publish
       run: |
         dotnet nuget push ./out/*.nupkg --skip-duplicate --source https://nuget.pkg.github.com/NewLifeX/index.json --api-key ${{ github.token }}
