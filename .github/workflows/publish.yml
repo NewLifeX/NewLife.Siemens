@@ -18,10 +18,10 @@ jobs:
         include-prerelease: true
     - name: Restore
       run: |
-        dotnet restore NewLife.Panasonic/NewLife.Panasonic.csproj
+        dotnet restore NewLife.Siemens/NewLife.Siemens.csproj
     - name: Build
       run: |
-        dotnet pack --no-restore --version-suffix $(date "+%Y.%m%d") -c Release -o out NewLife.Panasonic/NewLife.Panasonic.csproj
+        dotnet pack --no-restore --version-suffix $(date "+%Y.%m%d") -c Release -o out NewLife.Siemens/NewLife.Siemens.csproj
     - name: Publish
       run: |
         dotnet nuget push ./out/*.nupkg --skip-duplicate --source https://nuget.pkg.github.com/NewLifeX/index.json --api-key ${{ github.token }}

@@ -1,20 +1,16 @@
-﻿using NewLife.IoT.Protocols;
+﻿using NewLife.IoT.Drivers;
+using NewLife.IoT.Protocols;
 using NewLife.IoT.ThingModels;
 using NewLife.IoT.ThingSpecification;
 using NewLife.Log;
 
-namespace NewLife.IoT.Drivers;
+namespace NewLife.Siemens.Drivers;
 
 /// <summary>
 /// Modbus协议封装
 /// </summary>
-public abstract class ModbusDriver : DisposeBase
+public abstract class SiemensS7 : DisposeBase
 {
-    /// <summary>
-    /// Modbus通道
-    /// </summary>
-    protected Modbus _modbus;
-
     private Int32 _nodes;
 
     #region 构造
@@ -25,21 +21,10 @@ public abstract class ModbusDriver : DisposeBase
     protected override void Dispose(Boolean disposing)
     {
         base.Dispose(disposing);
-
-        _modbus.TryDispose();
-        _modbus = null;
     }
     #endregion
 
     #region 方法
-    /// <summary>
-    /// 创建Modbus通道
-    /// </summary>
-    /// <param name="channel"></param>
-    /// <param name="parameters"></param>
-    /// <returns></returns>
-    protected abstract Modbus CreateModbus(IChannel channel, IDictionary<String, Object> parameters);
-
     /// <summary>
     /// 打开通道。一个ModbusTcp设备可能分为多个通道读取，需要共用Tcp连接，以不同节点区分
     /// </summary>
@@ -48,29 +33,11 @@ public abstract class ModbusDriver : DisposeBase
     /// <returns></returns>
     public virtual INode Open(IChannel channel, IDictionary<String, Object> parameters)
     {
-        var node = new ModbusNode
+        var node = new SiemensNode
         {
             Host = (Byte)parameters["host"],
-            ReadCode = (FunctionCodes)parameters["ReadFunctionCode"],
-            WriteCode = (FunctionCodes)parameters["WriteFunctionCode"],
             Channel = channel
         };
-
-        // 实例化一次Tcp连接
-        if (_modbus == null)
-        {
-            lock (this)
-            {
-                if (_modbus == null)
-                {
-                    var modbus = CreateModbus(channel, parameters);
-
-                    modbus.Open();
-
-                    _modbus = modbus;
-                }
-            }
-        }
 
         Interlocked.Increment(ref _nodes);
 
@@ -85,8 +52,6 @@ public abstract class ModbusDriver : DisposeBase
     {
         if (Interlocked.Decrement(ref _nodes) <= 0)
         {
-            _modbus.TryDispose();
-            _modbus = null;
         }
     }
 
@@ -100,88 +65,7 @@ public abstract class ModbusDriver : DisposeBase
     {
         if (points == null || points.Length == 0) return null;
 
-        // 加锁，避免冲突
-        lock (_modbus)
-        {
-            var n = node as ModbusNode;
-            var dic = new Dictionary<String, Object>();
-            //foreach (var p in points)
-            //{
-            //    var addr = GetAddress(p);
-            //    var count = GetCount(p);
-            //    if (addr != UInt16.MaxValue)
-            //    {
-            //        var buf = _modbus.Read(n.ReadCode, n.Host, addr, (UInt16)count);
-
-            //        // 这里可以点位信息解析数据，如果直接返回字节数组，设备通道将使用表达式解析
-
-            //        dic[p.Name] = buf;
-            //    }
-            //}
-
-            // 组合多个片段，减少读取次数
-            var list = new List<Segment>();
-            foreach (var p in points)
-            {
-                var addr = GetAddress(p);
-                var count = GetCount(p);
-                if (addr != UInt16.MaxValue)
-                    list.Add(new Segment { Address = addr, Count = count });
-            }
-            list = list.OrderBy(e => e.Address).ThenByDescending(e => e.Count).ToList();
-
-            // 逆向合并，减少拷贝
-            for (var i = list.Count - 1; i > 0; i--)
-            {
-                var prv = list[i - 1];
-                var cur = list[i];
-
-                // 前一段末尾碰到了当前段开始，可以合并
-                if (prv.Address + prv.Count >= cur.Address)
-                {
-                    // 要注意，可能前后重叠，也可能前面区域比后面还大
-                    var size = cur.Address + cur.Count - prv.Address;
-                    if (size > prv.Count) prv.Count = size;
-
-                    list.RemoveAt(i);
-                }
-            }
-
-            // 整体读取
-            foreach (var seg in list)
-            {
-                seg.Data = _modbus.Read(n.ReadCode, n.Host, (UInt16)seg.Address, (UInt16)seg.Count);
-            }
-
-            // 分赃
-            foreach (var p in points)
-            {
-                var addr = GetAddress(p);
-                var count = GetCount(p);
-                if (addr != UInt16.MaxValue)
-                {
-                    // 找到片段
-                    var seg = list.FirstOrDefault(e => e.Address <= addr && addr + count <= e.Address + e.Count);
-                    if (seg != null && seg.Data != null)
-                    {
-                        // 校验数据完整性
-                        var offset = addr - seg.Address;
-                        var size = count * 2;
-                        if (seg.Data.Length >= offset + size)
-                            dic[p.Name] = seg.Data.ReadBytes(offset, size);
-                    }
-                }
-            }
-
-            return dic;
-        }
-    }
-
-    private class Segment
-    {
-        public Int32 Address { get; set; }
-        public Int32 Count { get; set; }
-        public Byte[] Data { get; set; }
+        return null;
     }
 
     /// <summary>
@@ -243,28 +127,7 @@ public abstract class ModbusDriver : DisposeBase
 
         if (value == null) return null;
 
-        var n = node as ModbusNode;
-        UInt16[] vs;
-        if (value is Byte[] buf)
-        {
-            vs = new UInt16[(Int32)(Math.Ceiling(buf.Length / 2d))];
-            for (var i = 0; i < vs.Length; i++)
-            {
-                vs[i] = buf.ToUInt16(i * 2, false);
-            }
-        }
-        else
-        {
-            vs = ConvertToRegister(value, point, n.Channel?.Specification);
-
-            if (vs == null) throw new NotSupportedException($"点位[{point.Name}]不支持数据[{value}]");
-        }
-
-        // 加锁，避免冲突
-        lock (_modbus)
-        {
-            return _modbus.Write(n.WriteCode, n.Host, addr, vs);
-        }
+        return null;
     }
 
     /// <summary>原始数据转寄存器数组</summary>

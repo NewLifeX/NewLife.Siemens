@@ -1,15 +1,15 @@
 ﻿# NewLife.Siemens
 
-![GitHub top language](https://img.shields.io/github/languages/top/newlifex/NewLife.Panasonic?logo=github)
-![GitHub License](https://img.shields.io/github/license/newlifex/NewLife.Panasonic?logo=github)
-![Nuget Downloads](https://img.shields.io/nuget/dt/NewLife.Panasonic?logo=nuget)
-![Nuget](https://img.shields.io/nuget/v/NewLife.Panasonic?logo=nuget)
-![Nuget (with prereleases)](https://img.shields.io/nuget/vpre/NewLife.Panasonic?label=dev%20nuget&logo=nuget)
+![GitHub top language](https://img.shields.io/github/languages/top/newlifex/NewLife.Siemens?logo=github)
+![GitHub License](https://img.shields.io/github/license/newlifex/NewLife.Siemens?logo=github)
+![Nuget Downloads](https://img.shields.io/nuget/dt/NewLife.Siemens?logo=nuget)
+![Nuget](https://img.shields.io/nuget/v/NewLife.Siemens?logo=nuget)
+![Nuget (with prereleases)](https://img.shields.io/nuget/vpre/NewLife.Siemens?label=dev%20nuget&logo=nuget)
 
 西门子PLC协议  
 
-源码： https://github.com/NewLifeX/NewLife.Panasonic  
-Nuget：NewLife.Panasonic  
+源码： https://github.com/NewLifeX/NewLife.Siemens  
+Nuget：NewLife.Siemens  
 
 
 ## 新生命项目矩阵
