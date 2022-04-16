@@ -3,6 +3,9 @@ name: publish-beta
 on:
   push:
     branches: [ master ]
+    paths:
+        - 'NewLife.Core/**'
+  workflow_dispatch:
 
 jobs:
   build-publish:
