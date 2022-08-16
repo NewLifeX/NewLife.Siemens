@@ -1,4 +1,6 @@
-﻿namespace NewLife.Siemens.Protocols
+﻿using NewLife.Siemens.Common;
+
+namespace NewLife.Siemens.Protocols
 {
     internal class TPKT
     {

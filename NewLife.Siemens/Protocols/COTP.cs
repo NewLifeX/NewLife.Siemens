@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using NewLife.Siemens.Common;
 
 namespace NewLife.Siemens.Protocols
 {

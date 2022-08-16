@@ -9,7 +9,7 @@ namespace NewLife.Siemens.Drivers;
 /// <summary>
 /// Modbus协议封装
 /// </summary>
-public abstract class SiemensS7 : DisposeBase
+public abstract class SiemensS7 : DisposeBase, IDriver
 {
     private Int32 _nodes;
 

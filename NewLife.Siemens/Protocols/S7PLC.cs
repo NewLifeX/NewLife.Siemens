@@ -1,5 +1,8 @@
 ﻿using System.Net.Sockets;
+using NewLife.Siemens.Common;
 using NewLife.Siemens.Models;
+using NewLife.Siemens;
+using InvalidDataException = NewLife.Siemens.Common.InvalidDataException;
 
 namespace NewLife.Siemens.Protocols;
 
@@ -75,18 +78,15 @@ public partial class S7PLC : DisposeBase
 
         try
         {
-            await queue.Enqueue(async () =>
-            {
+            //await queue.Enqueue(async () =>
+            //{
                 cancellationToken.ThrowIfCancellationRequested();
-                await EstablishConnection(stream, cancellationToken).ConfigureAwait(false);
-                _stream = stream;
-
-                return default(Object);
-            }).ConfigureAwait(false);
+                await EstablishConnection(_stream, cancellationToken).ConfigureAwait(false);
+            //}).ConfigureAwait(false);
         }
         catch (Exception)
         {
-            stream.Dispose();
+            _stream.Dispose();
             throw;
         }
     }
@@ -104,7 +104,7 @@ public partial class S7PLC : DisposeBase
 
         if (response.PDUType != COTP.PduType.ConnectionConfirmed)
         {
-            throw new InvalidDataException("Connection request was denied", response.TPkt.Data, 1, 0x0d);
+            throw new Common.InvalidDataException("Connection request was denied", response.TPkt.Data, 1, 0x0d);
         }
     }
 
@@ -184,7 +184,7 @@ public partial class S7PLC : DisposeBase
 
     #endregion
 
-    private void AssertPduSizeForRead(ICollection<DataItem> dataItems)
+    private void AssertPduSizeForRead(ICollection<Types.DataItem> dataItems)
     {
         // send request limit: 19 bytes of header data, 12 bytes of parameter data for each dataItem
         var requiredRequestSize = 19 + dataItems.Count * 12;
@@ -195,7 +195,7 @@ public partial class S7PLC : DisposeBase
         if (requiredResponseSize > MaxPDUSize) throw new Exception($"Too much data requested for read. Response size ({requiredResponseSize}) is larger than protocol limit ({MaxPDUSize}).");
     }
 
-    private void AssertPduSizeForWrite(ICollection<DataItem> dataItems)
+    private void AssertPduSizeForWrite(ICollection<Types.DataItem> dataItems)
     {
         // 12 bytes of header data, 18 bytes of parameter data for each dataItem
         if (dataItems.Count * 18 + 12 > MaxPDUSize) throw new Exception("Too many vars supplied for write");
@@ -205,7 +205,7 @@ public partial class S7PLC : DisposeBase
             throw new Exception("Too much data supplied for write");
     }
 
-    private Int32 GetDataLength(IEnumerable<DataItem> dataItems)
+    private Int32 GetDataLength(IEnumerable<Types.DataItem> dataItems)
     {
         // Odd length variables are 0-padded
         return dataItems.Select(di => VarTypeToByteLength(di.VarType, di.Count))
@@ -266,39 +266,72 @@ $"Received {s7Data.Length} bytes: '{BitConverter.ToString(s7Data)}', expected {e
         return _stream;
     }
 
-    #region IDisposable Support
-    private Boolean disposedValue = false; // To detect redundant calls
-
-    /// <summary>
-    /// Dispose Plc Object
-    /// </summary>
-    /// <param name="disposing"></param>
-    protected virtual void Dispose(Boolean disposing)
+    private byte[] GetS7ConnectionSetup()
     {
-        if (!disposedValue)
+        return new byte[] {  3, 0, 0, 25, 2, 240, 128, 50, 1, 0, 0, 255, 255, 0, 8, 0, 0, 240, 0, 0, 3, 0, 3,
+                    3, 192 // Use 960 PDU size
+            };
+    }
+
+    private async Task<byte[]> NoLockRequestTsduAsync(Stream stream, byte[] requestData, int offset, int length,
+    CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        try
         {
-            if (disposing)
+            using var closeOnCancellation = cancellationToken.Register(Close);
+            await stream.WriteAsync(requestData, offset, length, cancellationToken).ConfigureAwait(false);
+            return await COTP.TSDU.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exc)
+        {
+            if (exc is TPDUInvalidException || exc is TPKTInvalidException)
             {
                 Close();
             }
 
-            // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
-            // TODO: set large fields to null.
-
-            disposedValue = true;
+            throw;
         }
     }
 
-    // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
-    // ~Plc() {
-    //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-    //   Dispose(false);
-    // }
 
-    // This code added to correctly implement the disposable pattern.
-    void IDisposable.Dispose() =>
-        // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-        Dispose(true);// TODO: uncomment the following line if the finalizer is overridden above.// GC.SuppressFinalize(this);
-    #endregion
+    /// <summary>
+    /// Given a S7 <see cref="VarType"/> (Bool, Word, DWord, etc.), it returns how many bytes to read.
+    /// </summary>
+    /// <param name="varType"></param>
+    /// <param name="varCount"></param>
+    /// <returns>Byte lenght of variable</returns>
+    internal static int VarTypeToByteLength(VarType varType, int varCount = 1)
+    {
+        switch (varType)
+        {
+            case VarType.Bit:
+                return (varCount + 7) / 8;
+            case VarType.Byte:
+                return (varCount < 1) ? 1 : varCount;
+            case VarType.String:
+                return varCount;
+            case VarType.S7String:
+                return ((varCount + 2) & 1) == 1 ? (varCount + 3) : (varCount + 2);
+            case VarType.S7WString:
+                return (varCount * 2) + 4;
+            case VarType.Word:
+            case VarType.Timer:
+            case VarType.Int:
+            case VarType.Counter:
+                return varCount * 2;
+            case VarType.DWord:
+            case VarType.DInt:
+            case VarType.Real:
+                return varCount * 4;
+            case VarType.LReal:
+            case VarType.DateTime:
+                return varCount * 8;
+            case VarType.DateTimeLong:
+                return varCount * 12;
+            default:
+                return 0;
+        }
+    }
 
 }
