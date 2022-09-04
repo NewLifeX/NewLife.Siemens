@@ -1,6 +1,7 @@
-﻿using NewLife.Siemens.Models;
+﻿using NewLife.Siemens.Common;
+using NewLife.Siemens.Models;
 
-namespace NewLife.Siemens.Common
+namespace NewLife.Siemens.Protocols
 {
     internal class PLCAddress
     {

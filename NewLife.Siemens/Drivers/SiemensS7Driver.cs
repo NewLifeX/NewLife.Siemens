@@ -1,16 +1,30 @@
-﻿using NewLife.IoT.Drivers;
+﻿using System.ComponentModel;
+using NewLife.IoT;
+using NewLife.IoT.Drivers;
 using NewLife.IoT.Protocols;
 using NewLife.IoT.ThingModels;
 using NewLife.IoT.ThingSpecification;
 using NewLife.Log;
+using NewLife.Omron.Drivers;
+using NewLife.Serialization;
+using NewLife.Siemens.Models;
+using NewLife.Siemens.Protocols;
 
 namespace NewLife.Siemens.Drivers;
 
 /// <summary>
 /// Modbus协议封装
 /// </summary>
-public abstract class SiemensS7 : DisposeBase, IDriver
+
+[Driver("SiemensPLC")]
+[DisplayName("西门子PLC")]
+public class SiemensS7Driver : DisposeBase, IDriver
 {
+    protected S7PLC _plcConn;
+
+    /// <summary>
+    /// 打开通道数量
+    /// </summary>
     private Int32 _nodes;
 
     #region 构造
@@ -26,18 +40,75 @@ public abstract class SiemensS7 : DisposeBase, IDriver
 
     #region 方法
     /// <summary>
+    /// 创建驱动参数对象，可序列化成Xml/Json作为该协议的参数模板
+    /// </summary>
+    /// <returns></returns>
+    public virtual IDriverParameter CreateParameter() => new SiemensParameter
+    {
+        Address = "127.0.0.1:102",
+        Rack = 0,
+        Slot = 0,
+    };
+
+    /// <summary>
     /// 打开通道。一个ModbusTcp设备可能分为多个通道读取，需要共用Tcp连接，以不同节点区分
     /// </summary>
-    /// <param name="channel">通道</param>
+    /// <param name="device">通道</param>
     /// <param name="parameters">参数</param>
     /// <returns></returns>
-    public virtual INode Open(IChannel channel, IDictionary<String, Object> parameters)
+    public virtual INode Open(IDevice device, IDictionary<String, Object> parameters)
     {
+        var pm = JsonHelper.Convert<SiemensParameter>(parameters);
+
+        var address = pm.Address;
+        if (address.IsNullOrEmpty()) throw new ArgumentException("参数中未指定地址address");
+
+        //var p = address.IndexOfAny(new[] { ':', '.' }); // p为3，最后截取不到正确ip
+        var p = address.IndexOfAny(new[] { ':' });
+        if (p < 0) throw new ArgumentException($"参数中地址address格式错误:{address}");
+
+        var cpuType = pm.CpuType;
+
+        if (!Enum.IsDefined(typeof(CpuType), cpuType))
+        {
+            throw new ArgumentException($"参数中未指定地址CpuType，必须为其中之一：{Enum.GetNames(typeof(CpuType)).Join()}");
+        }
+
+        var rack = pm.Rack;
+        var slot = pm.Slot;
+
         var node = new SiemensNode
         {
-            Host = (Byte)parameters["host"],
-            Channel = channel
+            Address = address,
+            Device = device,
+            Parameter = pm,
         };
+
+        if (_plcConn == null)
+        {
+            lock (this)
+            {
+                if (_plcConn == null)
+                {
+                    //var ip = address.Substring(0, p);
+                    var ip = address[..p];
+
+                    _plcConn = new S7PLC((CpuType)cpuType, ip, rack, slot)
+                    {
+                        Timeout = 5000,
+                        Port = address.Substring(p + 1).ToInt(),
+                    };
+
+#if DEBUG
+                    _plcConn.Debug = true;
+#endif
+
+                    _plcConn.OpenAsync().GetAwaiter().GetResult();
+
+                    //if (!connect.IsSuccess) throw new Exception($"连接失败：{connect.Message}");
+                }
+            }
+        }
 
         Interlocked.Increment(ref _nodes);
 
@@ -52,6 +123,9 @@ public abstract class SiemensS7 : DisposeBase, IDriver
     {
         if (Interlocked.Decrement(ref _nodes) <= 0)
         {
+            _plcConn?.Close();
+            _plcConn.TryDispose();
+            _plcConn = null;
         }
     }
 
@@ -63,9 +137,34 @@ public abstract class SiemensS7 : DisposeBase, IDriver
     /// <returns></returns>
     public virtual IDictionary<String, Object> Read(INode node, IPoint[] points)
     {
-        if (points == null || points.Length == 0) return null;
+        var dic = new Dictionary<String, Object>();
 
-        return null;
+        if (points == null || points.Length == 0) return dic;
+
+        foreach (var point in points)
+        {
+            var addr = GetAddress(point);
+            if (addr.IsNullOrWhiteSpace())
+            {
+                dic[point.Name] = null;
+                continue;
+            }
+
+            // 操作字节数组，不用设置bitNumber，但是解析需要带上
+            if (addr.IndexOf('.') == -1) addr += ".0";
+
+            var adr = new PLCAddress(addr);
+
+            var dataType = adr.DataType;
+            var db = adr.DbNumber;
+            var startByteAdr = adr.StartByte;
+
+            var data = _plcConn.ReadBytes(dataType, db, startByteAdr, (UInt16)point.Length);
+
+            dic[point.Name] = data;
+        }
+
+        return dic;
     }
 
     /// <summary>
@@ -73,20 +172,16 @@ public abstract class SiemensS7 : DisposeBase, IDriver
     /// </summary>
     /// <param name="point"></param>
     /// <returns></returns>
-    public virtual UInt16 GetAddress(IPoint point)
+    public virtual String GetAddress(IPoint point)
     {
-        if (point == null) return UInt16.MaxValue;
+        if (point == null) throw new ArgumentException("点位信息不能为空！");
 
         // 去掉冒号后面的位域
         var addr = point.Address;
         var p = addr.IndexOf(':');
         if (p > 0) addr = addr[..p];
 
-        // 按十六进制解析返回
-        if (addr.StartsWithIgnoreCase("0x")) return addr[2..].ToHex().ToUInt16(0, false);
-
-        // 直接转数字范围
-        return (UInt16)addr.ToInt(UInt16.MaxValue);
+        return addr;
     }
 
     /// <summary>
@@ -123,9 +218,25 @@ public abstract class SiemensS7 : DisposeBase, IDriver
     public virtual Object Write(INode node, IPoint point, Object value)
     {
         var addr = GetAddress(point);
-        if (addr == UInt16.MaxValue) return null;
+        if (addr.IsNullOrWhiteSpace()) return null;
 
-        if (value == null) return null;
+        // 操作字节数组，不用设置bitNumber，但是解析需要带上
+        if (addr.IndexOf('.') == -1) addr += ".0";
+
+        var adr = new PLCAddress(addr);
+
+        var dataType = adr.DataType;
+        var db = adr.DbNumber;
+        var startByteAdr = adr.StartByte;
+
+        if (value is Byte[] bytes)
+        {
+            _plcConn.WriteBytes(dataType, db, startByteAdr, bytes);
+        }
+        else
+        {
+            throw new ArgumentException("数据value不是字节数组！");
+        }
 
         return null;
     }

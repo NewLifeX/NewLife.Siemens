@@ -34,6 +34,65 @@ public partial class S7PLC : DisposeBase
     /// <summary>最大PDU大小</summary>
     public Int32 MaxPDUSize { get; private set; } = 240;
 
+    /// <summary>
+    /// 本地调试，设置为true，建立连接时发送调试的数据
+    /// </summary>
+    public Boolean Debug { get; set; } = false;
+
+    private byte[] plcHead1 = new byte[22]
+{
+      (byte) 3,
+      (byte) 0,
+      (byte) 0,
+      (byte) 22,
+      (byte) 17,
+      (byte) 224,
+      (byte) 0,
+      (byte) 0,
+      (byte) 0,
+      (byte) 1,
+      (byte) 0,
+      (byte) 192,
+      (byte) 1,
+      (byte) 10,
+      (byte) 193,
+      (byte) 2,
+      (byte) 1,
+      (byte) 2,
+      (byte) 194,
+      (byte) 2,
+      (byte) 1,
+      (byte) 0
+};
+    private byte[] plcHead2 = new byte[25]
+    {
+      (byte) 3,
+      (byte) 0,
+      (byte) 0,
+      (byte) 25,
+      (byte) 2,
+      (byte) 240,
+      (byte) 128,
+      (byte) 50,
+      (byte) 1,
+      (byte) 0,
+      (byte) 0,
+      (byte) 4,
+      (byte) 0,
+      (byte) 0,
+      (byte) 8,
+      (byte) 0,
+      (byte) 0,
+      (byte) 240,
+      (byte) 0,
+      (byte) 0,
+      (byte) 1,
+      (byte) 0,
+      (byte) 1,
+      (byte) 1,
+      (byte) 224
+    };
+
     private TcpClient _client;
     private NetworkStream _stream;
     #endregion
@@ -50,6 +109,8 @@ public partial class S7PLC : DisposeBase
         CPU = cpu;
         Rack = rack;
         Slot = slot;
+
+        TSAP = TsapAddress.GetDefaultTsapPair(cpu, rack, slot);
     }
 
     /// <summary>销毁</summary>
@@ -99,7 +160,7 @@ public partial class S7PLC : DisposeBase
 
     private async Task RequestConnection(Stream stream, CancellationToken cancellationToken)
     {
-        var requestData = GetCOTPConnectionRequest(TSAP);
+        var requestData = Debug ? plcHead1 : GetCOTPConnectionRequest(TSAP);
         var response = await NoLockRequestTpduAsync(stream, requestData, cancellationToken).ConfigureAwait(false);
 
         if (response.PDUType != COTP.PduType.ConnectionConfirmed)
@@ -119,10 +180,30 @@ public partial class S7PLC : DisposeBase
                     0,      //Flags
                     193,    //Parameter Code (src-tasp)
                     2,      //Parameter Length
-                    (Byte)(tsap.Local>>8), (Byte)(tsap.Local|0xFF),   //Source TASP
+                    (Byte)(tsap.Local>>8), (Byte)(tsap.Local&0xFF),   //Source TASP
                     194,    //Parameter Code (dst-tasp)
                     2,      //Parameter Length
-                    (Byte)(tsap.Remote>>8), (Byte)(tsap.Remote|0xFF),   //Destination TASP
+                    (Byte)(tsap.Remote>>8), (Byte)(tsap.Remote&0xFF),   //Destination TASP
+                    192,    //Parameter Code (tpdu-size)
+                    1,      //Parameter Length
+                    10      //TPDU Size (2^10 = 1024)
+                };
+
+        var rack = 0;
+        var slot = 3;
+        Byte[] buf2 = {
+                    3, 0, 0, 22, //TPKT
+                    17,     //COTP Header Length
+                    224,    //Connect Request
+                    0, 0,   //Destination Reference
+                    0, 46,  //Source Reference
+                    0,      //Flags
+                    193,    //Parameter Code (src-tasp)
+                    2,      //Parameter Length
+                    0x01,  0x00,   //Source TASP
+                    194,    //Parameter Code (dst-tasp)
+                    2,      //Parameter Length
+                    0x03, (byte) ((rack << 5) | slot),   //Destination TASP
                     192,    //Parameter Code (tpdu-size)
                     1,      //Parameter Length
                     10      //TPDU Size (2^10 = 1024)
@@ -154,7 +235,7 @@ public partial class S7PLC : DisposeBase
 
     private async Task SetupConnection(Stream stream, CancellationToken cancellationToken)
     {
-        var setupData = GetS7ConnectionSetup();
+        var setupData = Debug ? plcHead2 : GetS7ConnectionSetup();
 
         var s7data = await NoLockRequestTsduAsync(stream, setupData, 0, setupData.Length, cancellationToken)
             .ConfigureAwait(false);
@@ -184,6 +265,201 @@ public partial class S7PLC : DisposeBase
 
     #endregion
 
+    #region 核心方法
+    /// <summary>
+    /// Creates the header to read bytes from the PLC
+    /// </summary>
+    /// <param name="amount"></param>
+    /// <returns></returns>
+    private static void BuildHeaderPackage(System.IO.MemoryStream stream, int amount = 1)
+    {
+        //header size = 19 bytes
+        stream.WriteByteArray(new byte[] { 0x03, 0x00 });
+        //complete package size
+        stream.WriteByteArray(Types.Int.ToByteArray((short)(19 + (12 * amount))));
+        stream.WriteByteArray(new byte[] { 0x02, 0xf0, 0x80, 0x32, 0x01, 0x00, 0x00, 0x00, 0x00 });
+        //data part size
+        stream.WriteByteArray(Types.Word.ToByteArray((ushort)(2 + (amount * 12))));
+        stream.WriteByteArray(new byte[] { 0x00, 0x00, 0x04 });
+        //amount of requests
+        stream.WriteByte((byte)amount);
+    }
+
+    private byte[] RequestTsdu(byte[] requestData) => RequestTsdu(requestData, 0, requestData.Length);
+
+    private byte[] RequestTsdu(byte[] requestData, int offset, int length, CancellationToken cancellationToken = default)
+    {
+        var stream = GetStreamIfAvailable();
+
+        return 
+            //queue.Enqueue(() =>
+            NoLockRequestTsduAsync(stream, requestData, offset, length, cancellationToken).GetAwaiter().GetResult();
+        //)
+        ;
+    }
+    #endregion
+
+    #region 读取
+    /// <summary>
+    /// Reads a number of bytes from a DB starting from a specified index. This handles more than 200 bytes with multiple requests.
+    /// If the read was not successful, check LastErrorCode or LastErrorString.
+    /// </summary>
+    /// <param name="dataType">Data type of the memory area, can be DB, Timer, Counter, Merker(Memory), Input, Output.</param>
+    /// <param name="db">Address of the memory area (if you want to read DB1, this is set to 1). This must be set also for other memory area types: counters, timers,etc.</param>
+    /// <param name="startByteAdr">Start byte address. If you want to read DB1.DBW200, this is 200.</param>
+    /// <param name="count">Byte count, if you want to read 120 bytes, set this to 120.</param>
+    /// <returns>Returns the bytes in an array</returns>
+    public byte[] ReadBytes(DataType dataType, int db, int startByteAdr, int count)
+    {
+        var result = new byte[count];
+        int index = 0;
+        while (count > 0)
+        {
+            //This works up to MaxPDUSize-1 on SNAP7. But not MaxPDUSize-0.
+            var maxToRead = Math.Min(count, MaxPDUSize - 18);
+            ReadBytesWithSingleRequest(dataType, db, startByteAdr + index, result, index, maxToRead);
+            count -= maxToRead;
+            index += maxToRead;
+        }
+        return result;
+    }
+
+    private void ReadBytesWithSingleRequest(DataType dataType, int db, int startByteAdr, byte[] buffer, int offset, int count)
+    {
+        try
+        {
+            // first create the header
+            int packageSize = 19 + 12; // 19 header + 12 for 1 request
+            var package = new System.IO.MemoryStream(packageSize);
+            BuildHeaderPackage(package);
+            // package.Add(0x02);  // datenart
+            BuildReadDataRequestPackage(package, dataType, db, startByteAdr, count);
+
+            var dataToSend = package.ToArray();
+            var s7data = RequestTsdu(dataToSend);
+            AssertReadResponse(s7data, count);
+
+            Array.Copy(s7data, 18, buffer, offset, count);
+        }
+        catch (Exception exc)
+        {
+            throw new PlcException(ErrorCode.ReadData, exc);
+        }
+    }
+
+    /// <summary>
+    /// Create the bytes-package to request data from the PLC. You have to specify the memory type (dataType),
+    /// the address of the memory, the address of the byte and the bytes count.
+    /// </summary>
+    /// <param name="dataType">MemoryType (DB, Timer, Counter, etc.)</param>
+    /// <param name="db">Address of the memory to be read</param>
+    /// <param name="startByteAdr">Start address of the byte</param>
+    /// <param name="count">Number of bytes to be read</param>
+    /// <returns></returns>
+    private static void BuildReadDataRequestPackage(System.IO.MemoryStream stream, DataType dataType, int db, int startByteAdr, int count = 1)
+    {
+        //single data req = 12
+        stream.WriteByteArray(new byte[] { 0x12, 0x0a, 0x10 });
+        switch (dataType)
+        {
+            case DataType.Timer:
+            case DataType.Counter:
+                stream.WriteByte((byte)dataType);
+                break;
+            default:
+                stream.WriteByte(0x02);
+                break;
+        }
+
+        stream.WriteByteArray(Types.Word.ToByteArray((ushort)(count)));
+        stream.WriteByteArray(Types.Word.ToByteArray((ushort)(db)));
+        stream.WriteByte((byte)dataType);
+        var overflow = (int)(startByteAdr * 8 / 0xffffU); // handles words with address bigger than 8191
+        stream.WriteByte((byte)overflow);
+        switch (dataType)
+        {
+            case DataType.Timer:
+            case DataType.Counter:
+                stream.WriteByteArray(Types.Word.ToByteArray((ushort)(startByteAdr)));
+                break;
+            default:
+                stream.WriteByteArray(Types.Word.ToByteArray((ushort)((startByteAdr) * 8)));
+                break;
+        }
+    }
+    #endregion
+
+    #region 写入
+    /// <summary>
+    /// Write a number of bytes from a DB starting from a specified index. This handles more than 200 bytes with multiple requests.
+    /// If the write was not successful, check LastErrorCode or LastErrorString.
+    /// </summary>
+    /// <param name="dataType">Data type of the memory area, can be DB, Timer, Counter, Merker(Memory), Input, Output.</param>
+    /// <param name="db">Address of the memory area (if you want to read DB1, this is set to 1). This must be set also for other memory area types: counters, timers,etc.</param>
+    /// <param name="startByteAdr">Start byte address. If you want to write DB1.DBW200, this is 200.</param>
+    /// <param name="value">Bytes to write. If more than 200, multiple requests will be made.</param>
+    public void WriteBytes(DataType dataType, int db, int startByteAdr, byte[] value)
+    {
+        int localIndex = 0;
+        int count = value.Length;
+        while (count > 0)
+        {
+            //TODO: Figure out how to use MaxPDUSize here
+            //Snap7 seems to choke on PDU sizes above 256 even if snap7
+            //replies with bigger PDU size in connection setup.
+            var maxToWrite = Math.Min(count, MaxPDUSize - 28);//TODO tested only when the MaxPDUSize is 480
+            WriteBytesWithASingleRequest(dataType, db, startByteAdr + localIndex, value, localIndex, maxToWrite);
+            count -= maxToWrite;
+            localIndex += maxToWrite;
+        }
+    }
+
+    private void WriteBytesWithASingleRequest(DataType dataType, int db, int startByteAdr, byte[] value, int dataOffset, int count)
+    {
+        try
+        {
+            var dataToSend = BuildWriteBytesPackage(dataType, db, startByteAdr, value, dataOffset, count);
+            var s7data = RequestTsdu(dataToSend);
+
+            ValidateResponseCode((ReadWriteErrorCode)s7data[14]);
+        }
+        catch (Exception exc)
+        {
+            throw new PlcException(ErrorCode.WriteData, exc);
+        }
+    }
+
+    private byte[] BuildWriteBytesPackage(DataType dataType, int db, int startByteAdr, byte[] value, int dataOffset, int count)
+    {
+        int varCount = count;
+        // first create the header
+        int packageSize = 35 + varCount;
+        var package = new MemoryStream(new byte[packageSize]);
+
+        package.WriteByte(3);
+        package.WriteByte(0);
+        //complete package size
+        package.WriteByteArray(Types.Int.ToByteArray((short)packageSize));
+        package.WriteByteArray(new byte[] { 2, 0xf0, 0x80, 0x32, 1, 0, 0 });
+        package.WriteByteArray(Types.Word.ToByteArray((ushort)(varCount - 1)));
+        package.WriteByteArray(new byte[] { 0, 0x0e });
+        package.WriteByteArray(Types.Word.ToByteArray((ushort)(varCount + 4)));
+        package.WriteByteArray(new byte[] { 0x05, 0x01, 0x12, 0x0a, 0x10, 0x02 });
+        package.WriteByteArray(Types.Word.ToByteArray((ushort)varCount));
+        package.WriteByteArray(Types.Word.ToByteArray((ushort)(db)));
+        package.WriteByte((byte)dataType);
+        var overflow = (int)(startByteAdr * 8 / 0xffffU); // handles words with address bigger than 8191
+        package.WriteByte((byte)overflow);
+        package.WriteByteArray(Types.Word.ToByteArray((ushort)(startByteAdr * 8)));
+        package.WriteByteArray(new byte[] { 0, 4 });
+        package.WriteByteArray(Types.Word.ToByteArray((ushort)(varCount * 8)));
+
+        // now join the header and the data
+        package.Write(value, dataOffset, count);
+
+        return package.ToArray();
+    }
+    #endregion
     private void AssertPduSizeForRead(ICollection<Types.DataItem> dataItems)
     {
         // send request limit: 19 bytes of header data, 12 bytes of parameter data for each dataItem

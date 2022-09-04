@@ -7,10 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NewLife.Core" Version="9.0.2022.304" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\NewLife.Siemens\NewLife.Siemens.csproj" />
   </ItemGroup>
 
