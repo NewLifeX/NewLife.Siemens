@@ -15,13 +15,13 @@ public class SiemensParameter : IDriverParameter
     [Description("西门子PLC种类")]
     public CpuType CpuType { get; set; }
 
-    /// <summary>PLC Rack。通常为0</summary>
-    [Description("PLC Rack。通常为0")]
+    /// <summary>机架号。通常为0</summary>
+    [Description("机架号。通常为0")]
     public Int16 Rack { get; set; }
 
     /// <summary>
-    /// PLC的CPU插槽，对于S7300-S7400通常为2，对于S7-1200和S7-1500为0。如果使用外部以太网卡，则必须做相应设置
+    /// 插槽，对于S7300-S7400通常为2，对于S7-1200和S7-1500为0。如果使用外部以太网卡，则必须做相应设置
     /// </summary>
-    [Description("PLC的CPU插槽，对于S7300-S7400通常为2，对于S7-1200和S7-1500为0。如果使用外部以太网卡，则必须做相应设置")]
+    [Description("插槽，对于S7300-S7400通常为2，对于S7-1200和S7-1500为0。如果使用外部以太网卡，则必须做相应设置")]
     public Int16 Slot { get; set; }
 }

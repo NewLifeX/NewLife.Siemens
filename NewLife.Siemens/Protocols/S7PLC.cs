@@ -34,11 +34,6 @@ public partial class S7PLC : DisposeBase
     /// <summary>最大PDU大小</summary>
     public Int32 MaxPDUSize { get; private set; } = 240;
 
-    /// <summary>
-    /// 本地调试，设置为true，建立连接时发送调试的数据
-    /// </summary>
-    public Boolean Debug { get; set; } = false;
-
     private byte[] plcHead1 = new byte[22]
 {
       (byte) 3,
@@ -92,7 +87,59 @@ public partial class S7PLC : DisposeBase
       (byte) 1,
       (byte) 224
     };
-
+    private byte[] plcHead1_200smart = new byte[22]
+    {
+      (byte) 3,
+      (byte) 0,
+      (byte) 0,
+      (byte) 22,
+      (byte) 17,
+      (byte) 224,
+      (byte) 0,
+      (byte) 0,
+      (byte) 0,
+      (byte) 1,
+      (byte) 0,
+      (byte) 193,
+      (byte) 2,
+      (byte) 16,
+      (byte) 0,
+      (byte) 194,
+      (byte) 2,
+      (byte) 3,
+      (byte) 0,
+      (byte) 192,
+      (byte) 1,
+      (byte) 10
+    };
+    private byte[] plcHead2_200smart = new byte[25]
+{
+      (byte) 3,
+      (byte) 0,
+      (byte) 0,
+      (byte) 25,
+      (byte) 2,
+      (byte) 240,
+      (byte) 128,
+      (byte) 50,
+      (byte) 1,
+      (byte) 0,
+      (byte) 0,
+      (byte) 204,
+      (byte) 193,
+      (byte) 0,
+      (byte) 8,
+      (byte) 0,
+      (byte) 0,
+      (byte) 240,
+      (byte) 0,
+      (byte) 0,
+      (byte) 1,
+      (byte) 0,
+      (byte) 1,
+      (byte) 3,
+      (byte) 192
+};
     private TcpClient _client;
     private NetworkStream _stream;
     #endregion
@@ -160,7 +207,7 @@ public partial class S7PLC : DisposeBase
 
     private async Task RequestConnection(Stream stream, CancellationToken cancellationToken)
     {
-        var requestData = Debug ? plcHead1 : GetCOTPConnectionRequest(TSAP);
+        var requestData = GetCOTPConnectionRequest(TSAP);
         var response = await NoLockRequestTpduAsync(stream, requestData, cancellationToken).ConfigureAwait(false);
 
         if (response.PDUType != COTP.PduType.ConnectionConfirmed)
@@ -169,8 +216,14 @@ public partial class S7PLC : DisposeBase
         }
     }
 
-    private static Byte[] GetCOTPConnectionRequest(TsapAddress tsap)
+    private Byte[] GetCOTPConnectionRequest(TsapAddress tsap)
     {
+
+        if (CPU == CpuType.S7200Smart)
+        {
+            return plcHead1_200smart;
+        }
+
         Byte[] buf = {
                     3, 0, 0, 22, //TPKT
                     17,     //COTP Header Length
@@ -184,26 +237,6 @@ public partial class S7PLC : DisposeBase
                     194,    //Parameter Code (dst-tasp)
                     2,      //Parameter Length
                     (Byte)(tsap.Remote>>8), (Byte)(tsap.Remote&0xFF),   //Destination TASP
-                    192,    //Parameter Code (tpdu-size)
-                    1,      //Parameter Length
-                    10      //TPDU Size (2^10 = 1024)
-                };
-
-        var rack = 0;
-        var slot = 3;
-        Byte[] buf2 = {
-                    3, 0, 0, 22, //TPKT
-                    17,     //COTP Header Length
-                    224,    //Connect Request
-                    0, 0,   //Destination Reference
-                    0, 46,  //Source Reference
-                    0,      //Flags
-                    193,    //Parameter Code (src-tasp)
-                    2,      //Parameter Length
-                    0x01,  0x00,   //Source TASP
-                    194,    //Parameter Code (dst-tasp)
-                    2,      //Parameter Length
-                    0x03, (byte) ((rack << 5) | slot),   //Destination TASP
                     192,    //Parameter Code (tpdu-size)
                     1,      //Parameter Length
                     10      //TPDU Size (2^10 = 1024)
@@ -235,7 +268,7 @@ public partial class S7PLC : DisposeBase
 
     private async Task SetupConnection(Stream stream, CancellationToken cancellationToken)
     {
-        var setupData = Debug ? plcHead2 : GetS7ConnectionSetup();
+        var setupData = GetS7ConnectionSetup();
 
         var s7data = await NoLockRequestTsduAsync(stream, setupData, 0, setupData.Length, cancellationToken)
             .ConfigureAwait(false);
@@ -544,6 +577,11 @@ $"Received {s7Data.Length} bytes: '{BitConverter.ToString(s7Data)}', expected {e
 
     private byte[] GetS7ConnectionSetup()
     {
+        if (CPU == CpuType.S7200Smart)
+        {
+            return plcHead2_200smart;
+        }
+
         return new byte[] {  3, 0, 0, 25, 2, 240, 128, 50, 1, 0, 0, 255, 255, 0, 8, 0, 0, 240, 0, 0, 3, 0, 3,
                     3, 192 // Use 960 PDU size
             };

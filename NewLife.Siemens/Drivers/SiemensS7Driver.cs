@@ -99,10 +99,6 @@ public class SiemensS7Driver : DisposeBase, IDriver
                         Port = address.Substring(p + 1).ToInt(),
                     };
 
-#if DEBUG
-                    _plcConn.Debug = true;
-#endif
-
                     _plcConn.OpenAsync().GetAwaiter().GetResult();
 
                     //if (!connect.IsSuccess) throw new Exception($"连接失败：{connect.Message}");
