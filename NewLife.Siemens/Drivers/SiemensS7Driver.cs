@@ -20,7 +20,7 @@ namespace NewLife.Siemens.Drivers;
 [DisplayName("西门子PLC")]
 public class SiemensS7Driver : DisposeBase, IDriver
 {
-    protected S7PLC _plcConn;
+    private S7PLC _plcConn;
 
     /// <summary>
     /// 打开通道数量
@@ -43,12 +43,16 @@ public class SiemensS7Driver : DisposeBase, IDriver
     /// 创建驱动参数对象，可序列化成Xml/Json作为该协议的参数模板
     /// </summary>
     /// <returns></returns>
-    public virtual IDriverParameter CreateParameter() => new SiemensParameter
+    public virtual IDriverParameter GetDefaultParameter() => new SiemensParameter
     {
         Address = "127.0.0.1:102",
         Rack = 0,
         Slot = 0,
     };
+
+    /// <summary>获取默认点位</summary>
+    /// <returns></returns>
+    public IPoint[] GetDefaultPoints() => null;
 
     /// <summary>
     /// 打开通道。一个ModbusTcp设备可能分为多个通道读取，需要共用Tcp连接，以不同节点区分
