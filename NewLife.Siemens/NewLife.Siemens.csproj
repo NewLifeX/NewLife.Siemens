@@ -24,7 +24,7 @@
     <Authors>$(Company)</Authors>
     <PackageProjectUrl>https://newlifex.com/iot</PackageProjectUrl>
     <PackageIcon>leaf.png</PackageIcon>
-    <RepositoryUrl>https://github.com/NewLifeX/NewLife.Modbus</RepositoryUrl>
+    <RepositoryUrl>https://github.com/NewLifeX/NewLife.Siemens</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>物联网;IoT;边缘计算;Edge;新生命团队;NewLife;PLC;$(AssemblyName)</PackageTags>
     <PackageReleaseNotes></PackageReleaseNotes>
