@@ -1,10 +1,7 @@
 ﻿using System.ComponentModel;
 using NewLife.IoT;
 using NewLife.IoT.Drivers;
-using NewLife.IoT.Protocols;
 using NewLife.IoT.ThingModels;
-using NewLife.IoT.ThingSpecification;
-using NewLife.Log;
 using NewLife.Omron.Drivers;
 using NewLife.Serialization;
 using NewLife.Siemens.Models;
@@ -12,13 +9,10 @@ using NewLife.Siemens.Protocols;
 
 namespace NewLife.Siemens.Drivers;
 
-/// <summary>
-/// Modbus协议封装
-/// </summary>
-
+/// <summary>西门子PLC协议封装</summary>
 [Driver("SiemensPLC")]
 [DisplayName("西门子PLC")]
-public class SiemensS7Driver : DisposeBase, IDriver
+public class SiemensS7Driver : DriverBase
 {
     private S7PLC _plcConn;
 
@@ -43,16 +37,12 @@ public class SiemensS7Driver : DisposeBase, IDriver
     /// 创建驱动参数对象，可序列化成Xml/Json作为该协议的参数模板
     /// </summary>
     /// <returns></returns>
-    public virtual IDriverParameter GetDefaultParameter() => new SiemensParameter
+    public override IDriverParameter GetDefaultParameter() => new SiemensParameter
     {
         Address = "127.0.0.1:102",
         Rack = 0,
         Slot = 0,
     };
-
-    /// <summary>获取默认点位</summary>
-    /// <returns></returns>
-    public IPoint[] GetDefaultPoints() => null;
 
     /// <summary>
     /// 打开通道。一个ModbusTcp设备可能分为多个通道读取，需要共用Tcp连接，以不同节点区分
@@ -60,7 +50,7 @@ public class SiemensS7Driver : DisposeBase, IDriver
     /// <param name="device">通道</param>
     /// <param name="parameters">参数</param>
     /// <returns></returns>
-    public virtual INode Open(IDevice device, IDictionary<String, Object> parameters)
+    public override INode Open(IDevice device, IDictionary<String, Object> parameters)
     {
         var pm = JsonHelper.Convert<SiemensParameter>(parameters);
 
@@ -119,7 +109,7 @@ public class SiemensS7Driver : DisposeBase, IDriver
     /// 关闭设备驱动
     /// </summary>
     /// <param name="node"></param>
-    public virtual void Close(INode node)
+    public override void Close(INode node)
     {
         if (Interlocked.Decrement(ref _nodes) <= 0)
         {
@@ -135,7 +125,7 @@ public class SiemensS7Driver : DisposeBase, IDriver
     /// <param name="node">节点对象，可存储站号等信息，仅驱动自己识别</param>
     /// <param name="points">点位集合</param>
     /// <returns></returns>
-    public virtual IDictionary<String, Object> Read(INode node, IPoint[] points)
+    public override IDictionary<String, Object> Read(INode node, IPoint[] points)
     {
         var dic = new Dictionary<String, Object>();
 
@@ -185,37 +175,12 @@ public class SiemensS7Driver : DisposeBase, IDriver
     }
 
     /// <summary>
-    /// 从点位中计算寄存器个数
-    /// </summary>
-    /// <param name="point"></param>
-    /// <returns></returns>
-    public virtual Int32 GetCount(IPoint point)
-    {
-        // 字节数转寄存器数，要除以2
-        var count = point.Length / 2;
-        if (count > 0) return count;
-
-        if (point.Type.IsNullOrEmpty()) return 1;
-
-        return point.Type.ToLower() switch
-        {
-            "byte" or "sbyte" or "bool" => 1,
-            "short" or "ushort" or "int16" or "uint16" => 2 / 2,
-            "int" or "uint" or "int32" or "uint32" => 4 / 2,
-            "long" or "ulong" or "int64" or "uint64" => 8 / 2,
-            "float" or "single" => 4 / 2,
-            "double" or "decimal" => 8 / 2,
-            _ => 1,
-        };
-    }
-
-    /// <summary>
     /// 写入数据
     /// </summary>
     /// <param name="node">节点对象，可存储站号等信息，仅驱动自己识别</param>
     /// <param name="point">点位</param>
     /// <param name="value">数值</param>
-    public virtual Object Write(INode node, IPoint point, Object value)
+    public override Object Write(INode node, IPoint point, Object value)
     {
         var addr = GetAddress(point);
         if (addr.IsNullOrWhiteSpace()) return null;
@@ -229,107 +194,12 @@ public class SiemensS7Driver : DisposeBase, IDriver
         var db = adr.DbNumber;
         var startByteAdr = adr.StartByte;
 
-        if (value is Byte[] bytes)
-        {
-            _plcConn.WriteBytes(dataType, db, startByteAdr, bytes);
-        }
-        else
-        {
+        if (value is not Byte[] bytes)
             throw new ArgumentException("数据value不是字节数组！");
-        }
+
+        _plcConn.WriteBytes(dataType, db, startByteAdr, bytes);
 
         return null;
     }
-
-    /// <summary>原始数据转寄存器数组</summary>
-    /// <param name="data"></param>
-    /// <param name="point"></param>
-    /// <param name="spec"></param>
-    /// <returns></returns>
-    private UInt16[] ConvertToRegister(Object data, IPoint point, ThingSpec spec)
-    {
-        // 找到物属性定义
-        var pi = spec?.Properties?.FirstOrDefault(e => e.Id.EqualIgnoreCase(point.Name));
-        var type = pi?.DataType?.Type;
-        if (type.IsNullOrEmpty()) type = point.Type;
-        if (type.IsNullOrEmpty()) return null;
-
-        switch (type.ToLower())
-        {
-            case "short":
-            case "int16":
-            case "ushort":
-            case "uint16":
-                {
-                    var n = data.ToInt();
-                    return new[] { (UInt16)n };
-                }
-            case "int":
-            case "int32":
-            case "uint":
-            case "uint32":
-                {
-                    var n = data.ToInt();
-                    return new[] { (UInt16)(n >> 16), (UInt16)(n & 0xFFFF) };
-                }
-            case "long":
-            case "int64":
-            case "ulong":
-            case "uint64":
-                {
-                    var n = data.ToLong();
-                    return new[] { (UInt16)(n >> 48), (UInt16)(n >> 32), (UInt16)(n >> 16), (UInt16)(n & 0xFFFF) };
-                }
-            case "float":
-            case "single":
-                {
-                    var d = (Single)data.ToDouble();
-                    //var n = BitConverter.SingleToInt32Bits(d);
-                    var n = (UInt32)d;
-                    return new[] { (UInt16)(n >> 16), (UInt16)(n & 0xFFFF) };
-                }
-            case "double":
-            case "decimal":
-                {
-                    var d = data.ToDouble();
-                    //var n = BitConverter.DoubleToInt64Bits(d);
-                    var n = (UInt64)d;
-                    return new[] { (UInt16)(n >> 48), (UInt16)(n >> 32), (UInt16)(n >> 16), (UInt16)(n & 0xFFFF) };
-                }
-            case "bool":
-            case "boolean":
-                {
-                    return data.ToBoolean() ? new[] { (UInt16)0xFF00 } : new[] { (UInt16)0x00 };
-                }
-            default:
-                return null;
-        }
-        //return type.ToLower() switch
-        //{
-        //    "short" or "int16" or "ushort" or "uint16" => new[] { (UInt16)n },
-        //    "int" or "int32" or "uint" or "uint32" => new[] { (UInt16)(n >> 16), (UInt16)(n & 0xFFFF) },
-        //    "long" or "int64" or "uint64" => { },
-        //    "float" or "single" => BitConverter.SingleToInt32Bits((Single)data.ToDouble()).GetBytes(false),
-        //    "double" or "decimal" => BitConverter.DoubleToInt64Bits(data.ToDouble()).GetBytes(false),
-        //    "bool" or "boolean" => data.ToBoolean() ? new[] { (UInt16)0xFF00 } : new[] { (UInt16)0x00 },
-        //    _ => null,
-        //};
-    }
-
-    /// <summary>
-    /// 控制设备，特殊功能使用
-    /// </summary>
-    /// <param name="node"></param>
-    /// <param name="parameters"></param>
-    /// <exception cref="NotImplementedException"></exception>
-    public virtual void Control(INode node, IDictionary<String, Object> parameters) => throw new NotImplementedException();
-    #endregion
-
-    #region 日志
-    /// <summary>日志</summary>
-    public ILog Log { get; set; }
-
-    /// <summary>性能追踪器</summary>
-    public ITracer Tracer { get; set; }
     #endregion
 }
