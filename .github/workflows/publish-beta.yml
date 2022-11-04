@@ -4,7 +4,7 @@ on:
   push:
     branches: [ master ]
     paths:
-        - 'NewLife.Core/**'
+        - 'NewLife.Siemens/**'
   workflow_dispatch:
 
 jobs:
