@@ -87,7 +87,7 @@ public class SiemensS7Driver : DriverBase
                     _plcConn = new S7PLC(cpuType, ip, rack, slot)
                     {
                         Timeout = 5000,
-                        Port = address.Substring(p + 1).ToInt(),
+                        Port = address[(p + 1)..].ToInt(),
                     };
 
                     _plcConn.OpenAsync().GetAwaiter().GetResult();

@@ -33,20 +33,12 @@ public class TsapAddress
         if (rack < 0 || rack > 0x0F) throw new ArgumentOutOfRangeException(nameof(rack));
         if (slot < 0 || slot > 0x0F) throw new ArgumentOutOfRangeException(nameof(slot));
 
-        switch (cpuType)
+        return cpuType switch
         {
-            case CpuType.S7200:
-                return new TsapAddress(0x1000, 0x1001);
-            case CpuType.Logo0BA8:
-                return new TsapAddress(0x0100, 0x0102);
-            case CpuType.S7200Smart:
-            case CpuType.S71200:
-            case CpuType.S71500:
-            case CpuType.S7300:
-            case CpuType.S7400:
-                return new TsapAddress(0x0100, (UInt16)(0x03 << 8 | (Byte)((rack << 5) | slot)));
-            default:
-                throw new NotSupportedException();
-        }
+            CpuType.S7200 => new TsapAddress(0x1000, 0x1001),
+            CpuType.Logo0BA8 => new TsapAddress(0x0100, 0x0102),
+            CpuType.S7200Smart or CpuType.S71200 or CpuType.S71500 or CpuType.S7300 or CpuType.S7400 => new TsapAddress(0x0100, (UInt16)(0x03 << 8 | (Byte)((rack << 5) | slot))),
+            _ => throw new NotSupportedException(),
+        };
     }
 }

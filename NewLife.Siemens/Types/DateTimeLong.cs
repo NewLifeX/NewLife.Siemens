@@ -9,12 +9,12 @@
         /// <summary>
         /// The minimum <see cref="T:System.DateTime" /> value supported by the specification.
         /// </summary>
-        public static readonly System.DateTime SpecMinimumDateTime = new System.DateTime(1970, 1, 1);
+        public static readonly System.DateTime SpecMinimumDateTime = new(1970, 1, 1);
 
         /// <summary>
         /// The maximum <see cref="T:System.DateTime" /> value supported by the specification.
         /// </summary>
-        public static readonly System.DateTime SpecMaximumDateTime = new System.DateTime(2262, 4, 11, 23, 47, 16, 854);
+        public static readonly System.DateTime SpecMaximumDateTime = new(2262, 4, 11, 23, 47, 16, 854);
 
         /// <summary>
         /// Parses a <see cref="T:System.DateTime" /> value from bytes.

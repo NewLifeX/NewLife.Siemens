@@ -2,7 +2,7 @@
 {
     internal class ByteArray
     {
-        private List<System.Byte> list = new List<System.Byte>();
+        private List<System.Byte> list = new();
 
         public System.Byte this[Int32 index]
         {

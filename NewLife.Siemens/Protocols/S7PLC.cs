@@ -170,6 +170,11 @@ public partial class S7PLC : DisposeBase
     #endregion
 
     #region 连接
+    /// <summary>
+    /// 打开连接
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     public async Task OpenAsync(CancellationToken cancellationToken = default)
     {
         var client = new TcpClient
@@ -194,6 +199,7 @@ public partial class S7PLC : DisposeBase
         catch (Exception)
         {
             _stream.Dispose();
+            _stream = null;
             throw;
         }
     }
@@ -218,10 +224,7 @@ public partial class S7PLC : DisposeBase
     private Byte[] GetCOTPConnectionRequest(TsapAddress tsap)
     {
 
-        if (CPU == CpuType.S7200Smart)
-        {
-            return plcHead1_200smart;
-        }
+        if (CPU == CpuType.S7200Smart) return plcHead1_200smart;
 
         Byte[] buf = {
                     3, 0, 0, 22, //TPKT
@@ -244,8 +247,7 @@ public partial class S7PLC : DisposeBase
         return buf;
     }
 
-    private async Task<COTP.TPDU> NoLockRequestTpduAsync(Stream stream, Byte[] requestData,
-        CancellationToken cancellationToken = default)
+    private async Task<COTP.TPDU> NoLockRequestTpduAsync(Stream stream, Byte[] requestData, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         try
@@ -298,9 +300,8 @@ public partial class S7PLC : DisposeBase
     #endregion
 
     #region 核心方法
-    /// <summary>
-    /// Creates the header to read bytes from the PLC
-    /// </summary>
+    /// <summary>生成头部</summary>
+    /// <param name="stream"></param>
     /// <param name="amount"></param>
     /// <returns></returns>
     private static void BuildHeaderPackage(MemoryStream stream, Int32 amount = 1)
@@ -332,10 +333,7 @@ public partial class S7PLC : DisposeBase
     #endregion
 
     #region 读取
-    /// <summary>
-    /// Reads a number of bytes from a DB starting from a specified index. This handles more than 200 bytes with multiple requests.
-    /// If the read was not successful, check LastErrorCode or LastErrorString.
-    /// </summary>
+    /// <summary>从指定DB开始，读取多个字节</summary>
     /// <param name="dataType">Data type of the memory area, can be DB, Timer, Counter, Merker(Memory), Input, Output.</param>
     /// <param name="db">Address of the memory area (if you want to read DB1, this is set to 1). This must be set also for other memory area types: counters, timers,etc.</param>
     /// <param name="startByteAdr">Start byte address. If you want to read DB1.DBW200, this is 200.</param>
@@ -379,10 +377,8 @@ public partial class S7PLC : DisposeBase
         }
     }
 
-    /// <summary>
-    /// Create the bytes-package to request data from the PLC. You have to specify the memory type (dataType),
-    /// the address of the memory, the address of the byte and the bytes count.
-    /// </summary>
+    /// <summary>创建请求包</summary>
+    /// <param name="stream"></param>
     /// <param name="dataType">MemoryType (DB, Timer, Counter, etc.)</param>
     /// <param name="db">Address of the memory to be read</param>
     /// <param name="startByteAdr">Start address of the byte</param>
@@ -422,10 +418,7 @@ public partial class S7PLC : DisposeBase
     #endregion
 
     #region 写入
-    /// <summary>
-    /// Write a number of bytes from a DB starting from a specified index. This handles more than 200 bytes with multiple requests.
-    /// If the write was not successful, check LastErrorCode or LastErrorString.
-    /// </summary>
+    /// <summary>从指定DB开始，写入多个字节</summary>
     /// <param name="dataType">Data type of the memory area, can be DB, Timer, Counter, Merker(Memory), Input, Output.</param>
     /// <param name="db">Address of the memory area (if you want to read DB1, this is set to 1). This must be set also for other memory area types: counters, timers,etc.</param>
     /// <param name="startByteAdr">Start byte address. If you want to write DB1.DBW200, this is 200.</param>
@@ -492,6 +485,7 @@ public partial class S7PLC : DisposeBase
         return package.ToArray();
     }
     #endregion
+
     private void AssertPduSizeForRead(ICollection<Types.DataItem> dataItems)
     {
         // send request limit: 19 bytes of header data, 12 bytes of parameter data for each dataItem
@@ -526,9 +520,7 @@ public partial class S7PLC : DisposeBase
 
         PlcException NotEnoughBytes()
         {
-            return new PlcException(ErrorCode.WrongNumberReceivedBytes,
-$"Received {s7Data.Length} bytes: '{BitConverter.ToString(s7Data)}', expected {expectedLength} bytes.")
-;
+            return new PlcException(ErrorCode.WrongNumberReceivedBytes, $"Received {s7Data.Length} bytes: '{BitConverter.ToString(s7Data)}', expected {expectedLength} bytes.");
         }
 
         if (s7Data == null)
@@ -567,19 +559,14 @@ $"Received {s7Data.Length} bytes: '{BitConverter.ToString(s7Data)}', expected {e
     private Stream GetStreamIfAvailable()
     {
         if (_stream == null)
-        {
             throw new PlcException(ErrorCode.ConnectionError, "Plc is not connected");
-        }
 
         return _stream;
     }
 
     private Byte[] GetS7ConnectionSetup()
     {
-        if (CPU == CpuType.S7200Smart)
-        {
-            return plcHead2_200smart;
-        }
+        if (CPU == CpuType.S7200Smart) return plcHead2_200smart;
 
         return new Byte[] {  3, 0, 0, 25, 2, 240, 128, 50, 1, 0, 0, 255, 255, 0, 8, 0, 0, 240, 0, 0, 3, 0, 3,
                     3, 192 // Use 960 PDU size
@@ -616,35 +603,18 @@ $"Received {s7Data.Length} bytes: '{BitConverter.ToString(s7Data)}', expected {e
     /// <returns>Byte lenght of variable</returns>
     internal static Int32 VarTypeToByteLength(VarType varType, Int32 varCount = 1)
     {
-        switch (varType)
+        return varType switch
         {
-            case VarType.Bit:
-                return (varCount + 7) / 8;
-            case VarType.Byte:
-                return (varCount < 1) ? 1 : varCount;
-            case VarType.String:
-                return varCount;
-            case VarType.S7String:
-                return ((varCount + 2) & 1) == 1 ? (varCount + 3) : (varCount + 2);
-            case VarType.S7WString:
-                return (varCount * 2) + 4;
-            case VarType.Word:
-            case VarType.Timer:
-            case VarType.Int:
-            case VarType.Counter:
-                return varCount * 2;
-            case VarType.DWord:
-            case VarType.DInt:
-            case VarType.Real:
-                return varCount * 4;
-            case VarType.LReal:
-            case VarType.DateTime:
-                return varCount * 8;
-            case VarType.DateTimeLong:
-                return varCount * 12;
-            default:
-                return 0;
-        }
+            VarType.Bit => (varCount + 7) / 8,
+            VarType.Byte => (varCount < 1) ? 1 : varCount,
+            VarType.String => varCount,
+            VarType.S7String => ((varCount + 2) & 1) == 1 ? (varCount + 3) : (varCount + 2),
+            VarType.S7WString => (varCount * 2) + 4,
+            VarType.Word or VarType.Timer or VarType.Int or VarType.Counter => varCount * 2,
+            VarType.DWord or VarType.DInt or VarType.Real => varCount * 4,
+            VarType.LReal or VarType.DateTime => varCount * 8,
+            VarType.DateTimeLong => varCount * 12,
+            _ => 0,
+        };
     }
-
 }
