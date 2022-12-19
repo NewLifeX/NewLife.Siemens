@@ -309,10 +309,10 @@ public partial class S7PLC : DisposeBase
         //header size = 19 bytes
         stream.WriteByteArray(new Byte[] { 0x03, 0x00 });
         //complete package size
-        stream.WriteByteArray(Types.Int.ToByteArray((Int16)(19 + (12 * amount))));
+        stream.WriteByteArray(((Int16)(19 + (12 * amount))).GetBytes(false));
         stream.WriteByteArray(new Byte[] { 0x02, 0xf0, 0x80, 0x32, 0x01, 0x00, 0x00, 0x00, 0x00 });
         //data part size
-        stream.WriteByteArray(Types.Word.ToByteArray((UInt16)(2 + (amount * 12))));
+        stream.WriteByteArray(ToByteArray((UInt16)(2 + (amount * 12))));
         stream.WriteByteArray(new Byte[] { 0x00, 0x00, 0x04 });
         //amount of requests
         stream.WriteByte((Byte)amount);
@@ -399,8 +399,8 @@ public partial class S7PLC : DisposeBase
                 break;
         }
 
-        stream.WriteByteArray(Types.Word.ToByteArray((UInt16)(count)));
-        stream.WriteByteArray(Types.Word.ToByteArray((UInt16)(db)));
+        stream.WriteByteArray(ToByteArray((UInt16)(count)));
+        stream.WriteByteArray(ToByteArray((UInt16)(db)));
         stream.WriteByte((Byte)dataType);
         var overflow = (Int32)(startByteAdr * 8 / 0xffffU); // handles words with address bigger than 8191
         stream.WriteByte((Byte)overflow);
@@ -408,10 +408,10 @@ public partial class S7PLC : DisposeBase
         {
             case DataType.Timer:
             case DataType.Counter:
-                stream.WriteByteArray(Types.Word.ToByteArray((UInt16)(startByteAdr)));
+                stream.WriteByteArray(ToByteArray((UInt16)(startByteAdr)));
                 break;
             default:
-                stream.WriteByteArray(Types.Word.ToByteArray((UInt16)((startByteAdr) * 8)));
+                stream.WriteByteArray(ToByteArray((UInt16)((startByteAdr) * 8)));
                 break;
         }
     }
@@ -464,20 +464,20 @@ public partial class S7PLC : DisposeBase
         package.WriteByte(3);
         package.WriteByte(0);
         //complete package size
-        package.WriteByteArray(Types.Int.ToByteArray((Int16)packageSize));
+        package.WriteByteArray(((Int16)packageSize).GetBytes(false));
         package.WriteByteArray(new Byte[] { 2, 0xf0, 0x80, 0x32, 1, 0, 0 });
-        package.WriteByteArray(Types.Word.ToByteArray((UInt16)(varCount - 1)));
+        package.WriteByteArray(ToByteArray((UInt16)(varCount - 1)));
         package.WriteByteArray(new Byte[] { 0, 0x0e });
-        package.WriteByteArray(Types.Word.ToByteArray((UInt16)(varCount + 4)));
+        package.WriteByteArray(ToByteArray((UInt16)(varCount + 4)));
         package.WriteByteArray(new Byte[] { 0x05, 0x01, 0x12, 0x0a, 0x10, 0x02 });
-        package.WriteByteArray(Types.Word.ToByteArray((UInt16)varCount));
-        package.WriteByteArray(Types.Word.ToByteArray((UInt16)(db)));
+        package.WriteByteArray(ToByteArray((UInt16)varCount));
+        package.WriteByteArray(ToByteArray((UInt16)(db)));
         package.WriteByte((Byte)dataType);
         var overflow = (Int32)(startByteAdr * 8 / 0xffffU); // handles words with address bigger than 8191
         package.WriteByte((Byte)overflow);
-        package.WriteByteArray(Types.Word.ToByteArray((UInt16)(startByteAdr * 8)));
+        package.WriteByteArray(ToByteArray((UInt16)(startByteAdr * 8)));
         package.WriteByteArray(new Byte[] { 0, 4 });
-        package.WriteByteArray(Types.Word.ToByteArray((UInt16)(varCount * 8)));
+        package.WriteByteArray(ToByteArray((UInt16)(varCount * 8)));
 
         // now join the header and the data
         package.Write(value, dataOffset, count);
@@ -486,32 +486,18 @@ public partial class S7PLC : DisposeBase
     }
     #endregion
 
-    private void AssertPduSizeForRead(ICollection<Types.DataItem> dataItems)
+    #region 辅助
+    /// <summary>
+    /// Converts a ushort (UInt16) to word (2 bytes)
+    /// </summary>
+    public static Byte[] ToByteArray(UInt16 value)
     {
-        // send request limit: 19 bytes of header data, 12 bytes of parameter data for each dataItem
-        var requiredRequestSize = 19 + dataItems.Count * 12;
-        if (requiredRequestSize > MaxPDUSize) throw new Exception($"Too many vars requested for read. Request size ({requiredRequestSize}) is larger than protocol limit ({MaxPDUSize}).");
+        var bytes = new Byte[2];
 
-        // response limit: 14 bytes of header data, 4 bytes of result data for each dataItem and the actual data
-        var requiredResponseSize = GetDataLength(dataItems) + dataItems.Count * 4 + 14;
-        if (requiredResponseSize > MaxPDUSize) throw new Exception($"Too much data requested for read. Response size ({requiredResponseSize}) is larger than protocol limit ({MaxPDUSize}).");
-    }
+        bytes[1] = (Byte)(value & 0xFF);
+        bytes[0] = (Byte)(value >> 8 & 0xFF);
 
-    private void AssertPduSizeForWrite(ICollection<Types.DataItem> dataItems)
-    {
-        // 12 bytes of header data, 18 bytes of parameter data for each dataItem
-        if (dataItems.Count * 18 + 12 > MaxPDUSize) throw new Exception("Too many vars supplied for write");
-
-        // 12 bytes of header data, 16 bytes of data for each dataItem and the actual data
-        if (GetDataLength(dataItems) + dataItems.Count * 16 + 12 > MaxPDUSize)
-            throw new Exception("Too much data supplied for write");
-    }
-
-    private Int32 GetDataLength(IEnumerable<Types.DataItem> dataItems)
-    {
-        // Odd length variables are 0-padded
-        return dataItems.Select(di => VarTypeToByteLength(di.VarType, di.Count))
-            .Sum(len => (len & 1) == 1 ? len + 1 : len);
+        return bytes;
     }
 
     private static void AssertReadResponse(Byte[] s7Data, Int32 dataLength)
@@ -593,28 +579,5 @@ public partial class S7PLC : DisposeBase
             throw;
         }
     }
-
-
-    /// <summary>
-    /// Given a S7 <see cref="VarType"/> (Bool, Word, DWord, etc.), it returns how many bytes to read.
-    /// </summary>
-    /// <param name="varType"></param>
-    /// <param name="varCount"></param>
-    /// <returns>Byte lenght of variable</returns>
-    internal static Int32 VarTypeToByteLength(VarType varType, Int32 varCount = 1)
-    {
-        return varType switch
-        {
-            VarType.Bit => (varCount + 7) / 8,
-            VarType.Byte => (varCount < 1) ? 1 : varCount,
-            VarType.String => varCount,
-            VarType.S7String => ((varCount + 2) & 1) == 1 ? (varCount + 3) : (varCount + 2),
-            VarType.S7WString => (varCount * 2) + 4,
-            VarType.Word or VarType.Timer or VarType.Int or VarType.Counter => varCount * 2,
-            VarType.DWord or VarType.DInt or VarType.Real => varCount * 4,
-            VarType.LReal or VarType.DateTime => varCount * 8,
-            VarType.DateTimeLong => varCount * 12,
-            _ => 0,
-        };
-    }
+    #endregion
 }
