@@ -10,11 +10,11 @@
         /// </summary>
         /// <param name="value">The string to write to the PLC.</param>
         /// <param name="reservedLength">The amount of bytes reserved for the <paramref name="value"/> in the PLC.</param>
-        public static byte[] ToByteArray(string value, int reservedLength)
+        public static System.Byte[] ToByteArray(System.String value, Int32 reservedLength)
         {
             var length = value?.Length;
             if (length > reservedLength) length = reservedLength;
-            var bytes = new byte[reservedLength];
+            var bytes = new System.Byte[reservedLength];
 
             if (length == null || length == 0) return bytes;
 
@@ -28,10 +28,7 @@
         /// </summary>
         /// <param name="bytes"></param>
         /// <returns></returns>
-        public static string FromByteArray(byte[] bytes)
-        {
-            return System.Text.Encoding.ASCII.GetString(bytes);
-        }
+        public static System.String FromByteArray(System.Byte[] bytes) => System.Text.Encoding.ASCII.GetString(bytes);
 
     }
 }

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Reflection;
+﻿using System.Reflection;
 using NewLife.Siemens.Common;
 
 namespace NewLife.Siemens.Types
@@ -15,7 +13,7 @@ namespace NewLife.Siemens.Types
         /// </summary>
         /// <param name="structType">the type of the struct</param>
         /// <returns>the number of bytes</returns>
-        public static int GetStructSize(Type structType)
+        public static Int32 GetStructSize(Type structType)
         {
             var numBytes = 0.0;
 
@@ -76,7 +74,7 @@ namespace NewLife.Siemens.Types
                         numBytes += GetStructSize(info.FieldType);
                         break;
                 }
-            return (int)numBytes;
+            return (Int32)numBytes;
         }
 
         /// <summary>
@@ -85,7 +83,7 @@ namespace NewLife.Siemens.Types
         /// <param name="structType">The struct type</param>
         /// <param name="bytes">The array of bytes</param>
         /// <returns>The object depending on the struct type or null if fails(array-length != struct-length</returns>
-        public static object FromBytes(Type structType, byte[] bytes)
+        public static Object FromBytes(Type structType, System.Byte[] bytes)
         {
             if (bytes == null)
                 return null;
@@ -112,9 +110,9 @@ namespace NewLife.Siemens.Types
                 {
                     case "Boolean":
                         // get the value
-                        bytePos = (int)Math.Floor(numBytes);
-                        bitPos = (int)((numBytes - bytePos) / 0.125);
-                        if ((bytes[bytePos] & (int)Math.Pow(2, bitPos)) != 0)
+                        bytePos = (Int32)Math.Floor(numBytes);
+                        bitPos = (Int32)((numBytes - bytePos) / 0.125);
+                        if ((bytes[bytePos] & (Int32)Math.Pow(2, bitPos)) != 0)
                             info.SetValue(structValue, true);
                         else
                             info.SetValue(structValue, false);
@@ -122,7 +120,7 @@ namespace NewLife.Siemens.Types
                         break;
                     case "Byte":
                         numBytes = Math.Ceiling(numBytes);
-                        info.SetValue(structValue, bytes[(int)numBytes]);
+                        info.SetValue(structValue, bytes[(Int32)numBytes]);
                         numBytes++;
                         break;
                     case "Int16":
@@ -130,7 +128,7 @@ namespace NewLife.Siemens.Types
                         if (numBytes / 2 - Math.Floor(numBytes / 2.0) > 0)
                             numBytes++;
                         // get the value
-                        var source = Word.FromBytes(bytes[(int)numBytes + 1], bytes[(int)numBytes]);
+                        var source = Word.FromBytes(bytes[(Int32)numBytes + 1], bytes[(Int32)numBytes]);
                         info.SetValue(structValue, source.ConvertToShort());
                         numBytes += 2;
                         break;
@@ -139,8 +137,8 @@ namespace NewLife.Siemens.Types
                         if (numBytes / 2 - Math.Floor(numBytes / 2.0) > 0)
                             numBytes++;
                         // get the value
-                        info.SetValue(structValue, Word.FromBytes(bytes[(int)numBytes + 1],
-                                                                          bytes[(int)numBytes]));
+                        info.SetValue(structValue, Word.FromBytes(bytes[(Int32)numBytes + 1],
+                                                                          bytes[(Int32)numBytes]));
                         numBytes += 2;
                         break;
                     case "Int32":
@@ -148,10 +146,10 @@ namespace NewLife.Siemens.Types
                         if (numBytes / 2 - Math.Floor(numBytes / 2.0) > 0)
                             numBytes++;
                         // get the value
-                        var sourceUInt = DWord.FromBytes(bytes[(int)numBytes + 3],
-                                                                           bytes[(int)numBytes + 2],
-                                                                           bytes[(int)numBytes + 1],
-                                                                           bytes[(int)numBytes + 0]);
+                        var sourceUInt = DWord.FromBytes(bytes[(Int32)numBytes + 3],
+                                                                           bytes[(Int32)numBytes + 2],
+                                                                           bytes[(Int32)numBytes + 1],
+                                                                           bytes[(Int32)numBytes + 0]);
                         info.SetValue(structValue, sourceUInt.ConvertToInt());
                         numBytes += 4;
                         break;
@@ -160,10 +158,10 @@ namespace NewLife.Siemens.Types
                         if (numBytes / 2 - Math.Floor(numBytes / 2.0) > 0)
                             numBytes++;
                         // get the value
-                        info.SetValue(structValue, DWord.FromBytes(bytes[(int)numBytes],
-                                                                           bytes[(int)numBytes + 1],
-                                                                           bytes[(int)numBytes + 2],
-                                                                           bytes[(int)numBytes + 3]));
+                        info.SetValue(structValue, DWord.FromBytes(bytes[(Int32)numBytes],
+                                                                           bytes[(Int32)numBytes + 1],
+                                                                           bytes[(Int32)numBytes + 2],
+                                                                           bytes[(Int32)numBytes + 3]));
                         numBytes += 4;
                         break;
                     case "Single":
@@ -171,10 +169,10 @@ namespace NewLife.Siemens.Types
                         if (numBytes / 2 - Math.Floor(numBytes / 2.0) > 0)
                             numBytes++;
                         // get the value
-                        info.SetValue(structValue, Real.FromByteArray(new byte[] { bytes[(int)numBytes],
-                                                                           bytes[(int)numBytes + 1],
-                                                                           bytes[(int)numBytes + 2],
-                                                                           bytes[(int)numBytes + 3] }));
+                        info.SetValue(structValue, Real.FromByteArray(new System.Byte[] { bytes[(Int32)numBytes],
+                                                                           bytes[(Int32)numBytes + 1],
+                                                                           bytes[(Int32)numBytes + 2],
+                                                                           bytes[(Int32)numBytes + 3] }));
                         numBytes += 4;
                         break;
                     case "Double":
@@ -182,8 +180,8 @@ namespace NewLife.Siemens.Types
                         if (numBytes / 2 - Math.Floor(numBytes / 2.0) > 0)
                             numBytes++;
                         // get the value
-                        var data = new byte[8];
-                        Array.Copy(bytes, (int)numBytes, data, 0, 8);
+                        var data = new System.Byte[8];
+                        Array.Copy(bytes, (Int32)numBytes, data, 0, 8);
                         info.SetValue(structValue, LReal.FromByteArray(data));
                         numBytes += 8;
                         break;
@@ -197,8 +195,8 @@ namespace NewLife.Siemens.Types
                             numBytes++;
 
                         // get the value
-                        var sData = new byte[attribute.ReservedLengthInBytes];
-                        Array.Copy(bytes, (int)numBytes, sData, 0, sData.Length);
+                        var sData = new System.Byte[attribute.ReservedLengthInBytes];
+                        Array.Copy(bytes, (Int32)numBytes, sData, 0, sData.Length);
                         switch (attribute.Type)
                         {
                             case S7StringType.S7String:
@@ -214,10 +212,10 @@ namespace NewLife.Siemens.Types
                         numBytes += sData.Length;
                         break;
                     default:
-                        var buffer = new byte[GetStructSize(info.FieldType)];
+                        var buffer = new System.Byte[GetStructSize(info.FieldType)];
                         if (buffer.Length == 0)
                             continue;
-                        Buffer.BlockCopy(bytes, (int)Math.Ceiling(numBytes), buffer, 0, buffer.Length);
+                        Buffer.BlockCopy(bytes, (Int32)Math.Ceiling(numBytes), buffer, 0, buffer.Length);
                         info.SetValue(structValue, FromBytes(info.FieldType, buffer));
                         numBytes += buffer.Length;
                         break;
@@ -230,13 +228,13 @@ namespace NewLife.Siemens.Types
         /// </summary>
         /// <param name="structValue">The struct object</param>
         /// <returns>A byte array or null if fails.</returns>
-        public static byte[] ToBytes(object structValue)
+        public static System.Byte[] ToBytes(Object structValue)
         {
             var type = structValue.GetType();
 
             var size = GetStructSize(type);
-            var bytes = new byte[size];
-            byte[] bytes2 = null;
+            var bytes = new System.Byte[size];
+            System.Byte[] bytes2 = null;
 
             var bytePos = 0;
             var bitPos = 0;
@@ -256,18 +254,18 @@ namespace NewLife.Siemens.Types
                 {
                     case "Boolean":
                         // get the value
-                        bytePos = (int)Math.Floor(numBytes);
-                        bitPos = (int)((numBytes - bytePos) / 0.125);
-                        if ((bool)info.GetValue(structValue))
-                            bytes[bytePos] |= (byte)Math.Pow(2, bitPos);            // is true
+                        bytePos = (Int32)Math.Floor(numBytes);
+                        bitPos = (Int32)((numBytes - bytePos) / 0.125);
+                        if ((System.Boolean)info.GetValue(structValue))
+                            bytes[bytePos] |= (System.Byte)Math.Pow(2, bitPos);            // is true
                         else
-                            bytes[bytePos] &= (byte)~(byte)Math.Pow(2, bitPos);   // is false
+                            bytes[bytePos] &= (System.Byte)~(System.Byte)Math.Pow(2, bitPos);   // is false
                         numBytes += 0.125;
                         break;
                     case "Byte":
-                        numBytes = (int)Math.Ceiling(numBytes);
-                        bytePos = (int)numBytes;
-                        bytes[bytePos] = (byte)info.GetValue(structValue);
+                        numBytes = (Int32)Math.Ceiling(numBytes);
+                        bytePos = (Int32)numBytes;
+                        bytes[bytePos] = (System.Byte)info.GetValue(structValue);
                         numBytes++;
                         break;
                     case "Int16":
@@ -283,10 +281,10 @@ namespace NewLife.Siemens.Types
                         bytes2 = DWord.ToByteArray((UInt32)info.GetValue(structValue));
                         break;
                     case "Single":
-                        bytes2 = Real.ToByteArray((float)info.GetValue(structValue));
+                        bytes2 = Real.ToByteArray((System.Single)info.GetValue(structValue));
                         break;
                     case "Double":
-                        bytes2 = LReal.ToByteArray((double)info.GetValue(structValue));
+                        bytes2 = LReal.ToByteArray((System.Double)info.GetValue(structValue));
                         break;
                     case "String":
                         var attribute = info.GetCustomAttributes<S7StringAttribute>().SingleOrDefault();
@@ -295,8 +293,8 @@ namespace NewLife.Siemens.Types
 
                         bytes2 = attribute.Type switch
                         {
-                            S7StringType.S7String => S7String.ToByteArray((string)info.GetValue(structValue), attribute.ReservedLength),
-                            S7StringType.S7WString => S7WString.ToByteArray((string)info.GetValue(structValue), attribute.ReservedLength),
+                            S7StringType.S7String => S7String.ToByteArray((System.String)info.GetValue(structValue), attribute.ReservedLength),
+                            S7StringType.S7WString => S7WString.ToByteArray((System.String)info.GetValue(structValue), attribute.ReservedLength),
                             _ => throw new ArgumentException("Please use a valid string type for the S7StringAttribute")
                         };
                         break;
@@ -307,7 +305,7 @@ namespace NewLife.Siemens.Types
                     numBytes = Math.Ceiling(numBytes);
                     if (numBytes / 2 - Math.Floor(numBytes / 2.0) > 0)
                         numBytes++;
-                    bytePos = (int)numBytes;
+                    bytePos = (Int32)numBytes;
                     for (var bCnt = 0; bCnt < bytes2.Length; bCnt++)
                         bytes[bytePos + bCnt] = bytes2[bCnt];
                     numBytes += bytes2.Length;

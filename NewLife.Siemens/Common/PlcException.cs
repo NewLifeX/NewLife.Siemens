@@ -1,5 +1,4 @@
-﻿using System;
-using NewLife.Siemens.Models;
+﻿using NewLife.Siemens.Models;
 
 namespace NewLife.Siemens.Common
 {
@@ -19,15 +18,9 @@ namespace NewLife.Siemens.Common
         {
         }
 
-        public PlcException(ErrorCode errorCode, string message) : base(message)
-        {
-            ErrorCode = errorCode;
-        }
+        public PlcException(ErrorCode errorCode, String message) : base(message) => ErrorCode = errorCode;
 
-        public PlcException(ErrorCode errorCode, string message, Exception inner) : base(message, inner)
-        {
-            ErrorCode = errorCode;
-        }
+        public PlcException(ErrorCode errorCode, String message, Exception inner) : base(message, inner) => ErrorCode = errorCode;
 
 #if NET_FULL
         protected PlcException(System.Runtime.Serialization.SerializationInfo info,

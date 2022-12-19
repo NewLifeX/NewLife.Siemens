@@ -1,63 +1,37 @@
-﻿using System.Collections.Generic;
-
-namespace NewLife.Siemens.Types
+﻿namespace NewLife.Siemens.Types
 {
-    class ByteArray
+    internal class ByteArray
     {
-        List<byte> list = new List<byte>();
+        private List<System.Byte> list = new List<System.Byte>();
 
-        public byte this[int index]
+        public System.Byte this[Int32 index]
         {
             get => list[index];
             set => list[index] = value;
         }
 
-        public byte[] Array
+        public System.Byte[] Array => list.ToArray();
+
+        public Int32 Length => list.Count;
+
+        public ByteArray() => list = new List<System.Byte>();
+
+        public ByteArray(Int32 size) => list = new List<System.Byte>(size);
+
+        public void Clear() => list = new List<System.Byte>();
+
+        public void Add(System.Byte item) => list.Add(item);
+
+        public void AddWord(UInt16 value)
         {
-            get { return list.ToArray(); }
+            list.Add((System.Byte)(value >> 8));
+            list.Add((System.Byte)value);
         }
 
-        public int Length => list.Count;
+        public void Add(System.Byte[] items) => list.AddRange(items);
 
-        public ByteArray()
-        {
-            list = new List<byte>();
-        }
+        public void Add(IEnumerable<System.Byte> items) => list.AddRange(items);
 
-        public ByteArray(int size)
-        {
-            list = new List<byte>(size);
-        }
-
-        public void Clear()
-        {
-            list = new List<byte>();
-        }
-
-        public void Add(byte item)
-        {
-            list.Add(item);
-        }
-
-        public void AddWord(ushort value)
-        {
-            list.Add((byte)(value >> 8));
-            list.Add((byte)value);
-        }
-
-        public void Add(byte[] items)
-        {
-            list.AddRange(items);
-        }
-
-        public void Add(IEnumerable<byte> items)
-        {
-            list.AddRange(items);
-        }
-
-        public void Add(ByteArray byteArray)
-        {
-            list.AddRange(byteArray.Array);
-        }
+        public void Add(ByteArray byteArray) => list.AddRange(byteArray.Array);
     }
 }

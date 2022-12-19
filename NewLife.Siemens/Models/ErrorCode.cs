@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace NewLife.Siemens.Models
+﻿namespace NewLife.Siemens.Models
 {
     /// <summary>
     /// Types of error code that can be set after a function is called

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace NewLife.Siemens.Types
+﻿namespace NewLife.Siemens.Types
 {
     /// <summary>
     /// Converts the Timer data type to C# data type
@@ -10,9 +8,9 @@ namespace NewLife.Siemens.Types
         /// <summary>
         /// Converts the timer bytes to a double
         /// </summary>
-        public static double FromByteArray(byte[] bytes)
+        public static System.Double FromByteArray(System.Byte[] bytes)
         {
-            double wert = 0;
+            System.Double wert = 0;
 
             wert = (bytes[0] & 0x0F) * 100.0;
             wert += (bytes[1] >> 4 & 0x0F) * 10.0;
@@ -43,11 +41,11 @@ namespace NewLife.Siemens.Types
         /// <summary>
         /// Converts a ushort (UInt16) to an array of bytes formatted as time
         /// </summary>
-        public static byte[] ToByteArray(UInt16 value)
+        public static System.Byte[] ToByteArray(UInt16 value)
         {
-            var bytes = new byte[2];
-            bytes[1] = (byte)(value & 0xFF);
-            bytes[0] = (byte)(value >> 8 & 0xFF);
+            var bytes = new System.Byte[2];
+            bytes[1] = (System.Byte)(value & 0xFF);
+            bytes[0] = (System.Byte)(value >> 8 & 0xFF);
 
             return bytes;
         }
@@ -55,7 +53,7 @@ namespace NewLife.Siemens.Types
         /// <summary>
         /// Converts an array of ushorts (Uint16) to an array of bytes formatted as time
         /// </summary>
-        public static byte[] ToByteArray(UInt16[] value)
+        public static System.Byte[] ToByteArray(UInt16[] value)
         {
             var arr = new ByteArray();
             foreach (var val in value)
@@ -68,13 +66,13 @@ namespace NewLife.Siemens.Types
         /// </summary>
         /// <param name="bytes"></param>
         /// <returns></returns>
-        public static double[] ToArray(byte[] bytes)
+        public static System.Double[] ToArray(System.Byte[] bytes)
         {
-            var values = new double[bytes.Length / 2];
+            var values = new System.Double[bytes.Length / 2];
 
             var counter = 0;
             for (var cnt = 0; cnt < bytes.Length / 2; cnt++)
-                values[cnt] = FromByteArray(new byte[] { bytes[counter++], bytes[counter++] });
+                values[cnt] = FromByteArray(new System.Byte[] { bytes[counter++], bytes[counter++] });
 
             return values;
         }

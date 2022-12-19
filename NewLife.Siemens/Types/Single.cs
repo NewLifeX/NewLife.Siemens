@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace NewLife.Siemens.Types
+﻿namespace NewLife.Siemens.Types
 {
     /// <summary>
     /// Contains the conversion methods to convert Real from S7 plc to C# float.
@@ -11,12 +9,12 @@ namespace NewLife.Siemens.Types
         /// <summary>
         /// Converts a S7 Real (4 bytes) to float
         /// </summary>
-        public static float FromByteArray(byte[] bytes) => Real.FromByteArray(bytes);
+        public static System.Single FromByteArray(System.Byte[] bytes) => Real.FromByteArray(bytes);
 
         /// <summary>
         /// Converts a S7 DInt to float
         /// </summary>
-        public static float FromDWord(Int32 value)
+        public static System.Single FromDWord(Int32 value)
         {
             var b = DInt.ToByteArray(value);
             var d = FromByteArray(b);
@@ -26,7 +24,7 @@ namespace NewLife.Siemens.Types
         /// <summary>
         /// Converts a S7 DWord to float
         /// </summary>
-        public static float FromDWord(UInt32 value)
+        public static System.Single FromDWord(UInt32 value)
         {
             var b = DWord.ToByteArray(value);
             var d = FromByteArray(b);
@@ -37,12 +35,12 @@ namespace NewLife.Siemens.Types
         /// <summary>
         /// Converts a double to S7 Real (4 bytes)
         /// </summary>
-        public static byte[] ToByteArray(float value) => Real.ToByteArray(value);
+        public static System.Byte[] ToByteArray(System.Single value) => Real.ToByteArray(value);
 
         /// <summary>
         /// Converts an array of float to an array of bytes 
         /// </summary>
-        public static byte[] ToByteArray(float[] value)
+        public static System.Byte[] ToByteArray(System.Single[] value)
         {
             var arr = new ByteArray();
             foreach (var val in value)
@@ -53,13 +51,13 @@ namespace NewLife.Siemens.Types
         /// <summary>
         /// Converts an array of S7 Real to an array of float
         /// </summary>
-        public static float[] ToArray(byte[] bytes)
+        public static System.Single[] ToArray(System.Byte[] bytes)
         {
-            var values = new float[bytes.Length / 4];
+            var values = new System.Single[bytes.Length / 4];
 
             var counter = 0;
             for (var cnt = 0; cnt < bytes.Length / 4; cnt++)
-                values[cnt] = FromByteArray(new byte[] { bytes[counter++], bytes[counter++], bytes[counter++], bytes[counter++] });
+                values[cnt] = FromByteArray(new System.Byte[] { bytes[counter++], bytes[counter++], bytes[counter++], bytes[counter++] });
 
             return values;
         }

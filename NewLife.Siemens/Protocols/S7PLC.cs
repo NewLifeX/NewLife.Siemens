@@ -1,7 +1,6 @@
 ﻿using System.Net.Sockets;
 using NewLife.Siemens.Common;
 using NewLife.Siemens.Models;
-using NewLife.Siemens;
 using InvalidDataException = NewLife.Siemens.Common.InvalidDataException;
 
 namespace NewLife.Siemens.Protocols;
@@ -34,111 +33,111 @@ public partial class S7PLC : DisposeBase
     /// <summary>最大PDU大小</summary>
     public Int32 MaxPDUSize { get; private set; } = 240;
 
-    private byte[] plcHead1 = new byte[22]
+    private readonly Byte[] plcHead1 = new Byte[22]
 {
-      (byte) 3,
-      (byte) 0,
-      (byte) 0,
-      (byte) 22,
-      (byte) 17,
-      (byte) 224,
-      (byte) 0,
-      (byte) 0,
-      (byte) 0,
-      (byte) 1,
-      (byte) 0,
-      (byte) 192,
-      (byte) 1,
-      (byte) 10,
-      (byte) 193,
-      (byte) 2,
-      (byte) 1,
-      (byte) 2,
-      (byte) 194,
-      (byte) 2,
-      (byte) 1,
-      (byte) 0
+       3,
+       0,
+       0,
+       22,
+       17,
+       224,
+       0,
+       0,
+       0,
+       1,
+       0,
+       192,
+       1,
+       10,
+       193,
+       2,
+       1,
+       2,
+       194,
+       2,
+       1,
+       0
 };
-    private byte[] plcHead2 = new byte[25]
+    private readonly Byte[] plcHead2 = new Byte[25]
     {
-      (byte) 3,
-      (byte) 0,
-      (byte) 0,
-      (byte) 25,
-      (byte) 2,
-      (byte) 240,
-      (byte) 128,
-      (byte) 50,
-      (byte) 1,
-      (byte) 0,
-      (byte) 0,
-      (byte) 4,
-      (byte) 0,
-      (byte) 0,
-      (byte) 8,
-      (byte) 0,
-      (byte) 0,
-      (byte) 240,
-      (byte) 0,
-      (byte) 0,
-      (byte) 1,
-      (byte) 0,
-      (byte) 1,
-      (byte) 1,
-      (byte) 224
+       3,
+       0,
+       0,
+       25,
+       2,
+       240,
+       128,
+       50,
+       1,
+       0,
+       0,
+       4,
+       0,
+       0,
+       8,
+       0,
+       0,
+       240,
+       0,
+       0,
+       1,
+       0,
+       1,
+       1,
+       224
     };
-    private byte[] plcHead1_200smart = new byte[22]
+    private readonly Byte[] plcHead1_200smart = new Byte[22]
     {
-      (byte) 3,
-      (byte) 0,
-      (byte) 0,
-      (byte) 22,
-      (byte) 17,
-      (byte) 224,
-      (byte) 0,
-      (byte) 0,
-      (byte) 0,
-      (byte) 1,
-      (byte) 0,
-      (byte) 193,
-      (byte) 2,
-      (byte) 16,
-      (byte) 0,
-      (byte) 194,
-      (byte) 2,
-      (byte) 3,
-      (byte) 0,
-      (byte) 192,
-      (byte) 1,
-      (byte) 10
+       3,
+       0,
+       0,
+       22,
+       17,
+       224,
+       0,
+       0,
+       0,
+       1,
+       0,
+       193,
+       2,
+       16,
+       0,
+       194,
+       2,
+       3,
+       0,
+       192,
+       1,
+       10
     };
-    private byte[] plcHead2_200smart = new byte[25]
+    private readonly Byte[] plcHead2_200smart = new Byte[25]
 {
-      (byte) 3,
-      (byte) 0,
-      (byte) 0,
-      (byte) 25,
-      (byte) 2,
-      (byte) 240,
-      (byte) 128,
-      (byte) 50,
-      (byte) 1,
-      (byte) 0,
-      (byte) 0,
-      (byte) 204,
-      (byte) 193,
-      (byte) 0,
-      (byte) 8,
-      (byte) 0,
-      (byte) 0,
-      (byte) 240,
-      (byte) 0,
-      (byte) 0,
-      (byte) 1,
-      (byte) 0,
-      (byte) 1,
-      (byte) 3,
-      (byte) 192
+       3,
+       0,
+       0,
+       25,
+       2,
+       240,
+       128,
+       50,
+       1,
+       0,
+       0,
+       204,
+       193,
+       0,
+       8,
+       0,
+       0,
+       240,
+       0,
+       0,
+       1,
+       0,
+       1,
+       3,
+       192
 };
     private TcpClient _client;
     private NetworkStream _stream;
@@ -188,8 +187,8 @@ public partial class S7PLC : DisposeBase
         {
             //await queue.Enqueue(async () =>
             //{
-                cancellationToken.ThrowIfCancellationRequested();
-                await EstablishConnection(_stream, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            await EstablishConnection(_stream, cancellationToken).ConfigureAwait(false);
             //}).ConfigureAwait(false);
         }
         catch (Exception)
@@ -212,7 +211,7 @@ public partial class S7PLC : DisposeBase
 
         if (response.PDUType != COTP.PduType.ConnectionConfirmed)
         {
-            throw new Common.InvalidDataException("Connection request was denied", response.TPkt.Data, 1, 0x0d);
+            throw new InvalidDataException("Connection request was denied", response.TPkt.Data, 1, 0x0d);
         }
     }
 
@@ -304,27 +303,27 @@ public partial class S7PLC : DisposeBase
     /// </summary>
     /// <param name="amount"></param>
     /// <returns></returns>
-    private static void BuildHeaderPackage(System.IO.MemoryStream stream, int amount = 1)
+    private static void BuildHeaderPackage(MemoryStream stream, Int32 amount = 1)
     {
         //header size = 19 bytes
-        stream.WriteByteArray(new byte[] { 0x03, 0x00 });
+        stream.WriteByteArray(new Byte[] { 0x03, 0x00 });
         //complete package size
-        stream.WriteByteArray(Types.Int.ToByteArray((short)(19 + (12 * amount))));
-        stream.WriteByteArray(new byte[] { 0x02, 0xf0, 0x80, 0x32, 0x01, 0x00, 0x00, 0x00, 0x00 });
+        stream.WriteByteArray(Types.Int.ToByteArray((Int16)(19 + (12 * amount))));
+        stream.WriteByteArray(new Byte[] { 0x02, 0xf0, 0x80, 0x32, 0x01, 0x00, 0x00, 0x00, 0x00 });
         //data part size
-        stream.WriteByteArray(Types.Word.ToByteArray((ushort)(2 + (amount * 12))));
-        stream.WriteByteArray(new byte[] { 0x00, 0x00, 0x04 });
+        stream.WriteByteArray(Types.Word.ToByteArray((UInt16)(2 + (amount * 12))));
+        stream.WriteByteArray(new Byte[] { 0x00, 0x00, 0x04 });
         //amount of requests
-        stream.WriteByte((byte)amount);
+        stream.WriteByte((Byte)amount);
     }
 
-    private byte[] RequestTsdu(byte[] requestData) => RequestTsdu(requestData, 0, requestData.Length);
+    private Byte[] RequestTsdu(Byte[] requestData) => RequestTsdu(requestData, 0, requestData.Length);
 
-    private byte[] RequestTsdu(byte[] requestData, int offset, int length, CancellationToken cancellationToken = default)
+    private Byte[] RequestTsdu(Byte[] requestData, Int32 offset, Int32 length, CancellationToken cancellationToken = default)
     {
         var stream = GetStreamIfAvailable();
 
-        return 
+        return
             //queue.Enqueue(() =>
             NoLockRequestTsduAsync(stream, requestData, offset, length, cancellationToken).GetAwaiter().GetResult();
         //)
@@ -342,10 +341,10 @@ public partial class S7PLC : DisposeBase
     /// <param name="startByteAdr">Start byte address. If you want to read DB1.DBW200, this is 200.</param>
     /// <param name="count">Byte count, if you want to read 120 bytes, set this to 120.</param>
     /// <returns>Returns the bytes in an array</returns>
-    public byte[] ReadBytes(DataType dataType, int db, int startByteAdr, int count)
+    public Byte[] ReadBytes(DataType dataType, Int32 db, Int32 startByteAdr, Int32 count)
     {
-        var result = new byte[count];
-        int index = 0;
+        var result = new Byte[count];
+        var index = 0;
         while (count > 0)
         {
             //This works up to MaxPDUSize-1 on SNAP7. But not MaxPDUSize-0.
@@ -357,13 +356,13 @@ public partial class S7PLC : DisposeBase
         return result;
     }
 
-    private void ReadBytesWithSingleRequest(DataType dataType, int db, int startByteAdr, byte[] buffer, int offset, int count)
+    private void ReadBytesWithSingleRequest(DataType dataType, Int32 db, Int32 startByteAdr, Byte[] buffer, Int32 offset, Int32 count)
     {
         try
         {
             // first create the header
-            int packageSize = 19 + 12; // 19 header + 12 for 1 request
-            var package = new System.IO.MemoryStream(packageSize);
+            var packageSize = 19 + 12; // 19 header + 12 for 1 request
+            var package = new MemoryStream(packageSize);
             BuildHeaderPackage(package);
             // package.Add(0x02);  // datenart
             BuildReadDataRequestPackage(package, dataType, db, startByteAdr, count);
@@ -389,34 +388,34 @@ public partial class S7PLC : DisposeBase
     /// <param name="startByteAdr">Start address of the byte</param>
     /// <param name="count">Number of bytes to be read</param>
     /// <returns></returns>
-    private static void BuildReadDataRequestPackage(System.IO.MemoryStream stream, DataType dataType, int db, int startByteAdr, int count = 1)
+    private static void BuildReadDataRequestPackage(MemoryStream stream, DataType dataType, Int32 db, Int32 startByteAdr, Int32 count = 1)
     {
         //single data req = 12
-        stream.WriteByteArray(new byte[] { 0x12, 0x0a, 0x10 });
+        stream.WriteByteArray(new Byte[] { 0x12, 0x0a, 0x10 });
         switch (dataType)
         {
             case DataType.Timer:
             case DataType.Counter:
-                stream.WriteByte((byte)dataType);
+                stream.WriteByte((Byte)dataType);
                 break;
             default:
                 stream.WriteByte(0x02);
                 break;
         }
 
-        stream.WriteByteArray(Types.Word.ToByteArray((ushort)(count)));
-        stream.WriteByteArray(Types.Word.ToByteArray((ushort)(db)));
-        stream.WriteByte((byte)dataType);
-        var overflow = (int)(startByteAdr * 8 / 0xffffU); // handles words with address bigger than 8191
-        stream.WriteByte((byte)overflow);
+        stream.WriteByteArray(Types.Word.ToByteArray((UInt16)(count)));
+        stream.WriteByteArray(Types.Word.ToByteArray((UInt16)(db)));
+        stream.WriteByte((Byte)dataType);
+        var overflow = (Int32)(startByteAdr * 8 / 0xffffU); // handles words with address bigger than 8191
+        stream.WriteByte((Byte)overflow);
         switch (dataType)
         {
             case DataType.Timer:
             case DataType.Counter:
-                stream.WriteByteArray(Types.Word.ToByteArray((ushort)(startByteAdr)));
+                stream.WriteByteArray(Types.Word.ToByteArray((UInt16)(startByteAdr)));
                 break;
             default:
-                stream.WriteByteArray(Types.Word.ToByteArray((ushort)((startByteAdr) * 8)));
+                stream.WriteByteArray(Types.Word.ToByteArray((UInt16)((startByteAdr) * 8)));
                 break;
         }
     }
@@ -431,10 +430,10 @@ public partial class S7PLC : DisposeBase
     /// <param name="db">Address of the memory area (if you want to read DB1, this is set to 1). This must be set also for other memory area types: counters, timers,etc.</param>
     /// <param name="startByteAdr">Start byte address. If you want to write DB1.DBW200, this is 200.</param>
     /// <param name="value">Bytes to write. If more than 200, multiple requests will be made.</param>
-    public void WriteBytes(DataType dataType, int db, int startByteAdr, byte[] value)
+    public void WriteBytes(DataType dataType, Int32 db, Int32 startByteAdr, Byte[] value)
     {
-        int localIndex = 0;
-        int count = value.Length;
+        var localIndex = 0;
+        var count = value.Length;
         while (count > 0)
         {
             //TODO: Figure out how to use MaxPDUSize here
@@ -447,7 +446,7 @@ public partial class S7PLC : DisposeBase
         }
     }
 
-    private void WriteBytesWithASingleRequest(DataType dataType, int db, int startByteAdr, byte[] value, int dataOffset, int count)
+    private void WriteBytesWithASingleRequest(DataType dataType, Int32 db, Int32 startByteAdr, Byte[] value, Int32 dataOffset, Int32 count)
     {
         try
         {
@@ -462,30 +461,30 @@ public partial class S7PLC : DisposeBase
         }
     }
 
-    private byte[] BuildWriteBytesPackage(DataType dataType, int db, int startByteAdr, byte[] value, int dataOffset, int count)
+    private Byte[] BuildWriteBytesPackage(DataType dataType, Int32 db, Int32 startByteAdr, Byte[] value, Int32 dataOffset, Int32 count)
     {
-        int varCount = count;
+        var varCount = count;
         // first create the header
-        int packageSize = 35 + varCount;
-        var package = new MemoryStream(new byte[packageSize]);
+        var packageSize = 35 + varCount;
+        var package = new MemoryStream(new Byte[packageSize]);
 
         package.WriteByte(3);
         package.WriteByte(0);
         //complete package size
-        package.WriteByteArray(Types.Int.ToByteArray((short)packageSize));
-        package.WriteByteArray(new byte[] { 2, 0xf0, 0x80, 0x32, 1, 0, 0 });
-        package.WriteByteArray(Types.Word.ToByteArray((ushort)(varCount - 1)));
-        package.WriteByteArray(new byte[] { 0, 0x0e });
-        package.WriteByteArray(Types.Word.ToByteArray((ushort)(varCount + 4)));
-        package.WriteByteArray(new byte[] { 0x05, 0x01, 0x12, 0x0a, 0x10, 0x02 });
-        package.WriteByteArray(Types.Word.ToByteArray((ushort)varCount));
-        package.WriteByteArray(Types.Word.ToByteArray((ushort)(db)));
-        package.WriteByte((byte)dataType);
-        var overflow = (int)(startByteAdr * 8 / 0xffffU); // handles words with address bigger than 8191
-        package.WriteByte((byte)overflow);
-        package.WriteByteArray(Types.Word.ToByteArray((ushort)(startByteAdr * 8)));
-        package.WriteByteArray(new byte[] { 0, 4 });
-        package.WriteByteArray(Types.Word.ToByteArray((ushort)(varCount * 8)));
+        package.WriteByteArray(Types.Int.ToByteArray((Int16)packageSize));
+        package.WriteByteArray(new Byte[] { 2, 0xf0, 0x80, 0x32, 1, 0, 0 });
+        package.WriteByteArray(Types.Word.ToByteArray((UInt16)(varCount - 1)));
+        package.WriteByteArray(new Byte[] { 0, 0x0e });
+        package.WriteByteArray(Types.Word.ToByteArray((UInt16)(varCount + 4)));
+        package.WriteByteArray(new Byte[] { 0x05, 0x01, 0x12, 0x0a, 0x10, 0x02 });
+        package.WriteByteArray(Types.Word.ToByteArray((UInt16)varCount));
+        package.WriteByteArray(Types.Word.ToByteArray((UInt16)(db)));
+        package.WriteByte((Byte)dataType);
+        var overflow = (Int32)(startByteAdr * 8 / 0xffffU); // handles words with address bigger than 8191
+        package.WriteByte((Byte)overflow);
+        package.WriteByteArray(Types.Word.ToByteArray((UInt16)(startByteAdr * 8)));
+        package.WriteByteArray(new Byte[] { 0, 4 });
+        package.WriteByteArray(Types.Word.ToByteArray((UInt16)(varCount * 8)));
 
         // now join the header and the data
         package.Write(value, dataOffset, count);
@@ -575,19 +574,19 @@ $"Received {s7Data.Length} bytes: '{BitConverter.ToString(s7Data)}', expected {e
         return _stream;
     }
 
-    private byte[] GetS7ConnectionSetup()
+    private Byte[] GetS7ConnectionSetup()
     {
         if (CPU == CpuType.S7200Smart)
         {
             return plcHead2_200smart;
         }
 
-        return new byte[] {  3, 0, 0, 25, 2, 240, 128, 50, 1, 0, 0, 255, 255, 0, 8, 0, 0, 240, 0, 0, 3, 0, 3,
+        return new Byte[] {  3, 0, 0, 25, 2, 240, 128, 50, 1, 0, 0, 255, 255, 0, 8, 0, 0, 240, 0, 0, 3, 0, 3,
                     3, 192 // Use 960 PDU size
             };
     }
 
-    private async Task<byte[]> NoLockRequestTsduAsync(Stream stream, byte[] requestData, int offset, int length,
+    private async Task<Byte[]> NoLockRequestTsduAsync(Stream stream, Byte[] requestData, Int32 offset, Int32 length,
     CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -615,7 +614,7 @@ $"Received {s7Data.Length} bytes: '{BitConverter.ToString(s7Data)}', expected {e
     /// <param name="varType"></param>
     /// <param name="varCount"></param>
     /// <returns>Byte lenght of variable</returns>
-    internal static int VarTypeToByteLength(VarType varType, int varCount = 1)
+    internal static Int32 VarTypeToByteLength(VarType varType, Int32 varCount = 1)
     {
         switch (varType)
         {

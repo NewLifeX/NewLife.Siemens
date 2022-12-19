@@ -1,5 +1,4 @@
-﻿using System;
-using NewLife.Siemens.Common;
+﻿using NewLife.Siemens.Common;
 using NewLife.Siemens.Models;
 using NewLife.Siemens.Protocols;
 
@@ -23,27 +22,27 @@ namespace NewLife.Siemens.Types
         /// <summary>
         /// Address of memory area to read (example: for DB1 this value is 1, for T45 this value is 45)
         /// </summary>
-        public int DB { get; set; }
+        public Int32 DB { get; set; }
 
         /// <summary>
         /// Address of the first byte to read
         /// </summary>
-        public int StartByteAdr { get; set; }
+        public Int32 StartByteAdr { get; set; }
 
         /// <summary>
         /// Addess of bit to read from StartByteAdr
         /// </summary>
-        public byte BitAdr { get; set; }
+        public System.Byte BitAdr { get; set; }
 
         /// <summary>
         /// Number of variables to read
         /// </summary>
-        public int Count { get; set; }
+        public Int32 Count { get; set; }
 
         /// <summary>
         /// Contains the value of the memory area after the read has been executed
         /// </summary>
-        public object Value { get; set; }
+        public Object Value { get; set; }
 
         /// <summary>
         /// Create an instance of DataItem
@@ -60,7 +59,7 @@ namespace NewLife.Siemens.Types
         /// <param name="address">The address to create the DataItem for.</param>
         /// <returns>A new <see cref="DataItem"/> instance with properties parsed from <paramref name="address"/>.</returns>
         /// <remarks>The <see cref="Count" /> property is not parsed from the address.</remarks>
-        public static DataItem FromAddress(string address)
+        public static DataItem FromAddress(System.String address)
         {
             PLCAddress.Parse(address, out var dataType, out var dbNumber, out var varType, out var startByte,
                 out var bitNumber);
@@ -71,7 +70,7 @@ namespace NewLife.Siemens.Types
                 DB = dbNumber,
                 VarType = varType,
                 StartByteAdr = startByte,
-                BitAdr = (byte)(bitNumber == -1 ? 0 : bitNumber)
+                BitAdr = (System.Byte)(bitNumber == -1 ? 0 : bitNumber)
             };
         }
 
@@ -81,7 +80,7 @@ namespace NewLife.Siemens.Types
         /// <param name="address">The address to create the DataItem for.</param>
         /// <param name="value">The value to be applied to the DataItem.</param>
         /// <returns>A new <see cref="DataItem"/> instance with properties parsed from <paramref name="address"/> and the supplied value set.</returns>
-        public static DataItem FromAddressAndValue<T>(string address, T value)
+        public static DataItem FromAddressAndValue<T>(System.String address, T value)
         {
             var dataItem = FromAddress(address);
             dataItem.Value = value;
@@ -96,9 +95,6 @@ namespace NewLife.Siemens.Types
             return dataItem;
         }
 
-        internal static DataItemAddress GetDataItemAddress(DataItem dataItem)
-        {
-            return new DataItemAddress(dataItem.DataType, dataItem.DB, dataItem.StartByteAdr, Plc.VarTypeToByteLength(dataItem.VarType, dataItem.Count));
-        }
+        internal static DataItemAddress GetDataItemAddress(DataItem dataItem) => new DataItemAddress(dataItem.DataType, dataItem.DB, dataItem.StartByteAdr, Plc.VarTypeToByteLength(dataItem.VarType, dataItem.Count));
     }
 }

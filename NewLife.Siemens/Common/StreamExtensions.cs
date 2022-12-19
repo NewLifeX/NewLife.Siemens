@@ -1,9 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace NewLife.Siemens.Common
+﻿namespace NewLife.Siemens.Common
 {
     /// <summary>
     /// Extensions for Streams
@@ -18,10 +13,10 @@ namespace NewLife.Siemens.Common
         /// <param name="offset">the offset in the buffer to read into</param>
         /// <param name="count">the amount of bytes to read into the buffer</param>
         /// <returns>returns the amount of read bytes</returns>
-        public static int ReadExact(this Stream stream, byte[] buffer, int offset, int count)
+        public static Int32 ReadExact(this Stream stream, Byte[] buffer, Int32 offset, Int32 count)
         {
             var read = 0;
-            int received;
+            Int32 received;
             do
             {
                 received = stream.Read(buffer, offset + read, count - read);
@@ -40,10 +35,10 @@ namespace NewLife.Siemens.Common
         /// <param name="offset">the offset in the buffer to read into</param>
         /// <param name="count">the amount of bytes to read into the buffer</param>
         /// <returns>returns the amount of read bytes</returns>
-        public static async Task<int> ReadExactAsync(this Stream stream, byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public static async Task<Int32> ReadExactAsync(this Stream stream, Byte[] buffer, Int32 offset, Int32 count, CancellationToken cancellationToken)
         {
             var read = 0;
-            int received;
+            Int32 received;
             do
             {
                 received = await stream.ReadAsync(buffer, offset + read, count - read, cancellationToken).ConfigureAwait(false);

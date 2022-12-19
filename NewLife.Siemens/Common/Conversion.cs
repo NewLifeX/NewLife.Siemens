@@ -1,5 +1,4 @@
-﻿using System;
-using System.Globalization;
+﻿using System.Globalization;
 
 namespace NewLife.Siemens.Common
 {
@@ -13,7 +12,7 @@ namespace NewLife.Siemens.Common
         /// </summary>
         /// <param name="txt"></param>
         /// <returns></returns>
-        public static int BinStringToInt32(this string txt)
+        public static Int32 BinStringToInt32(this String txt)
         {
             var ret = 0;
 
@@ -27,9 +26,9 @@ namespace NewLife.Siemens.Common
         /// </summary>
         /// <param name="txt"></param>
         /// <returns></returns>
-        public static byte? BinStringToByte(this string txt)
+        public static Byte? BinStringToByte(this String txt)
         {
-            if (txt.Length == 8) return (byte)txt.BinStringToInt32();
+            if (txt.Length == 8) return (Byte)txt.BinStringToInt32();
             return null;
         }
 
@@ -38,13 +37,13 @@ namespace NewLife.Siemens.Common
         /// </summary>
         /// <param name="value"></param>
         /// <returns></returns>
-        public static string ValToBinString(this object value)
+        public static String ValToBinString(this Object value)
         {
             var cnt = 0;
             var cnt2 = 0;
             var x = 0;
             var txt = "";
-            long longValue = 0;
+            Int64 longValue = 0;
 
             try
             {
@@ -55,7 +54,7 @@ namespace NewLife.Siemens.Common
                     {
                         case "Byte":
                             x = 7;
-                            longValue = (byte)value;
+                            longValue = (Byte)value;
                             break;
                         case "Int16":
                             x = 15;
@@ -85,31 +84,31 @@ namespace NewLife.Siemens.Common
                     {
                         case "Byte[]":
                             x = 7;
-                            var ByteArr = (byte[])value;
+                            var ByteArr = (Byte[])value;
                             for (cnt2 = 0; cnt2 <= ByteArr.Length - 1; cnt2++)
                                 for (cnt = x; cnt >= 0; cnt += -1)
-                                    if ((ByteArr[cnt2] & (byte)Math.Pow(2, cnt)) > 0) txt += "1"; else txt += "0";
+                                    if ((ByteArr[cnt2] & (Byte)Math.Pow(2, cnt)) > 0) txt += "1"; else txt += "0";
                             break;
                         case "Int16[]":
                             x = 15;
                             var Int16Arr = (Int16[])value;
                             for (cnt2 = 0; cnt2 <= Int16Arr.Length - 1; cnt2++)
                                 for (cnt = x; cnt >= 0; cnt += -1)
-                                    if ((Int16Arr[cnt2] & (byte)Math.Pow(2, cnt)) > 0) txt += "1"; else txt += "0";
+                                    if ((Int16Arr[cnt2] & (Byte)Math.Pow(2, cnt)) > 0) txt += "1"; else txt += "0";
                             break;
                         case "Int32[]":
                             x = 31;
                             var Int32Arr = (Int32[])value;
                             for (cnt2 = 0; cnt2 <= Int32Arr.Length - 1; cnt2++)
                                 for (cnt = x; cnt >= 0; cnt += -1)
-                                    if ((Int32Arr[cnt2] & (byte)Math.Pow(2, cnt)) > 0) txt += "1"; else txt += "0";
+                                    if ((Int32Arr[cnt2] & (Byte)Math.Pow(2, cnt)) > 0) txt += "1"; else txt += "0";
                             break;
                         case "Int64[]":
                             x = 63;
-                            var Int64Arr = (byte[])value;
+                            var Int64Arr = (Byte[])value;
                             for (cnt2 = 0; cnt2 <= Int64Arr.Length - 1; cnt2++)
                                 for (cnt = x; cnt >= 0; cnt += -1)
-                                    if ((Int64Arr[cnt2] & (byte)Math.Pow(2, cnt)) > 0) txt += "1"; else txt += "0";
+                                    if ((Int64Arr[cnt2] & (Byte)Math.Pow(2, cnt)) > 0) txt += "1"; else txt += "0";
                             break;
                         default:
                             throw new Exception();
@@ -129,7 +128,7 @@ namespace NewLife.Siemens.Common
         /// <param name="data"></param>
         /// <param name="bitPosition"></param>
         /// <returns></returns>
-        public static bool SelectBit(this byte data, int bitPosition)
+        public static Boolean SelectBit(this Byte data, Int32 bitPosition)
         {
             var mask = 1 << bitPosition;
             var result = data & mask;
@@ -142,10 +141,10 @@ namespace NewLife.Siemens.Common
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        public static short ConvertToShort(this ushort input)
+        public static Int16 ConvertToShort(this UInt16 input)
         {
-            short output;
-            output = short.Parse(input.ToString("X"), NumberStyles.HexNumber);
+            Int16 output;
+            output = Int16.Parse(input.ToString("X"), NumberStyles.HexNumber);
             return output;
         }
 
@@ -154,10 +153,10 @@ namespace NewLife.Siemens.Common
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        public static ushort ConvertToUshort(this short input)
+        public static UInt16 ConvertToUshort(this Int16 input)
         {
-            ushort output;
-            output = ushort.Parse(input.ToString("X"), NumberStyles.HexNumber);
+            UInt16 output;
+            output = UInt16.Parse(input.ToString("X"), NumberStyles.HexNumber);
             return output;
         }
 
@@ -166,10 +165,10 @@ namespace NewLife.Siemens.Common
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        public static Int32 ConvertToInt(this uint input)
+        public static Int32 ConvertToInt(this UInt32 input)
         {
-            int output;
-            output = int.Parse(input.ToString("X"), NumberStyles.HexNumber);
+            Int32 output;
+            output = Int32.Parse(input.ToString("X"), NumberStyles.HexNumber);
             return output;
         }
 
@@ -178,10 +177,10 @@ namespace NewLife.Siemens.Common
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        public static UInt32 ConvertToUInt(this int input)
+        public static UInt32 ConvertToUInt(this Int32 input)
         {
-            uint output;
-            output = uint.Parse(input.ToString("X"), NumberStyles.HexNumber);
+            UInt32 output;
+            output = UInt32.Parse(input.ToString("X"), NumberStyles.HexNumber);
             return output;
         }
 
@@ -190,9 +189,9 @@ namespace NewLife.Siemens.Common
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        public static UInt32 ConvertToUInt(this float input)
+        public static UInt32 ConvertToUInt(this Single input)
         {
-            uint output;
+            UInt32 output;
             output = Types.DWord.FromByteArray(Types.Real.ToByteArray(input));
             return output;
         }
@@ -202,9 +201,9 @@ namespace NewLife.Siemens.Common
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        public static float ConvertToFloat(this uint input)
+        public static Single ConvertToFloat(this UInt32 input)
         {
-            float output;
+            Single output;
             output = Types.Real.FromByteArray(Types.DWord.ToByteArray(input));
             return output;
         }

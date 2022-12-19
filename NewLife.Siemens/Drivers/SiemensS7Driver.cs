@@ -26,10 +26,7 @@ public class SiemensS7Driver : DriverBase
     /// 销毁时，关闭连接
     /// </summary>
     /// <param name="disposing"></param>
-    protected override void Dispose(Boolean disposing)
-    {
-        base.Dispose(disposing);
-    }
+    protected override void Dispose(Boolean disposing) => base.Dispose(disposing);
     #endregion
 
     #region 方法
@@ -87,7 +84,7 @@ public class SiemensS7Driver : DriverBase
                     //var ip = address.Substring(0, p);
                     var ip = address[..p];
 
-                    _plcConn = new S7PLC((CpuType)cpuType, ip, rack, slot)
+                    _plcConn = new S7PLC(cpuType, ip, rack, slot)
                     {
                         Timeout = 5000,
                         Port = address.Substring(p + 1).ToInt(),

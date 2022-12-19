@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using NewLife.Siemens.Common;
+﻿using NewLife.Siemens.Common;
 
 namespace NewLife.Siemens.Protocols
 {
     internal class COTP
     {
-        public enum PduType : byte
+        public enum PduType : Byte
         {
             Data = 0xf0,
             ConnectionConfirmed = 0xd0
@@ -18,11 +15,11 @@ namespace NewLife.Siemens.Protocols
         public class TPDU
         {
             public TPKT TPkt { get; }
-            public byte HeaderLength;
+            public Byte HeaderLength;
             public PduType PDUType;
-            public int TPDUNumber;
-            public byte[] Data;
-            public bool LastDataUnit;
+            public Int32 TPDUNumber;
+            public Byte[] Data;
+            public Boolean LastDataUnit;
 
             public TPDU(TPKT tPKT)
             {
@@ -37,13 +34,13 @@ namespace NewLife.Siemens.Protocols
                         var flags = tPKT.Data[2];
                         TPDUNumber = flags & 0x7F;
                         LastDataUnit = (flags & 0x80) > 0;
-                        Data = new byte[tPKT.Data.Length - HeaderLength - 1]; // substract header length byte + header length.
+                        Data = new Byte[tPKT.Data.Length - HeaderLength - 1]; // substract header length byte + header length.
                         Array.Copy(tPKT.Data, HeaderLength + 1, Data, 0, Data.Length);
                         return;
                     }
                     //TODO: Handle other PDUTypes
                 }
-                Data = new byte[0];
+                Data = new Byte[0];
             }
 
             /// <summary>
@@ -62,9 +59,9 @@ namespace NewLife.Siemens.Protocols
                 return new TPDU(tpkt);
             }
 
-            public override string ToString()
+            public override String ToString()
             {
-                return string.Format("Length: {0} PDUType: {1} TPDUNumber: {2} Last: {3} Segment Data: {4}",
+                return String.Format("Length: {0} PDUType: {1} TPDUNumber: {2} Last: {3} Segment Data: {4}",
                     HeaderLength,
                     PDUType,
                     TPDUNumber,
@@ -86,7 +83,7 @@ namespace NewLife.Siemens.Protocols
             /// </summary>
             /// <param name="stream">The stream to read from</param>
             /// <returns>Data in TSDU</returns>
-            public static async Task<byte[]> ReadAsync(Stream stream, CancellationToken cancellationToken)
+            public static async Task<Byte[]> ReadAsync(Stream stream, CancellationToken cancellationToken)
             {
                 var segment = await TPDU.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
 
@@ -96,7 +93,7 @@ namespace NewLife.Siemens.Protocols
                 }
 
                 // More segments are expected, prepare a buffer to store all data
-                var buffer = new byte[segment.Data.Length];
+                var buffer = new Byte[segment.Data.Length];
                 Array.Copy(segment.Data, buffer, segment.Data.Length);
 
                 while (!segment.LastDataUnit)

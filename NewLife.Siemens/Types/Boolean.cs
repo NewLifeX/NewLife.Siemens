@@ -8,7 +8,7 @@
         /// <summary>
         /// Returns the value of a bit in a bit, given the address of the bit
         /// </summary>
-        public static System.Boolean GetValue(byte value, int bit) => (((int)value & (1 << bit)) != 0);
+        public static System.Boolean GetValue(System.Byte value, Int32 bit) => ((value & (1 << bit)) != 0);
 
         /// <summary>
         /// Sets the value of a bit to 1 (true), given the address of the bit. Returns
@@ -17,7 +17,7 @@
         /// <param name="value">The input value to modify.</param>
         /// <param name="bit">The index (zero based) of the bit to set.</param>
         /// <returns>The modified value with the bit at index set.</returns>
-        public static byte SetBit(byte value, int bit)
+        public static System.Byte SetBit(System.Byte value, Int32 bit)
         {
             SetBit(ref value, bit);
 
@@ -29,7 +29,7 @@
         /// </summary>
         /// <param name="value">The value to modify.</param>
         /// <param name="bit">The index (zero based) of the bit to set.</param>
-        public static void SetBit(ref byte value, Int32 bit) => value = (byte)((value | 1 << bit) & 0xFF);
+        public static void SetBit(ref System.Byte value, Int32 bit) => value = (System.Byte)((value | 1 << bit) & 0xFF);
 
         /// <summary>
         /// Resets the value of a bit to 0 (false), given the address of the bit. Returns
@@ -38,7 +38,7 @@
         /// <param name="value">The input value to modify.</param>
         /// <param name="bit">The index (zero based) of the bit to clear.</param>
         /// <returns>The modified value with the bit at index cleared.</returns>
-        public static byte ClearBit(byte value, int bit)
+        public static System.Byte ClearBit(System.Byte value, Int32 bit)
         {
             ClearBit(ref value, bit);
 
@@ -50,6 +50,6 @@
         /// </summary>
         /// <param name="value">The input value to modify.</param>
         /// <param name="bit">The index (zero based) of the bit to clear.</param>
-        public static void ClearBit(ref byte value, int bit) => value = (byte)(value & ~(1 << bit) & 0xFF);
+        public static void ClearBit(ref System.Byte value, Int32 bit) => value = (System.Byte)(value & ~(1 << bit) & 0xFF);
     }
 }

@@ -1,10 +1,6 @@
-﻿using NewLife.Siemens.Common;
-using NewLife.Siemens.Models;
+﻿using NewLife.Siemens.Models;
 using NewLife.Siemens.Protocols;
 using NewLife.Siemens.Types;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using DateTime = NewLife.Siemens.Types.DateTime;
 
 namespace NewLife.Siemens.Common
@@ -16,18 +12,18 @@ namespace NewLife.Siemens.Common
         /// </summary>
         /// <param name="amount"></param>
         /// <returns></returns>
-        private static void BuildHeaderPackage(MemoryStream stream, int amount = 1)
+        private static void BuildHeaderPackage(MemoryStream stream, Int32 amount = 1)
         {
             //header size = 19 bytes
-            stream.WriteByteArray(new byte[] { 0x03, 0x00 });
+            stream.WriteByteArray(new System.Byte[] { 0x03, 0x00 });
             //complete package size
-            stream.WriteByteArray(Types.Int.ToByteArray((short)(19 + 12 * amount)));
-            stream.WriteByteArray(new byte[] { 0x02, 0xf0, 0x80, 0x32, 0x01, 0x00, 0x00, 0x00, 0x00 });
+            stream.WriteByteArray(Types.Int.ToByteArray((Int16)(19 + 12 * amount)));
+            stream.WriteByteArray(new System.Byte[] { 0x02, 0xf0, 0x80, 0x32, 0x01, 0x00, 0x00, 0x00, 0x00 });
             //data part size
-            stream.WriteByteArray(Types.Word.ToByteArray((ushort)(2 + amount * 12)));
-            stream.WriteByteArray(new byte[] { 0x00, 0x00, 0x04 });
+            stream.WriteByteArray(Types.Word.ToByteArray((UInt16)(2 + amount * 12)));
+            stream.WriteByteArray(new System.Byte[] { 0x00, 0x00, 0x04 });
             //amount of requests
-            stream.WriteByte((byte)amount);
+            stream.WriteByte((System.Byte)amount);
         }
 
         /// <summary>
@@ -39,34 +35,34 @@ namespace NewLife.Siemens.Common
         /// <param name="startByteAdr">Start address of the byte</param>
         /// <param name="count">Number of bytes to be read</param>
         /// <returns></returns>
-        private static void BuildReadDataRequestPackage(MemoryStream stream, DataType dataType, int db, int startByteAdr, int count = 1)
+        private static void BuildReadDataRequestPackage(MemoryStream stream, DataType dataType, Int32 db, Int32 startByteAdr, Int32 count = 1)
         {
             //single data req = 12
-            stream.WriteByteArray(new byte[] { 0x12, 0x0a, 0x10 });
+            stream.WriteByteArray(new System.Byte[] { 0x12, 0x0a, 0x10 });
             switch (dataType)
             {
                 case DataType.Timer:
                 case DataType.Counter:
-                    stream.WriteByte((byte)dataType);
+                    stream.WriteByte((System.Byte)dataType);
                     break;
                 default:
                     stream.WriteByte(0x02);
                     break;
             }
 
-            stream.WriteByteArray(Word.ToByteArray((ushort)count));
-            stream.WriteByteArray(Word.ToByteArray((ushort)db));
-            stream.WriteByte((byte)dataType);
-            var overflow = (int)(startByteAdr * 8 / 0xffffU); // handles words with address bigger than 8191
-            stream.WriteByte((byte)overflow);
+            stream.WriteByteArray(Word.ToByteArray((UInt16)count));
+            stream.WriteByteArray(Word.ToByteArray((UInt16)db));
+            stream.WriteByte((System.Byte)dataType);
+            var overflow = (Int32)(startByteAdr * 8 / 0xffffU); // handles words with address bigger than 8191
+            stream.WriteByte((System.Byte)overflow);
             switch (dataType)
             {
                 case DataType.Timer:
                 case DataType.Counter:
-                    stream.WriteByteArray(Types.Word.ToByteArray((ushort)startByteAdr));
+                    stream.WriteByteArray(Types.Word.ToByteArray((UInt16)startByteAdr));
                     break;
                 default:
-                    stream.WriteByteArray(Types.Word.ToByteArray((ushort)(startByteAdr * 8)));
+                    stream.WriteByteArray(Types.Word.ToByteArray((UInt16)(startByteAdr * 8)));
                     break;
             }
         }
@@ -79,7 +75,7 @@ namespace NewLife.Siemens.Common
         /// <param name="varCount"></param>
         /// <param name="bitAdr"></param>
         /// <returns></returns>
-        private object ParseBytes(VarType varType, byte[] bytes, int varCount, byte bitAdr = 0)
+        private Object ParseBytes(VarType varType, System.Byte[] bytes, Int32 varCount, System.Byte bitAdr = 0)
         {
             if (bytes == null || bytes.Length == 0)
                 return null;
@@ -168,7 +164,7 @@ namespace NewLife.Siemens.Common
         /// <param name="varType"></param>
         /// <param name="varCount"></param>
         /// <returns>Byte lenght of variable</returns>
-        internal static int VarTypeToByteLength(VarType varType, int varCount = 1)
+        internal static Int32 VarTypeToByteLength(VarType varType, Int32 varCount = 1)
         {
             switch (varType)
             {
@@ -201,14 +197,14 @@ namespace NewLife.Siemens.Common
             }
         }
 
-        private byte[] GetS7ConnectionSetup()
+        private System.Byte[] GetS7ConnectionSetup()
         {
-            return new byte[] {  3, 0, 0, 25, 2, 240, 128, 50, 1, 0, 0, 255, 255, 0, 8, 0, 0, 240, 0, 0, 3, 0, 3,
+            return new System.Byte[] {  3, 0, 0, 25, 2, 240, 128, 50, 1, 0, 0, 255, 255, 0, 8, 0, 0, 240, 0, 0, 3, 0, 3,
                     3, 192 // Use 960 PDU size
             };
         }
 
-        private void ParseDataIntoDataItems(byte[] s7data, List<DataItem> dataItems)
+        private void ParseDataIntoDataItems(System.Byte[] s7data, List<DataItem> dataItems)
         {
             var offset = 14;
             foreach (var dataItem in dataItems)
@@ -237,7 +233,7 @@ namespace NewLife.Siemens.Common
             }
         }
 
-        private static byte[] BuildReadRequestPackage(IList<DataItemAddress> dataItems)
+        private static System.Byte[] BuildReadRequestPackage(IList<DataItemAddress> dataItems)
         {
             var packageSize = 19 + dataItems.Count * 12;
             var package = new MemoryStream(packageSize);

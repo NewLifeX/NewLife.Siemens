@@ -1,5 +1,4 @@
-﻿using System;
-using System.Text;
+﻿using System.Text;
 using NewLife.Siemens.Common;
 using NewLife.Siemens.Models;
 
@@ -16,7 +15,7 @@ namespace NewLife.Siemens.Types
         /// </summary>
         /// <param name="bytes"></param>
         /// <returns></returns>
-        public static string FromByteArray(byte[] bytes)
+        public static System.String FromByteArray(System.Byte[] bytes)
         {
             if (bytes.Length < 4)
                 throw new PlcException(ErrorCode.ReadData, "Malformed S7 WString / too short");
@@ -46,18 +45,18 @@ namespace NewLife.Siemens.Types
         /// <param name="value">The string to convert to byte array.</param>
         /// <param name="reservedLength">The length (in characters) allocated in PLC for the string.</param>
         /// <returns>A <see cref="T:byte[]" /> containing the string header and string value with a maximum length of <paramref name="reservedLength"/> + 4.</returns>
-        public static byte[] ToByteArray(string value, int reservedLength)
+        public static System.Byte[] ToByteArray(System.String value, Int32 reservedLength)
         {
             if (value is null)
                 throw new ArgumentNullException(nameof(value));
 
             if (reservedLength > 16382) throw new ArgumentException("The maximum string length supported is 16382.");
 
-            var buffer = new byte[4 + reservedLength * 2];
-            buffer[0] = (byte)(reservedLength >> 8 & 0xFF);
-            buffer[1] = (byte)(reservedLength & 0xFF);
-            buffer[2] = (byte)(value.Length >> 8 & 0xFF);
-            buffer[3] = (byte)(value.Length & 0xFF);
+            var buffer = new System.Byte[4 + reservedLength * 2];
+            buffer[0] = (System.Byte)(reservedLength >> 8 & 0xFF);
+            buffer[1] = (System.Byte)(reservedLength & 0xFF);
+            buffer[2] = (System.Byte)(value.Length >> 8 & 0xFF);
+            buffer[3] = (System.Byte)(value.Length & 0xFF);
 
             var stringLength = Encoding.BigEndianUnicode.GetBytes(value, 0, value.Length, buffer, 4) / 2;
             if (stringLength > reservedLength) throw new ArgumentException($"The provided string length ({stringLength} is larger than the specified reserved length ({reservedLength}).");

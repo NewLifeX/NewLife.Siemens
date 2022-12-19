@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace NewLife.Siemens.Types
+﻿namespace NewLife.Siemens.Types
 {
     /// <summary>
     /// Contains the methods to convert between <see cref="T:System.DateTime"/> and S7 representation of datetime values.
@@ -26,10 +23,7 @@ namespace NewLife.Siemens.Types
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the length of
         ///   <paramref name="bytes"/> is not 8 or any value in <paramref name="bytes"/>
         ///   is outside the valid range of values.</exception>
-        public static System.DateTime FromByteArray(byte[] bytes)
-        {
-            return FromByteArrayImpl(bytes);
-        }
+        public static System.DateTime FromByteArray(System.Byte[] bytes) => FromByteArrayImpl(bytes);
 
         /// <summary>
         /// Parses an array of <see cref="T:System.DateTime"/> values from bytes.
@@ -39,7 +33,7 @@ namespace NewLife.Siemens.Types
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the length of
         ///   <paramref name="bytes"/> is not a multiple of 8 or any value in
         ///   <paramref name="bytes"/> is outside the valid range of values.</exception>
-        public static System.DateTime[] ToArray(byte[] bytes)
+        public static System.DateTime[] ToArray(System.Byte[] bytes)
         {
             if (bytes.Length % 8 != 0)
                 throw new ArgumentOutOfRangeException(nameof(bytes), bytes.Length,
@@ -49,20 +43,23 @@ namespace NewLife.Siemens.Types
             var result = new System.DateTime[bytes.Length / 8];
 
             for (var i = 0; i < cnt; i++)
-                result[i] = FromByteArrayImpl(new ArraySegment<byte>(bytes, i * 8, 8));
+                result[i] = FromByteArrayImpl(new ArraySegment<System.Byte>(bytes, i * 8, 8));
 
             return result;
         }
 
-        private static System.DateTime FromByteArrayImpl(IList<byte> bytes)
+        private static System.DateTime FromByteArrayImpl(IList<System.Byte> bytes)
         {
             if (bytes.Count != 8)
                 throw new ArgumentOutOfRangeException(nameof(bytes), bytes.Count,
                     $"Parsing a DateTime requires exactly 8 bytes of input data, input data is {bytes.Count} bytes long.");
 
-            int DecodeBcd(byte input) => 10 * (input >> 4) + (input & 0b00001111);
+            Int32 DecodeBcd(System.Byte input)
+            {
+                return 10 * (input >> 4) + (input & 0b00001111);
+            }
 
-            int ByteToYear(byte bcdYear)
+            Int32 ByteToYear(System.Byte bcdYear)
             {
                 var input = DecodeBcd(bcdYear);
                 if (input < 90) return input + 2000;
@@ -72,7 +69,7 @@ namespace NewLife.Siemens.Types
                     $"Value '{input}' is higher than the maximum '99' of S7 date and time representation.");
             }
 
-            int AssertRangeInclusive(int input, byte min, byte max, string field)
+            Int32 AssertRangeInclusive(Int32 input, System.Byte min, System.Byte max, System.String field)
             {
                 if (input < min)
                     throw new ArgumentOutOfRangeException(nameof(input), input,
@@ -105,11 +102,11 @@ namespace NewLife.Siemens.Types
         /// <exception cref="ArgumentOutOfRangeException">Thrown when the value of
         ///   <paramref name="dateTime"/> is before <see cref="P:SpecMinimumDateTime"/>
         ///   or after <see cref="P:SpecMaximumDateTime"/>.</exception>
-        public static byte[] ToByteArray(System.DateTime dateTime)
+        public static System.Byte[] ToByteArray(System.DateTime dateTime)
         {
-            byte EncodeBcd(int value)
+            System.Byte EncodeBcd(Int32 value)
             {
-                return (byte)(value / 10 << 4 | value % 10);
+                return (System.Byte)(value / 10 << 4 | value % 10);
             }
 
             if (dateTime < SpecMinimumDateTime)
@@ -120,9 +117,15 @@ namespace NewLife.Siemens.Types
                 throw new ArgumentOutOfRangeException(nameof(dateTime), dateTime,
                     $"Date time '{dateTime}' is after the maximum '{SpecMaximumDateTime}' supported in S7 date time representation.");
 
-            byte MapYear(int year) => (byte)(year < 2000 ? year - 1900 : year - 2000);
+            System.Byte MapYear(Int32 year)
+            {
+                return (System.Byte)(year < 2000 ? year - 1900 : year - 2000);
+            }
 
-            int DayOfWeekToInt(DayOfWeek dayOfWeek) => (int)dayOfWeek + 1;
+            Int32 DayOfWeekToInt(DayOfWeek dayOfWeek)
+            {
+                return (Int32)dayOfWeek + 1;
+            }
 
             return new[]
             {
@@ -133,7 +136,7 @@ namespace NewLife.Siemens.Types
                 EncodeBcd(dateTime.Minute),
                 EncodeBcd(dateTime.Second),
                 EncodeBcd(dateTime.Millisecond / 10),
-                (byte) (dateTime.Millisecond % 10 << 4 | DayOfWeekToInt(dateTime.DayOfWeek))
+                (System.Byte) (dateTime.Millisecond % 10 << 4 | DayOfWeekToInt(dateTime.DayOfWeek))
             };
         }
 
@@ -145,9 +148,9 @@ namespace NewLife.Siemens.Types
         /// <exception cref="ArgumentOutOfRangeException">Thrown when any value of
         ///   <paramref name="dateTimes"/> is before <see cref="P:SpecMinimumDateTime"/>
         ///   or after <see cref="P:SpecMaximumDateTime"/>.</exception>
-        public static byte[] ToByteArray(System.DateTime[] dateTimes)
+        public static System.Byte[] ToByteArray(System.DateTime[] dateTimes)
         {
-            var bytes = new List<byte>(dateTimes.Length * 8);
+            var bytes = new List<System.Byte>(dateTimes.Length * 8);
             foreach (var dateTime in dateTimes) bytes.AddRange(ToByteArray(dateTime));
 
             return bytes.ToArray();

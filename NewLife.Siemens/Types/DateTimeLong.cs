@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-
-namespace NewLife.Siemens.Types
+﻿namespace NewLife.Siemens.Types
 {
     /// <summary>
     /// Contains the methods to convert between <see cref="T:System.DateTime" /> and S7 representation of DateTimeLong (DTL) values.
     /// </summary>
     public static class DateTimeLong
     {
-        public const int TypeLengthInBytes = 12;
+        public const Int32 TypeLengthInBytes = 12;
         /// <summary>
         /// The minimum <see cref="T:System.DateTime" /> value supported by the specification.
         /// </summary>
@@ -30,10 +26,7 @@ namespace NewLife.Siemens.Types
         /// <paramref name="bytes" /> is not 12 or any value in <paramref name="bytes" />
         /// is outside the valid range of values.
         /// </exception>
-        public static System.DateTime FromByteArray(byte[] bytes)
-        {
-            return FromByteArrayImpl(bytes);
-        }
+        public static System.DateTime FromByteArray(System.Byte[] bytes) => FromByteArrayImpl(bytes);
 
         /// <summary>
         /// Parses an array of <see cref="T:System.DateTime" /> values from bytes.
@@ -45,7 +38,7 @@ namespace NewLife.Siemens.Types
         /// <paramref name="bytes" /> is not a multiple of 12 or any value in
         /// <paramref name="bytes" /> is outside the valid range of values.
         /// </exception>
-        public static System.DateTime[] ToArray(byte[] bytes)
+        public static System.DateTime[] ToArray(System.Byte[] bytes)
         {
             if (bytes.Length % TypeLengthInBytes != 0)
                 throw new ArgumentOutOfRangeException(nameof(bytes), bytes.Length,
@@ -56,7 +49,7 @@ namespace NewLife.Siemens.Types
 
             for (var i = 0; i < cnt; i++)
             {
-                var slice = new byte[TypeLengthInBytes];
+                var slice = new System.Byte[TypeLengthInBytes];
                 Array.Copy(bytes, i * TypeLengthInBytes, slice, 0, TypeLengthInBytes);
                 result[i] = FromByteArrayImpl(slice);
             }
@@ -64,7 +57,7 @@ namespace NewLife.Siemens.Types
             return result;
         }
 
-        private static System.DateTime FromByteArrayImpl(byte[] bytes)
+        private static System.DateTime FromByteArrayImpl(System.Byte[] bytes)
         {
             if (bytes.Length != TypeLengthInBytes)
                 throw new ArgumentOutOfRangeException(nameof(bytes), bytes.Length,
@@ -80,7 +73,7 @@ namespace NewLife.Siemens.Types
             var second = AssertRangeInclusive(bytes[7], 0, 59, "second");
             ;
 
-            var nanoseconds = AssertRangeInclusive<uint>(DWord.FromBytes(bytes[11], bytes[10], bytes[9], bytes[8]), 0,
+            var nanoseconds = AssertRangeInclusive<UInt32>(DWord.FromBytes(bytes[11], bytes[10], bytes[9], bytes[8]), 0,
                 999999999, "nanoseconds");
 
             var time = new System.DateTime(year, month, day, hour, minute, second);
@@ -97,7 +90,7 @@ namespace NewLife.Siemens.Types
         /// <paramref name="dateTime" /> is before <see cref="P:SpecMinimumDateTime" />
         /// or after <see cref="P:SpecMaximumDateTime" />.
         /// </exception>
-        public static byte[] ToByteArray(System.DateTime dateTime)
+        public static System.Byte[] ToByteArray(System.DateTime dateTime)
         {
             if (dateTime < SpecMinimumDateTime)
                 throw new ArgumentOutOfRangeException(nameof(dateTime), dateTime,
@@ -146,16 +139,16 @@ namespace NewLife.Siemens.Types
         /// <paramref name="dateTimes" /> is before <see cref="P:SpecMinimumDateTime" />
         /// or after <see cref="P:SpecMaximumDateTime" />.
         /// </exception>
-        public static byte[] ToByteArray(System.DateTime[] dateTimes)
+        public static System.Byte[] ToByteArray(System.DateTime[] dateTimes)
         {
-            var bytes = new List<byte>(dateTimes.Length * TypeLengthInBytes);
+            var bytes = new List<System.Byte>(dateTimes.Length * TypeLengthInBytes);
             foreach (var dateTime in dateTimes)
                 bytes.AddRange(ToByteArray(dateTime));
 
             return bytes.ToArray();
         }
 
-        private static T AssertRangeInclusive<T>(T input, T min, T max, string field) where T : IComparable<T>
+        private static T AssertRangeInclusive<T>(T input, T min, T max, System.String field) where T : IComparable<T>
         {
             if (input.CompareTo(min) < 0)
                 throw new ArgumentOutOfRangeException(nameof(input), input,

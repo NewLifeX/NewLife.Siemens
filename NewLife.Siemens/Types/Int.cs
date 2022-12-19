@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace NewLife.Siemens.Types
+﻿namespace NewLife.Siemens.Types
 {
     /// <summary>
     /// Contains the conversion methods to convert Int from S7 plc to C#.
@@ -10,25 +8,25 @@ namespace NewLife.Siemens.Types
         /// <summary>
         /// Converts a S7 Int (2 bytes) to short (Int16)
         /// </summary>
-        public static short FromByteArray(byte[] bytes)
+        public static Int16 FromByteArray(System.Byte[] bytes)
         {
             if (bytes.Length != 2)
                 throw new ArgumentException("Wrong number of bytes. Bytes array must contain 2 bytes.");
             // bytes[0] -> HighByte
             // bytes[1] -> LowByte
-            return (short)(bytes[1] | bytes[0] << 8);
+            return (Int16)(bytes[1] | bytes[0] << 8);
         }
 
 
         /// <summary>
         /// Converts a short (Int16) to a S7 Int byte array (2 bytes)
         /// </summary>
-        public static byte[] ToByteArray(Int16 value)
+        public static System.Byte[] ToByteArray(Int16 value)
         {
-            var bytes = new byte[2];
+            var bytes = new System.Byte[2];
 
-            bytes[0] = (byte)(value >> 8 & 0xFF);
-            bytes[1] = (byte)(value & 0xFF);
+            bytes[0] = (System.Byte)(value >> 8 & 0xFF);
+            bytes[1] = (System.Byte)(value & 0xFF);
 
             return bytes;
         }
@@ -36,15 +34,15 @@ namespace NewLife.Siemens.Types
         /// <summary>
         /// Converts an array of short (Int16) to a S7 Int byte array (2 bytes)
         /// </summary>
-        public static byte[] ToByteArray(Int16[] value)
+        public static System.Byte[] ToByteArray(Int16[] value)
         {
-            var bytes = new byte[value.Length * 2];
+            var bytes = new System.Byte[value.Length * 2];
             var bytesPos = 0;
 
-            for (var i = 0; i< value.Length; i++)
+            for (var i = 0; i < value.Length; i++)
             {
-                bytes[bytesPos++] = (byte)(value[i] >> 8 & 0xFF);
-                bytes[bytesPos++] = (byte)(value[i] & 0xFF);
+                bytes[bytesPos++] = (System.Byte)(value[i] >> 8 & 0xFF);
+                bytes[bytesPos++] = (System.Byte)(value[i] & 0xFF);
             }
             return bytes;
         }
@@ -52,7 +50,7 @@ namespace NewLife.Siemens.Types
         /// <summary>
         /// Converts an array of S7 Int to an array of short (Int16)
         /// </summary>
-        public static Int16[] ToArray(byte[] bytes)
+        public static Int16[] ToArray(System.Byte[] bytes)
         {
             var shortsCount = bytes.Length / 2;
 
@@ -60,7 +58,7 @@ namespace NewLife.Siemens.Types
 
             var counter = 0;
             for (var cnt = 0; cnt < shortsCount; cnt++)
-                values[cnt] = FromByteArray(new byte[] { bytes[counter++], bytes[counter++] });
+                values[cnt] = FromByteArray(new System.Byte[] { bytes[counter++], bytes[counter++] });
 
             return values;
         }
@@ -70,7 +68,7 @@ namespace NewLife.Siemens.Types
         /// </summary>
         /// <param name="value"></param>
         /// <returns></returns>
-        public static Int16 CWord(int value)
+        public static Int16 CWord(Int32 value)
         {
             if (value > 32767)
             {
@@ -78,7 +76,7 @@ namespace NewLife.Siemens.Types
                 value = 32768 - value;
                 value *= -1;
             }
-            return (short)value;
+            return (Int16)value;
         }
 
     }

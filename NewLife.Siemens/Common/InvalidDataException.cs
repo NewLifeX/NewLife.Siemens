@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace NewLife.Siemens.Common
+﻿namespace NewLife.Siemens.Common
 {
     public class InvalidDataException : Exception
     {
-        public byte[] ReceivedData { get; }
-        public int ErrorIndex { get; }
-        public byte ExpectedValue { get; }
+        public Byte[] ReceivedData { get; }
+        public Int32 ErrorIndex { get; }
+        public Byte ExpectedValue { get; }
 
-        public InvalidDataException(string message, byte[] receivedData, int errorIndex, byte expectedValue)
+        public InvalidDataException(String message, Byte[] receivedData, Int32 errorIndex, Byte expectedValue)
             : base(FormatMessage(message, receivedData, errorIndex, expectedValue))
         {
             ReceivedData = receivedData;
@@ -18,7 +14,7 @@ namespace NewLife.Siemens.Common
             ExpectedValue = expectedValue;
         }
 
-        private static string FormatMessage(string message, byte[] receivedData, int errorIndex, byte expectedValue)
+        private static String FormatMessage(String message, Byte[] receivedData, Int32 errorIndex, Byte expectedValue)
         {
             if (errorIndex >= receivedData.Length)
                 throw new ArgumentOutOfRangeException(nameof(errorIndex),

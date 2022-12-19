@@ -1,5 +1,4 @@
-﻿using System;
-using System.Text;
+﻿using System.Text;
 using NewLife.Siemens.Common;
 using NewLife.Siemens.Models;
 
@@ -28,13 +27,13 @@ namespace NewLife.Siemens.Types
         /// </summary>
         /// <param name="bytes"></param>
         /// <returns></returns>
-        public static string FromByteArray(byte[] bytes)
+        public static System.String FromByteArray(System.Byte[] bytes)
         {
             if (bytes.Length < 2)
                 throw new PlcException(ErrorCode.ReadData, "Malformed S7 String / too short");
 
-            int size = bytes[0];
-            int length = bytes[1];
+            Int32 size = bytes[0];
+            Int32 length = bytes[1];
             if (length > size)
                 throw new PlcException(ErrorCode.ReadData, "Malformed S7 String / length larger than capacity");
 
@@ -56,7 +55,7 @@ namespace NewLife.Siemens.Types
         /// <param name="value">The string to convert to byte array.</param>
         /// <param name="reservedLength">The length (in characters) allocated in PLC for the string.</param>
         /// <returns>A <see cref="T:byte[]" /> containing the string header and string value with a maximum length of <paramref name="reservedLength"/> + 2.</returns>
-        public static byte[] ToByteArray(string value, int reservedLength)
+        public static System.Byte[] ToByteArray(System.String value, Int32 reservedLength)
         {
             if (value is null)
                 throw new ArgumentNullException(nameof(value));
@@ -66,10 +65,10 @@ namespace NewLife.Siemens.Types
             var bytes = StringEncoding.GetBytes(value);
             if (bytes.Length > reservedLength) throw new ArgumentException($"The provided string length ({bytes.Length} is larger than the specified reserved length ({reservedLength}).");
 
-            var buffer = new byte[2 + reservedLength];
+            var buffer = new System.Byte[2 + reservedLength];
             Array.Copy(bytes, 0, buffer, 2, bytes.Length);
-            buffer[0] = (byte)reservedLength;
-            buffer[1] = (byte)bytes.Length;
+            buffer[0] = (System.Byte)reservedLength;
+            buffer[1] = (System.Byte)bytes.Length;
             return buffer;
         }
     }

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
+﻿using System.Reflection;
 using NewLife.Siemens.Common;
 
 namespace NewLife.Siemens.Types
@@ -26,7 +23,7 @@ namespace NewLife.Siemens.Types
 
         }
 
-        private static double GetIncreasedNumberOfBytes(double numBytes, Type type)
+        private static System.Double GetIncreasedNumberOfBytes(System.Double numBytes, Type type)
         {
             switch (type.Name)
             {
@@ -77,7 +74,7 @@ namespace NewLife.Siemens.Types
         /// </summary>
         /// <param name="instance">An instance of the class</param>
         /// <returns>the number of bytes</returns>
-        public static double GetClassSize(object instance, double numBytes = 0.0, bool isInnerProperty = false)
+        public static System.Double GetClassSize(Object instance, System.Double numBytes = 0.0, System.Boolean isInnerProperty = false)
         {
             var properties = GetAccessableProperties(instance.GetType());
             foreach (var property in properties)
@@ -104,17 +101,17 @@ namespace NewLife.Siemens.Types
             return numBytes;
         }
 
-        private static object GetPropertyValue(Type propertyType, byte[] bytes, ref double numBytes)
+        private static Object GetPropertyValue(Type propertyType, System.Byte[] bytes, ref System.Double numBytes)
         {
-            object value = null;
+            Object value = null;
 
             switch (propertyType.Name)
             {
                 case "Boolean":
                     // get the value
-                    var bytePos = (int)Math.Floor(numBytes);
-                    var bitPos = (int)((numBytes - bytePos) / 0.125);
-                    if ((bytes[bytePos] & (int)Math.Pow(2, bitPos)) != 0)
+                    var bytePos = (Int32)Math.Floor(numBytes);
+                    var bitPos = (Int32)((numBytes - bytePos) / 0.125);
+                    if ((bytes[bytePos] & (Int32)Math.Pow(2, bitPos)) != 0)
                         value = true;
                     else
                         value = false;
@@ -122,7 +119,7 @@ namespace NewLife.Siemens.Types
                     break;
                 case "Byte":
                     numBytes = Math.Ceiling(numBytes);
-                    value = bytes[(int)numBytes];
+                    value = bytes[(Int32)numBytes];
                     numBytes++;
                     break;
                 case "Int16":
@@ -130,7 +127,7 @@ namespace NewLife.Siemens.Types
                     if (numBytes / 2 - Math.Floor(numBytes / 2.0) > 0)
                         numBytes++;
                     // hier auswerten
-                    var source = Word.FromBytes(bytes[(int)numBytes + 1], bytes[(int)numBytes]);
+                    var source = Word.FromBytes(bytes[(Int32)numBytes + 1], bytes[(Int32)numBytes]);
                     value = source.ConvertToShort();
                     numBytes += 2;
                     break;
@@ -139,7 +136,7 @@ namespace NewLife.Siemens.Types
                     if (numBytes / 2 - Math.Floor(numBytes / 2.0) > 0)
                         numBytes++;
                     // hier auswerten
-                    value = Word.FromBytes(bytes[(int)numBytes + 1], bytes[(int)numBytes]);
+                    value = Word.FromBytes(bytes[(Int32)numBytes + 1], bytes[(Int32)numBytes]);
                     numBytes += 2;
                     break;
                 case "Int32":
@@ -147,10 +144,10 @@ namespace NewLife.Siemens.Types
                     if (numBytes / 2 - Math.Floor(numBytes / 2.0) > 0)
                         numBytes++;
                     // hier auswerten
-                    var sourceUInt = DWord.FromBytes(bytes[(int)numBytes + 3],
-                                                                       bytes[(int)numBytes + 2],
-                                                                       bytes[(int)numBytes + 1],
-                                                                       bytes[(int)numBytes + 0]);
+                    var sourceUInt = DWord.FromBytes(bytes[(Int32)numBytes + 3],
+                                                                       bytes[(Int32)numBytes + 2],
+                                                                       bytes[(Int32)numBytes + 1],
+                                                                       bytes[(Int32)numBytes + 0]);
                     value = sourceUInt.ConvertToInt();
                     numBytes += 4;
                     break;
@@ -160,10 +157,10 @@ namespace NewLife.Siemens.Types
                         numBytes++;
                     // hier auswerten
                     value = DWord.FromBytes(
-                        bytes[(int)numBytes],
-                        bytes[(int)numBytes + 1],
-                        bytes[(int)numBytes + 2],
-                        bytes[(int)numBytes + 3]);
+                        bytes[(Int32)numBytes],
+                        bytes[(Int32)numBytes + 1],
+                        bytes[(Int32)numBytes + 2],
+                        bytes[(Int32)numBytes + 3]);
                     numBytes += 4;
                     break;
                 case "Single":
@@ -172,19 +169,19 @@ namespace NewLife.Siemens.Types
                         numBytes++;
                     // hier auswerten
                     value = Real.FromByteArray(
-                        new byte[] {
-                            bytes[(int)numBytes],
-                            bytes[(int)numBytes + 1],
-                            bytes[(int)numBytes + 2],
-                            bytes[(int)numBytes + 3] });
+                        new System.Byte[] {
+                            bytes[(Int32)numBytes],
+                            bytes[(Int32)numBytes + 1],
+                            bytes[(Int32)numBytes + 2],
+                            bytes[(Int32)numBytes + 3] });
                     numBytes += 4;
                     break;
                 case "Double":
                     numBytes = Math.Ceiling(numBytes);
                     if (numBytes / 2 - Math.Floor(numBytes / 2.0) > 0)
                         numBytes++;
-                    var buffer = new byte[8];
-                    Array.Copy(bytes, (int)numBytes, buffer, 0, 8);
+                    var buffer = new System.Byte[8];
+                    Array.Copy(bytes, (Int32)numBytes, buffer, 0, 8);
                     // hier auswerten
                     value = LReal.FromByteArray(buffer);
                     numBytes += 8;
@@ -204,7 +201,7 @@ namespace NewLife.Siemens.Types
         /// </summary>
         /// <param name="sourceClass">The object to fill in the given array of bytes</param>
         /// <param name="bytes">The array of bytes</param>
-        public static double FromBytes(object sourceClass, byte[] bytes, double numBytes = 0, bool isInnerClass = false)
+        public static System.Double FromBytes(Object sourceClass, System.Byte[] bytes, System.Double numBytes = 0, System.Boolean isInnerClass = false)
         {
             if (bytes == null)
                 return numBytes;
@@ -230,28 +227,28 @@ namespace NewLife.Siemens.Types
             return numBytes;
         }
 
-        private static double SetBytesFromProperty(object propertyValue, byte[] bytes, double numBytes)
+        private static System.Double SetBytesFromProperty(Object propertyValue, System.Byte[] bytes, System.Double numBytes)
         {
             var bytePos = 0;
             var bitPos = 0;
-            byte[] bytes2 = null;
+            System.Byte[] bytes2 = null;
 
             switch (propertyValue.GetType().Name)
             {
                 case "Boolean":
                     // get the value
-                    bytePos = (int)Math.Floor(numBytes);
-                    bitPos = (int)((numBytes - bytePos) / 0.125);
-                    if ((bool)propertyValue)
-                        bytes[bytePos] |= (byte)Math.Pow(2, bitPos);            // is true
+                    bytePos = (Int32)Math.Floor(numBytes);
+                    bitPos = (Int32)((numBytes - bytePos) / 0.125);
+                    if ((System.Boolean)propertyValue)
+                        bytes[bytePos] |= (System.Byte)Math.Pow(2, bitPos);            // is true
                     else
-                        bytes[bytePos] &= (byte)~(byte)Math.Pow(2, bitPos);   // is false
+                        bytes[bytePos] &= (System.Byte)~(System.Byte)Math.Pow(2, bitPos);   // is false
                     numBytes += 0.125;
                     break;
                 case "Byte":
-                    numBytes = (int)Math.Ceiling(numBytes);
-                    bytePos = (int)numBytes;
-                    bytes[bytePos] = (byte)propertyValue;
+                    numBytes = (Int32)Math.Ceiling(numBytes);
+                    bytePos = (Int32)numBytes;
+                    bytes[bytePos] = (System.Byte)propertyValue;
                     numBytes++;
                     break;
                 case "Int16":
@@ -267,10 +264,10 @@ namespace NewLife.Siemens.Types
                     bytes2 = DWord.ToByteArray((UInt32)propertyValue);
                     break;
                 case "Single":
-                    bytes2 = Real.ToByteArray((float)propertyValue);
+                    bytes2 = Real.ToByteArray((System.Single)propertyValue);
                     break;
                 case "Double":
-                    bytes2 = LReal.ToByteArray((double)propertyValue);
+                    bytes2 = LReal.ToByteArray((System.Double)propertyValue);
                     break;
                 default:
                     numBytes = ToBytes(propertyValue, bytes, numBytes);
@@ -281,7 +278,7 @@ namespace NewLife.Siemens.Types
             {
                 IncrementToEven(ref numBytes);
 
-                bytePos = (int)numBytes;
+                bytePos = (Int32)numBytes;
                 for (var bCnt = 0; bCnt < bytes2.Length; bCnt++)
                     bytes[bytePos + bCnt] = bytes2[bCnt];
                 numBytes += bytes2.Length;
@@ -295,7 +292,7 @@ namespace NewLife.Siemens.Types
         /// </summary>
         /// <param name="sourceClass">The struct object</param>
         /// <returns>A byte array or null if fails.</returns>
-        public static double ToBytes(object sourceClass, byte[] bytes, double numBytes = 0.0)
+        public static System.Double ToBytes(Object sourceClass, System.Byte[] bytes, System.Double numBytes = 0.0)
         {
             var properties = GetAccessableProperties(sourceClass.GetType());
             foreach (var property in properties)
@@ -312,7 +309,7 @@ namespace NewLife.Siemens.Types
             return numBytes;
         }
 
-        private static void IncrementToEven(ref double numBytes)
+        private static void IncrementToEven(ref System.Double numBytes)
         {
             numBytes = Math.Ceiling(numBytes);
             if (numBytes % 2 > 0) numBytes++;

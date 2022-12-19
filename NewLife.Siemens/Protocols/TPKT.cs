@@ -24,7 +24,7 @@ namespace NewLife.Siemens.Protocols
         public static async Task<TPKT> ReadAsync(Stream stream, CancellationToken cancellationToken)
         {
             var buf = new Byte[4];
-            Int32 len = await stream.ReadExactAsync(buf, 0, 4, cancellationToken).ConfigureAwait(false);
+            var len = await stream.ReadExactAsync(buf, 0, 4, cancellationToken).ConfigureAwait(false);
             if (len < 4) throw new TPKTInvalidException("TPKT is incomplete / invalid");
 
             var version = buf[0];

@@ -9,9 +9,6 @@
         /// </summary>
         /// <param name="stream"></param>
         /// <param name="value"></param>
-        public static void WriteByteArray(this MemoryStream stream, byte[] value)
-        {
-            stream.Write(value, 0, value.Length);
-        }
+        public static void WriteByteArray(this MemoryStream stream, Byte[] value) => stream.Write(value, 0, value.Length);
     }
 }

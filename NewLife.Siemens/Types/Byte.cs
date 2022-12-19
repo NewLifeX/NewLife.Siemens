@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace NewLife.Siemens.Types
+﻿namespace NewLife.Siemens.Types
 {
     /// <summary>
     /// Contains the methods to convert from bytes to byte arrays
@@ -10,9 +8,9 @@ namespace NewLife.Siemens.Types
         /// <summary>
         /// Converts a byte to byte array
         /// </summary>
-        public static byte[] ToByteArray(byte value)
+        public static System.Byte[] ToByteArray(System.Byte value)
         {
-            return new byte[] { value }; ;
+            return new System.Byte[] { value }; ;
         }
 
         /// <summary>
@@ -20,7 +18,7 @@ namespace NewLife.Siemens.Types
         /// </summary>
         /// <param name="bytes"></param>
         /// <returns></returns>
-        public static byte FromByteArray(byte[] bytes)
+        public static System.Byte FromByteArray(System.Byte[] bytes)
         {
             if (bytes.Length != 1)
                 throw new ArgumentException("Wrong number of bytes. Bytes array must contain 1 bytes.");

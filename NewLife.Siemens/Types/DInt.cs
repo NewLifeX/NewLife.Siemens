@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace NewLife.Siemens.Types
+﻿namespace NewLife.Siemens.Types
 {
     /// <summary>
     /// Contains the conversion methods to convert DInt from S7 plc to C# int (Int32).
@@ -10,7 +8,7 @@ namespace NewLife.Siemens.Types
         /// <summary>
         /// Converts a S7 DInt (4 bytes) to int (Int32)
         /// </summary>
-        public static Int32 FromByteArray(byte[] bytes)
+        public static Int32 FromByteArray(System.Byte[] bytes)
         {
             if (bytes.Length != 4)
                 throw new ArgumentException("Wrong number of bytes. Bytes array must contain 4 bytes.");
@@ -21,14 +19,14 @@ namespace NewLife.Siemens.Types
         /// <summary>
         /// Converts a int (Int32) to S7 DInt (4 bytes)
         /// </summary>
-        public static byte[] ToByteArray(Int32 value)
+        public static System.Byte[] ToByteArray(Int32 value)
         {
-            var bytes = new byte[4];
+            var bytes = new System.Byte[4];
 
-            bytes[0] = (byte)(value >> 24 & 0xFF);
-            bytes[1] = (byte)(value >> 16 & 0xFF);
-            bytes[2] = (byte)(value >> 8 & 0xFF);
-            bytes[3] = (byte)(value & 0xFF);
+            bytes[0] = (System.Byte)(value >> 24 & 0xFF);
+            bytes[1] = (System.Byte)(value >> 16 & 0xFF);
+            bytes[2] = (System.Byte)(value >> 8 & 0xFF);
+            bytes[3] = (System.Byte)(value & 0xFF);
 
             return bytes;
         }
@@ -36,7 +34,7 @@ namespace NewLife.Siemens.Types
         /// <summary>
         /// Converts an array of int (Int32) to an array of bytes
         /// </summary>
-        public static byte[] ToByteArray(Int32[] value)
+        public static System.Byte[] ToByteArray(Int32[] value)
         {
             var arr = new ByteArray();
             foreach (var val in value)
@@ -47,13 +45,13 @@ namespace NewLife.Siemens.Types
         /// <summary>
         /// Converts an array of S7 DInt to an array of int (Int32)
         /// </summary>
-        public static Int32[] ToArray(byte[] bytes)
+        public static Int32[] ToArray(System.Byte[] bytes)
         {
             var values = new Int32[bytes.Length / 4];
 
             var counter = 0;
             for (var cnt = 0; cnt < bytes.Length / 4; cnt++)
-                values[cnt] = FromByteArray(new byte[] { bytes[counter++], bytes[counter++], bytes[counter++], bytes[counter++] });
+                values[cnt] = FromByteArray(new System.Byte[] { bytes[counter++], bytes[counter++], bytes[counter++], bytes[counter++] });
 
             return values;
         }

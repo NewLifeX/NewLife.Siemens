@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace NewLife.Siemens.Common
+﻿namespace NewLife.Siemens.Common
 {
     internal class WrongNumberOfBytesException : Exception
     {
@@ -10,11 +6,11 @@ namespace NewLife.Siemens.Common
         {
         }
 
-        public WrongNumberOfBytesException(string message) : base(message)
+        public WrongNumberOfBytesException(String message) : base(message)
         {
         }
 
-        public WrongNumberOfBytesException(string message, Exception innerException) : base(message, innerException)
+        public WrongNumberOfBytesException(String message, Exception innerException) : base(message, innerException)
         {
         }
 
@@ -31,11 +27,11 @@ namespace NewLife.Siemens.Common
         {
         }
 
-        public InvalidAddressException(string message) : base(message)
+        public InvalidAddressException(String message) : base(message)
         {
         }
 
-        public InvalidAddressException(string message, Exception innerException) : base(message, innerException)
+        public InvalidAddressException(String message, Exception innerException) : base(message, innerException)
         {
         }
 
@@ -52,11 +48,11 @@ namespace NewLife.Siemens.Common
         {
         }
 
-        public InvalidVariableTypeException(string message) : base(message)
+        public InvalidVariableTypeException(String message) : base(message)
         {
         }
 
-        public InvalidVariableTypeException(string message, Exception innerException) : base(message, innerException)
+        public InvalidVariableTypeException(String message, Exception innerException) : base(message, innerException)
         {
         }
 
@@ -73,11 +69,11 @@ namespace NewLife.Siemens.Common
         {
         }
 
-        public TPKTInvalidException(string message) : base(message)
+        public TPKTInvalidException(String message) : base(message)
         {
         }
 
-        public TPKTInvalidException(string message, Exception innerException) : base(message, innerException)
+        public TPKTInvalidException(String message, Exception innerException) : base(message, innerException)
         {
         }
 
@@ -94,11 +90,11 @@ namespace NewLife.Siemens.Common
         {
         }
 
-        public TPDUInvalidException(string message) : base(message)
+        public TPDUInvalidException(String message) : base(message)
         {
         }
 
-        public TPDUInvalidException(string message, Exception innerException) : base(message, innerException)
+        public TPDUInvalidException(String message, Exception innerException) : base(message, innerException)
         {
         }
     }

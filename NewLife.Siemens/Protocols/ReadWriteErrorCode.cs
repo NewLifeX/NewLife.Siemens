@@ -1,6 +1,6 @@
 ﻿namespace NewLife.Siemens.Protocols
 {
-    internal enum ReadWriteErrorCode : byte
+    internal enum ReadWriteErrorCode : Byte
     {
         Reserved = 0x00,
         HardwareFault = 0x01,

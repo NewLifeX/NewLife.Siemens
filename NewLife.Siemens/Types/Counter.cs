@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace NewLife.Siemens.Types
+﻿namespace NewLife.Siemens.Types
 {
     /// <summary>
     /// Contains the conversion methods to convert Counter from S7 plc to C# ushort (UInt16).
@@ -10,7 +8,7 @@ namespace NewLife.Siemens.Types
         /// <summary>
         /// Converts a Counter (2 bytes) to ushort (UInt16)
         /// </summary>
-        public static UInt16 FromByteArray(byte[] bytes)
+        public static UInt16 FromByteArray(System.Byte[] bytes)
         {
             if (bytes.Length != 2)
                 throw new ArgumentException("Wrong number of bytes. Bytes array must contain 2 bytes.");
@@ -23,12 +21,12 @@ namespace NewLife.Siemens.Types
         /// <summary>
         /// Converts a ushort (UInt16) to word (2 bytes)
         /// </summary>
-        public static byte[] ToByteArray(UInt16 value)
+        public static System.Byte[] ToByteArray(UInt16 value)
         {
-            var bytes = new byte[2];
+            var bytes = new System.Byte[2];
 
-            bytes[0] = (byte)(value << 8 & 0xFF);
-            bytes[1] = (byte)(value & 0xFF);
+            bytes[0] = (System.Byte)(value << 8 & 0xFF);
+            bytes[1] = (System.Byte)(value & 0xFF);
 
             return bytes;
         }
@@ -36,7 +34,7 @@ namespace NewLife.Siemens.Types
         /// <summary>
         /// Converts an array of ushort (UInt16) to an array of bytes
         /// </summary>
-        public static byte[] ToByteArray(UInt16[] value)
+        public static System.Byte[] ToByteArray(UInt16[] value)
         {
             var arr = new ByteArray();
             foreach (var val in value)
@@ -47,13 +45,13 @@ namespace NewLife.Siemens.Types
         /// <summary>
         /// Converts an array of bytes to an array of ushort
         /// </summary>
-        public static UInt16[] ToArray(byte[] bytes)
+        public static UInt16[] ToArray(System.Byte[] bytes)
         {
             var values = new UInt16[bytes.Length / 2];
 
             var counter = 0;
             for (var cnt = 0; cnt < bytes.Length / 2; cnt++)
-                values[cnt] = FromByteArray(new byte[] { bytes[counter++], bytes[counter++] });
+                values[cnt] = FromByteArray(new System.Byte[] { bytes[counter++], bytes[counter++] });
 
             return values;
         }
