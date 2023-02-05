@@ -4,7 +4,7 @@
     <AssemblyTitle>西门子PLC协议</AssemblyTitle>
     <Description>西门子PLC协议</Description>
     <Company>新生命开发团队</Company>
-    <Copyright>©2002-2022 新生命开发团队</Copyright>
+    <Copyright>©2002-2023 新生命开发团队</Copyright>
     <VersionPrefix>1.0</VersionPrefix>
     <VersionSuffix>$([System.DateTime]::Now.ToString(`yyyy.MMdd`))</VersionSuffix>
     <Version>$(VersionPrefix).$(VersionSuffix)</Version>
@@ -55,8 +55,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NewLife.Core" Version="10.1.2022.1203-beta0732" />
-    <PackageReference Include="NewLife.IoT" Version="1.7.2022.1209-beta0038" />
+    <PackageReference Include="NewLife.Core" Version="10.1.2023.203" />
+    <PackageReference Include="NewLife.IoT" Version="1.7.2023.205" />
   </ItemGroup>
 
   <ItemGroup>
