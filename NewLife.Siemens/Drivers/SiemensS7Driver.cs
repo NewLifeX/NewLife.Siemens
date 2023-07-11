@@ -45,11 +45,11 @@ public class SiemensS7Driver : DriverBase
     /// 打开通道。一个ModbusTcp设备可能分为多个通道读取，需要共用Tcp连接，以不同节点区分
     /// </summary>
     /// <param name="device">通道</param>
-    /// <param name="parameters">参数</param>
+    /// <param name="parameter">参数</param>
     /// <returns></returns>
-    public override INode Open(IDevice device, IDictionary<String, Object> parameters)
+    public override INode Open(IDevice device, IDriverParameter parameter)
     {
-        var pm = JsonHelper.Convert<SiemensParameter>(parameters);
+        var pm = parameter as SiemensParameter;
 
         var address = pm.Address;
         if (address.IsNullOrEmpty()) throw new ArgumentException("参数中未指定地址address");
