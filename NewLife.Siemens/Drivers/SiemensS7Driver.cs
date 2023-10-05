@@ -34,7 +34,7 @@ public class SiemensS7Driver : DriverBase
     /// 创建驱动参数对象，可序列化成Xml/Json作为该协议的参数模板
     /// </summary>
     /// <returns></returns>
-    public override IDriverParameter GetDefaultParameter() => new SiemensParameter
+    protected override IDriverParameter OnCreateParameter() => new SiemensParameter
     {
         Address = "127.0.0.1:102",
         Rack = 0,
