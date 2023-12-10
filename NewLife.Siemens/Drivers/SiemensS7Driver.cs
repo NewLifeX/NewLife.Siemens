@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using NewLife.IoT;
 using NewLife.IoT.Drivers;
 using NewLife.IoT.ThingModels;
@@ -191,8 +192,44 @@ public class SiemensS7Driver : DriverBase
         var db = adr.DbNumber;
         var startByteAdr = adr.StartByte;
 
-        if (value is not Byte[] bytes)
-            throw new ArgumentException("数据value不是字节数组！");
+        Byte[] bytes = null;
+
+        var typeStr = point.Type.ToLower();
+
+        switch (typeStr)
+        {
+            case "boolean":
+            case "bool":
+                bytes = BitConverter.GetBytes(value.ToBoolean());
+                break;
+            case "short":
+                bytes = BitConverter.GetBytes(Int16.Parse(value + ""));
+                break;
+            case "int":
+                bytes = BitConverter.GetBytes(value.ToInt());
+                break;
+            case "float":
+                bytes = BitConverter.GetBytes(Single.Parse(value + ""));
+                break;
+            case "byte":
+                bytes = BitConverter.GetBytes(Byte.Parse(value + ""));
+                break;
+            case "long":
+                bytes = BitConverter.GetBytes(Int64.Parse(value + ""));
+                break;
+            case "double":
+                bytes = BitConverter.GetBytes(value.ToDouble());
+                break;
+            case "time":
+                bytes = BitConverter.GetBytes(value.ToDateTime().Ticks);
+                break;
+            case "string":
+            case "text":
+                bytes = (value + "").GetBytes();
+                break;
+            default:
+                throw new ArgumentException("数据value不是字节数组或有效类型！");
+        }
 
         _plcConn.WriteBytes(dataType, db, startByteAdr, bytes);
 
