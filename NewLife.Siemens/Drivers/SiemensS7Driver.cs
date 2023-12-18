@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using NewLife.IoT;
 using NewLife.IoT.Drivers;
 using NewLife.IoT.ThingModels;
+using NewLife.Log;
 using NewLife.Omron.Drivers;
 using NewLife.Serialization;
 using NewLife.Siemens.Models;
@@ -180,56 +181,48 @@ public class SiemensS7Driver : DriverBase
     /// <param name="value">数值</param>
     public override Object Write(INode node, IPoint point, Object value)
     {
+        using var span = Tracer?.NewSpan("write_value", new { point, value });
+
         var addr = GetAddress(point);
         if (addr.IsNullOrWhiteSpace()) return null;
+
+        span.AppendTag($"addr:{addr}");
 
         // 操作字节数组，不用设置bitNumber，但是解析需要带上
         if (addr.IndexOf('.') == -1) addr += ".0";
 
-        var adr = new PLCAddress(addr);
+        var plc_adr = new PLCAddress(addr);
 
-        var dataType = adr.DataType;
-        var db = adr.DbNumber;
-        var startByteAdr = adr.StartByte;
+        span.AppendTag($"plc_addr:{plc_adr}");
+
+        var dataType = plc_adr.DataType;
+        var db = plc_adr.DbNumber;
+        var startByteAdr = plc_adr.StartByte;
 
         Byte[] bytes = null;
 
-        var typeStr = point.Type.ToLower();
-
-        switch (typeStr)
+        if (value is Byte[] v)
+            bytes = v;
+        else
         {
-            case "boolean":
-            case "bool":
-                bytes = BitConverter.GetBytes(value.ToBoolean());
-                break;
-            case "short":
-                bytes = BitConverter.GetBytes(Int16.Parse(value + ""));
-                break;
-            case "int":
-                bytes = BitConverter.GetBytes(value.ToInt());
-                break;
-            case "float":
-                bytes = BitConverter.GetBytes(Single.Parse(value + ""));
-                break;
-            case "byte":
-                bytes = BitConverter.GetBytes(Byte.Parse(value + ""));
-                break;
-            case "long":
-                bytes = BitConverter.GetBytes(Int64.Parse(value + ""));
-                break;
-            case "double":
-                bytes = BitConverter.GetBytes(value.ToDouble());
-                break;
-            case "time":
-                bytes = BitConverter.GetBytes(value.ToDateTime().Ticks);
-                break;
-            case "string":
-            case "text":
-                bytes = (value + "").GetBytes();
-                break;
-            default:
-                throw new ArgumentException("数据value不是字节数组或有效类型！");
+            var typeStr = point.Type.ToLower();
+
+            bytes = typeStr switch
+            {
+                "boolean" or "bool" => BitConverter.GetBytes(value.ToBoolean()),
+                "short" => BitConverter.GetBytes(Int16.Parse(value + "")),
+                "int" => BitConverter.GetBytes(value.ToInt()),
+                "float" => BitConverter.GetBytes(Single.Parse(value + "")),
+                "byte" => BitConverter.GetBytes(Byte.Parse(value + "")),
+                "long" => BitConverter.GetBytes(Int64.Parse(value + "")),
+                "double" => BitConverter.GetBytes(value.ToDouble()),
+                "time" => BitConverter.GetBytes(value.ToDateTime().Ticks),
+                "string" or "text" => (value + "").GetBytes(),
+                _ => throw new ArgumentException("数据value不是字节数组或有效类型！"),
+            };
         }
+
+        span.AppendTag($"转换完成bytes:{bytes.ToHex()}");
 
         _plcConn.WriteBytes(dataType, db, startByteAdr, bytes);
 

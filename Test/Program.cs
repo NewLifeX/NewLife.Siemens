@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using NewLife;
+using NewLife.IoT;
 using NewLife.IoT.Drivers;
 using NewLife.IoT.ThingModels;
 using NewLife.Omron.Drivers;
@@ -9,6 +10,17 @@ using NewLife.Siemens.Models;
 
 Console.WriteLine("服务端地址默认为：127.0.0.1:102，保持默认请回车开始连接，否则请输入服务端地址：");
 var address = Console.ReadLine();
+
+var point = new Point
+{
+    Name = "污泥泵停止时间",
+    Address = "DB1.DBD60", // "M100",
+    Type = "long",
+    Length = 4 //data.Length
+};
+
+var i = point.GetNetType();
+
 
 if (address == null || address == "") address = "127.0.0.1:102";
 
@@ -39,13 +51,7 @@ if (mode == "1")
     str = Console.ReadLine();
 }
 
-var point = new Point
-{
-    Name = "test",
-    Address = "DB1.DBX1134.0", // "M100",
-    Type = "Int32",
-    Length = 2 //data.Length
-};
+
 
 //var point2 = new Point
 //{
