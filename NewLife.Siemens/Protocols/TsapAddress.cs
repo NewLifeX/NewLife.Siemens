@@ -3,24 +3,18 @@
 namespace NewLife.Siemens.Protocols;
 
 /// <summary>TSAP地址对</summary>
-public class TsapAddress
+/// <remarks>
+/// 实例化
+/// </remarks>
+/// <param name="local"></param>
+/// <param name="remote"></param>
+public class TsapAddress(UInt16 local, UInt16 remote)
 {
     /// <summary>本地</summary>
-    public UInt16 Local { get; set; }
+    public UInt16 Local { get; set; } = local;
 
     /// <summary>远程</summary>
-    public UInt16 Remote { get; set; }
-
-    /// <summary>
-    /// 实例化
-    /// </summary>
-    /// <param name="local"></param>
-    /// <param name="remote"></param>
-    public TsapAddress(UInt16 local, UInt16 remote)
-    {
-        Local = local;
-        Remote = remote;
-    }
+    public UInt16 Remote { get; set; } = remote;
 
     /// <summary>获取默认地址对</summary>
     /// <param name="cpuType"></param>

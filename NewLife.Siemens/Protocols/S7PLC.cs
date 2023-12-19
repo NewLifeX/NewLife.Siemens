@@ -15,7 +15,7 @@ public partial class S7PLC : DisposeBase
     /// <summary>端口</summary>
     public Int32 Port { get; set; } = 102;
 
-    /// <summary>超时时间。默认5秒</summary>
+    /// <summary>超时时间。默认5000毫秒</summary>
     public Int32 Timeout { get; set; } = 5_000;
 
     /// <summary>TSAP地址</summary>
@@ -33,112 +33,10 @@ public partial class S7PLC : DisposeBase
     /// <summary>最大PDU大小</summary>
     public Int32 MaxPDUSize { get; private set; } = 240;
 
-    private readonly Byte[] plcHead1 = new Byte[22]
-{
-       3,
-       0,
-       0,
-       22,
-       17,
-       224,
-       0,
-       0,
-       0,
-       1,
-       0,
-       192,
-       1,
-       10,
-       193,
-       2,
-       1,
-       2,
-       194,
-       2,
-       1,
-       0
-};
-    private readonly Byte[] plcHead2 = new Byte[25]
-    {
-       3,
-       0,
-       0,
-       25,
-       2,
-       240,
-       128,
-       50,
-       1,
-       0,
-       0,
-       4,
-       0,
-       0,
-       8,
-       0,
-       0,
-       240,
-       0,
-       0,
-       1,
-       0,
-       1,
-       1,
-       224
-    };
-    private readonly Byte[] plcHead1_200smart = new Byte[22]
-    {
-       3,
-       0,
-       0,
-       22,
-       17,
-       224,
-       0,
-       0,
-       0,
-       1,
-       0,
-       193,
-       2,
-       16,
-       0,
-       194,
-       2,
-       3,
-       0,
-       192,
-       1,
-       10
-    };
-    private readonly Byte[] plcHead2_200smart = new Byte[25]
-{
-       3,
-       0,
-       0,
-       25,
-       2,
-       240,
-       128,
-       50,
-       1,
-       0,
-       0,
-       204,
-       193,
-       0,
-       8,
-       0,
-       0,
-       240,
-       0,
-       0,
-       1,
-       0,
-       1,
-       3,
-       192
-};
+    private readonly Byte[] plcHead1 = [3, 0, 0, 22, 17, 224, 0, 0, 0, 1, 0, 192, 1, 10, 193, 2, 1, 2, 194, 2, 1, 0];
+    private readonly Byte[] plcHead2 = [3, 0, 0, 25, 2, 240, 128, 50, 1, 0, 0, 4, 0, 0, 8, 0, 0, 240, 0, 0, 1, 0, 1, 1, 224];
+    private readonly Byte[] plcHead1_200smart = [3, 0, 0, 22, 17, 224, 0, 0, 0, 1, 0, 193, 2, 16, 0, 194, 2, 3, 0, 192, 1, 10];
+    private readonly Byte[] plcHead2_200smart = [3, 0, 0, 25, 2, 240, 128, 50, 1, 0, 0, 204, 193, 0, 8, 0, 0, 240, 0, 0, 1, 0, 1, 3, 192];
     private TcpClient _client;
     private NetworkStream _stream;
     #endregion
@@ -226,23 +124,30 @@ public partial class S7PLC : DisposeBase
 
         if (CPU == CpuType.S7200Smart) return plcHead1_200smart;
 
-        Byte[] buf = {
-                    3, 0, 0, 22, //TPKT
-                    17,     //COTP Header Length
-                    224,    //Connect Request
-                    0, 0,   //Destination Reference
-                    0, 46,  //Source Reference
-                    0,      //Flags
-                    193,    //Parameter Code (src-tasp)
-                    2,      //Parameter Length
-                    (Byte)(tsap.Local>>8), (Byte)(tsap.Local&0xFF),   //Source TASP
-                    194,    //Parameter Code (dst-tasp)
-                    2,      //Parameter Length
-                    (Byte)(tsap.Remote>>8), (Byte)(tsap.Remote&0xFF),   //Destination TASP
-                    192,    //Parameter Code (tpdu-size)
-                    1,      //Parameter Length
-                    10      //TPDU Size (2^10 = 1024)
-                };
+        Byte[] buf = [
+            3,
+            0,
+            0,
+            22, //TPKT
+            17,     //COTP Header Length
+            224,    //Connect Request
+            0,
+            0,   //Destination Reference
+            0,
+            46,  //Source Reference
+            0,      //Flags
+            193,    //Parameter Code (src-tasp)
+            2,      //Parameter Length
+            (Byte)(tsap.Local >> 8),
+            (Byte)(tsap.Local & 0xFF),   //Source TASP
+            194,    //Parameter Code (dst-tasp)
+            2,      //Parameter Length
+            (Byte)(tsap.Remote >> 8),
+            (Byte)(tsap.Remote & 0xFF),   //Destination TASP
+            192,    //Parameter Code (tpdu-size)
+            1,      //Parameter Length
+            10      //TPDU Size (2^10 = 1024)
+                ];
 
         return buf;
     }
@@ -307,13 +212,13 @@ public partial class S7PLC : DisposeBase
     private static void BuildHeaderPackage(MemoryStream stream, Int32 amount = 1)
     {
         //header size = 19 bytes
-        stream.WriteByteArray(new Byte[] { 0x03, 0x00 });
+        stream.WriteByteArray([0x03, 0x00]);
         //complete package size
         stream.WriteByteArray(((Int16)(19 + (12 * amount))).GetBytes(false));
-        stream.WriteByteArray(new Byte[] { 0x02, 0xf0, 0x80, 0x32, 0x01, 0x00, 0x00, 0x00, 0x00 });
+        stream.WriteByteArray([0x02, 0xf0, 0x80, 0x32, 0x01, 0x00, 0x00, 0x00, 0x00]);
         //data part size
         stream.WriteByteArray(ToByteArray((UInt16)(2 + (amount * 12))));
-        stream.WriteByteArray(new Byte[] { 0x00, 0x00, 0x04 });
+        stream.WriteByteArray([0x00, 0x00, 0x04]);
         //amount of requests
         stream.WriteByte((Byte)amount);
     }
@@ -387,7 +292,7 @@ public partial class S7PLC : DisposeBase
     private static void BuildReadDataRequestPackage(MemoryStream stream, DataType dataType, Int32 db, Int32 startByteAdr, Int32 count = 1)
     {
         //single data req = 12
-        stream.WriteByteArray(new Byte[] { 0x12, 0x0a, 0x10 });
+        stream.WriteByteArray([0x12, 0x0a, 0x10]);
         switch (dataType)
         {
             case DataType.Timer:
@@ -465,18 +370,18 @@ public partial class S7PLC : DisposeBase
         package.WriteByte(0);
         //complete package size
         package.WriteByteArray(((Int16)packageSize).GetBytes(false));
-        package.WriteByteArray(new Byte[] { 2, 0xf0, 0x80, 0x32, 1, 0, 0 });
+        package.WriteByteArray([2, 0xf0, 0x80, 0x32, 1, 0, 0]);
         package.WriteByteArray(ToByteArray((UInt16)(varCount - 1)));
-        package.WriteByteArray(new Byte[] { 0, 0x0e });
+        package.WriteByteArray([0, 0x0e]);
         package.WriteByteArray(ToByteArray((UInt16)(varCount + 4)));
-        package.WriteByteArray(new Byte[] { 0x05, 0x01, 0x12, 0x0a, 0x10, 0x02 });
+        package.WriteByteArray([0x05, 0x01, 0x12, 0x0a, 0x10, 0x02]);
         package.WriteByteArray(ToByteArray((UInt16)varCount));
         package.WriteByteArray(ToByteArray((UInt16)(db)));
         package.WriteByte((Byte)dataType);
         var overflow = (Int32)(startByteAdr * 8 / 0xffffU); // handles words with address bigger than 8191
         package.WriteByte((Byte)overflow);
         package.WriteByteArray(ToByteArray((UInt16)(startByteAdr * 8)));
-        package.WriteByteArray(new Byte[] { 0, 4 });
+        package.WriteByteArray([0, 4]);
         package.WriteByteArray(ToByteArray((UInt16)(varCount * 8)));
 
         // now join the header and the data
@@ -554,9 +459,7 @@ public partial class S7PLC : DisposeBase
     {
         if (CPU == CpuType.S7200Smart) return plcHead2_200smart;
 
-        return new Byte[] {  3, 0, 0, 25, 2, 240, 128, 50, 1, 0, 0, 255, 255, 0, 8, 0, 0, 240, 0, 0, 3, 0, 3,
-                    3, 192 // Use 960 PDU size
-            };
+        return [3, 0, 0, 25, 2, 240, 128, 50, 1, 0, 0, 255, 255, 0, 8, 0, 0, 240, 0, 0, 3, 0, 3, 3, 192];
     }
 
     private async Task<Byte[]> NoLockRequestTsduAsync(Stream stream, Byte[] requestData, Int32 offset, Int32 length,

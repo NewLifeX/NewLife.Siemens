@@ -34,7 +34,7 @@ internal class PLCAddress
         switch (input[..2])
         {
             case "DB":
-                var strings = input.Split(new Char[] { '.' });
+                var strings = input.Split(['.']);
                 if (strings.Length < 2)
                     throw new InvalidAddressException("To few periods for DB address");
 

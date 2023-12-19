@@ -1,11 +1,8 @@
 ﻿using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using NewLife.IoT;
 using NewLife.IoT.Drivers;
 using NewLife.IoT.ThingModels;
-using NewLife.Log;
 using NewLife.Omron.Drivers;
-using NewLife.Serialization;
 using NewLife.Siemens.Models;
 using NewLife.Siemens.Protocols;
 
@@ -28,7 +25,12 @@ public class SiemensS7Driver : DriverBase
     /// 销毁时，关闭连接
     /// </summary>
     /// <param name="disposing"></param>
-    protected override void Dispose(Boolean disposing) => base.Dispose(disposing);
+    protected override void Dispose(Boolean disposing)
+    {
+        base.Dispose(disposing);
+
+        _plcConn.TryDispose();
+    }
     #endregion
 
     #region 方法
@@ -39,6 +41,7 @@ public class SiemensS7Driver : DriverBase
     protected override IDriverParameter OnCreateParameter() => new SiemensParameter
     {
         Address = "127.0.0.1:102",
+        CpuType = CpuType.S7200Smart,
         Rack = 0,
         Slot = 0,
     };
@@ -57,7 +60,7 @@ public class SiemensS7Driver : DriverBase
         if (address.IsNullOrEmpty()) throw new ArgumentException("参数中未指定地址address");
 
         //var p = address.IndexOfAny(new[] { ':', '.' }); // p为3，最后截取不到正确ip
-        var p = address.IndexOfAny(new[] { ':' });
+        var p = address.IndexOfAny([':']);
         if (p < 0) throw new ArgumentException($"参数中地址address格式错误:{address}");
 
         var cpuType = pm.CpuType;
@@ -130,6 +133,7 @@ public class SiemensS7Driver : DriverBase
 
         if (points == null || points.Length == 0) return dic;
 
+        var spec = node.Device?.Specification;
         foreach (var point in points)
         {
             var addr = GetAddress(point);
@@ -150,7 +154,12 @@ public class SiemensS7Driver : DriverBase
 
             var data = _plcConn.ReadBytes(dataType, db, startByteAdr, (UInt16)point.Length);
 
-            dic[point.Name] = data;
+            // 借助物模型转换数据类型
+            var v = spec?.DecodeByThingModel(data, point);
+            if (v != null)
+                dic[point.Name] = v;
+            else
+                dic[point.Name] = data;
         }
 
         return dic;
@@ -181,19 +190,21 @@ public class SiemensS7Driver : DriverBase
     /// <param name="value">数值</param>
     public override Object Write(INode node, IPoint point, Object value)
     {
-        using var span = Tracer?.NewSpan("write_value", new { point, value });
-
         var addr = GetAddress(point);
         if (addr.IsNullOrWhiteSpace()) return null;
 
-        span.AppendTag($"addr:{addr}");
+        // 借助物模型转换数据类型
+        var spec = node.Device?.Specification;
+        if (spec != null && value is not Byte[])
+        {
+            // 普通数值转为字节数组
+            value = spec.EncodeByThingModel(value, point);
+        }
 
         // 操作字节数组，不用设置bitNumber，但是解析需要带上
         if (addr.IndexOf('.') == -1) addr += ".0";
 
         var plc_adr = new PLCAddress(addr);
-
-        span.AppendTag($"plc_addr:{plc_adr}");
 
         var dataType = plc_adr.DataType;
         var db = plc_adr.DbNumber;
@@ -221,8 +232,6 @@ public class SiemensS7Driver : DriverBase
                 _ => throw new ArgumentException("数据value不是字节数组或有效类型！"),
             };
         }
-
-        span.AppendTag($"转换完成bytes:{bytes.ToHex()}");
 
         _plcConn.WriteBytes(dataType, db, startByteAdr, bytes);
 

@@ -9,6 +9,7 @@ internal class COTP
         Data = 0xf0,
         ConnectionConfirmed = 0xd0
     }
+
     /// <summary>
     /// Describes a COTP TPDU (Transport protocol data unit)
     /// </summary>
@@ -48,28 +49,17 @@ internal class COTP
         /// See: https://tools.ietf.org/html/rfc905
         /// </summary>
         /// <param name="stream">The socket to read from</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>COTP DPDU instance</returns>
         public static async Task<TPDU> ReadAsync(Stream stream, CancellationToken cancellationToken)
         {
             var tpkt = await TPKT.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
-            if (tpkt.Length == 0)
-            {
-                throw new TPDUInvalidException("No protocol data received");
-            }
+            if (tpkt.Length == 0) throw new TPDUInvalidException("No protocol data received");
+
             return new TPDU(tpkt);
         }
 
-        public override String ToString()
-        {
-            return String.Format("Length: {0} PDUType: {1} TPDUNumber: {2} Last: {3} Segment Data: {4}",
-                HeaderLength,
-                PDUType,
-                TPDUNumber,
-                LastDataUnit,
-                BitConverter.ToString(Data)
-                );
-        }
-
+        public override String ToString() => $"Length: {HeaderLength} PDUType: {PDUType} TPDUNumber: {TPDUNumber} Last: {LastDataUnit} Segment Data: {BitConverter.ToString(Data)}";
     }
 
     /// <summary>
@@ -82,15 +72,13 @@ internal class COTP
         /// See: https://tools.ietf.org/html/rfc905
         /// </summary>
         /// <param name="stream">The stream to read from</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>Data in TSDU</returns>
         public static async Task<Byte[]> ReadAsync(Stream stream, CancellationToken cancellationToken)
         {
             var segment = await TPDU.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
 
-            if (segment.LastDataUnit)
-            {
-                return segment.Data;
-            }
+            if (segment.LastDataUnit) return segment.Data;
 
             // More segments are expected, prepare a buffer to store all data
             var buffer = new Byte[segment.Data.Length];
