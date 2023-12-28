@@ -2,11 +2,19 @@
 
 namespace NewLife.Siemens.Protocols;
 
-internal class COTP
+/// <summary>面向连接的传输协议(Connection-Oriented Transport Protocol)</summary>
+public class COTP
 {
+    /// <summary>PDU类型</summary>
     public enum PduType : Byte
     {
+        /// <summary>数据帧</summary>
         Data = 0xf0,
+
+        /// <summary>CR连接请求帧</summary>
+        ConnectionRequest = 0xe0,
+
+        /// <summary>CC连接确认帧</summary>
         ConnectionConfirmed = 0xd0
     }
 
@@ -15,28 +23,44 @@ internal class COTP
     /// </summary>
     public class TPDU
     {
-        public TPKT TPkt { get; }
-        public Byte HeaderLength;
-        public PduType PDUType;
-        public Int32 TPDUNumber;
-        public Byte[] Data;
-        public Boolean LastDataUnit;
+        ///// <summary>TPKT头</summary>
+        //public TPKT TPkt { get; }
 
+        ///// <summary>头部长度</summary>
+        //public Byte HeaderLength { get; set; }
+
+        /// <summary>包类型</summary>
+        public PduType PDUType { get; set; }
+
+        /// <summary>编码</summary>
+        public Int32 Number { get; set; }
+
+        /// <summary>数据</summary>
+        public Byte[] Data { get; set; }
+
+        /// <summary>是否最后数据单元</summary>
+        public Boolean LastDataUnit { get; set; }
+
+        /// <summary>实例化</summary>
+        /// <param name="tPKT"></param>
         public TPDU(TPKT tPKT)
         {
-            TPkt = tPKT;
+            //TPkt = tPKT;
 
-            HeaderLength = tPKT.Data[0]; // Header length excluding this length byte
-            if (HeaderLength >= 2)
+            var len = tPKT.Data[0]; // Header length excluding this length byte
+            if (len >= 2)
             {
                 PDUType = (PduType)tPKT.Data[1];
+
+                // 解析不同数据帧
                 if (PDUType == PduType.Data) //DT Data
                 {
                     var flags = tPKT.Data[2];
-                    TPDUNumber = flags & 0x7F;
+                    Number = flags & 0x7F;
                     LastDataUnit = (flags & 0x80) > 0;
-                    Data = new Byte[tPKT.Data.Length - HeaderLength - 1]; // substract header length byte + header length.
-                    Array.Copy(tPKT.Data, HeaderLength + 1, Data, 0, Data.Length);
+                    Data = new Byte[tPKT.Data.Length - len - 1]; // substract header length byte + header length.
+                    Array.Copy(tPKT.Data, len + 1, Data, 0, Data.Length);
+
                     return;
                 }
                 //TODO: Handle other PDUTypes
@@ -59,7 +83,9 @@ internal class COTP
             return new TPDU(tpkt);
         }
 
-        public override String ToString() => $"Length: {HeaderLength} PDUType: {PDUType} TPDUNumber: {TPDUNumber} Last: {LastDataUnit} Segment Data: {BitConverter.ToString(Data)}";
+        /// <summary>已重载。</summary>
+        /// <returns></returns>
+        public override String ToString() => $"[{PDUType}] TPDUNumber: {Number} Last: {LastDataUnit} Segment Data: {BitConverter.ToString(Data)}";
     }
 
     /// <summary>

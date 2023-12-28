@@ -1,7 +1,6 @@
 ﻿using System.Net.Sockets;
 using NewLife.Siemens.Common;
 using NewLife.Siemens.Models;
-using InvalidDataException = NewLife.Siemens.Common.InvalidDataException;
 
 namespace NewLife.Siemens.Protocols;
 
@@ -111,7 +110,7 @@ public partial class S7PLC : DisposeBase
 
         if (response.PDUType != COTP.PduType.ConnectionConfirmed)
         {
-            throw new InvalidDataException("Connection request was denied", response.TPkt.Data, 1, 0x0d);
+            throw new InvalidDataException($"Connection request was denied (PDUType={response.PDUType})");
         }
     }
 
@@ -179,7 +178,7 @@ public partial class S7PLC : DisposeBase
 
         //Check for S7 Ack Data
         if (s7data[1] != 0x03)
-            throw new InvalidDataException("Error reading Communication Setup response", s7data, 1, 0x03);
+            throw new InvalidDataException("Error reading Communication Setup response");
 
         if (s7data.Length < 20)
             throw new WrongNumberOfBytesException("Not enough data received in response to Communication Setup");
