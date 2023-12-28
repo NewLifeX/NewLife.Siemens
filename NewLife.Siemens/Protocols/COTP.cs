@@ -1,124 +1,210 @@
-﻿using NewLife.Siemens.Common;
+﻿using NewLife.Data;
+using NewLife.Serialization;
+using NewLife.Siemens.Common;
 
 namespace NewLife.Siemens.Protocols;
 
 /// <summary>面向连接的传输协议(Connection-Oriented Transport Protocol)</summary>
-public class COTP
+public class COTP : IAccessor
 {
-    /// <summary>PDU类型</summary>
-    public enum PduType : Byte
+    #region 属性
+    /// <summary>包类型</summary>
+    public PduType Type { get; set; }
+
+    /// <summary>目标的引用，可以认为是用来唯一标识目标</summary>
+    public UInt16 Destination { get; set; }
+
+    /// <summary>源的引用</summary>
+    public UInt16 Source { get; set; }
+
+    /// <summary>选项</summary>
+    public Byte Option { get; set; }
+
+    /// <summary>参数集合</summary>
+    public IList<TLV> Parameters { get; set; }
+
+    /// <summary>编码</summary>
+    public Int32 Number { get; set; }
+
+    /// <summary>是否最后数据单元</summary>
+    public Boolean LastDataUnit { get; set; }
+
+    /// <summary>数据</summary>
+    public Packet Data { get; set; }
+    #endregion
+
+    #region 读写
+    /// <summary>解析数据</summary>
+    /// <param name="data"></param>
+    /// <returns></returns>
+    public Boolean Read(Packet data) => (this as IAccessor).Read(null, data);
+
+    /// <summary>序列化</summary>
+    /// <returns></returns>
+    public Byte[] ToArray()
     {
-        /// <summary>数据帧</summary>
-        Data = 0xf0,
+        var ms = new MemoryStream();
+        (this as IAccessor).Write(ms, null);
 
-        /// <summary>CR连接请求帧</summary>
-        ConnectionRequest = 0xe0,
-
-        /// <summary>CC连接确认帧</summary>
-        ConnectionConfirmed = 0xd0
+        return ms.ToArray();
     }
 
-    /// <summary>
-    /// Describes a COTP TPDU (Transport protocol data unit)
-    /// </summary>
-    public class TPDU
+    Boolean IAccessor.Read(Stream stream, Object context)
     {
-        ///// <summary>TPKT头</summary>
-        //public TPKT TPkt { get; }
+        var pk = context as Packet;
+        stream ??= pk?.GetStream();
+        var reader = new Binary { Stream = stream, IsLittleEndian = false };
 
-        ///// <summary>头部长度</summary>
-        //public Byte HeaderLength { get; set; }
+        // 头部长度。当前字节之后就是头部，然后是数据
+        var len = reader.ReadByte();
+        Type = (PduType)reader.ReadByte();
 
-        /// <summary>包类型</summary>
-        public PduType PDUType { get; set; }
-
-        /// <summary>编码</summary>
-        public Int32 Number { get; set; }
-
-        /// <summary>数据</summary>
-        public Byte[] Data { get; set; }
-
-        /// <summary>是否最后数据单元</summary>
-        public Boolean LastDataUnit { get; set; }
-
-        /// <summary>实例化</summary>
-        /// <param name="tPKT"></param>
-        public TPDU(TPKT tPKT)
+        // 解析不同数据帧
+        switch (Type)
         {
-            //TPkt = tPKT;
-
-            var len = tPKT.Data[0]; // Header length excluding this length byte
-            if (len >= 2)
-            {
-                PDUType = (PduType)tPKT.Data[1];
-
-                // 解析不同数据帧
-                if (PDUType == PduType.Data) //DT Data
+            case PduType.Data:
                 {
-                    var flags = tPKT.Data[2];
+                    var flags = reader.ReadByte();
                     Number = flags & 0x7F;
                     LastDataUnit = (flags & 0x80) > 0;
-                    Data = new Byte[tPKT.Data.Length - len - 1]; // substract header length byte + header length.
-                    Array.Copy(tPKT.Data, len + 1, Data, 0, Data.Length);
 
-                    return;
+                    if (pk != null)
+                        Data = pk.Slice(4, pk.Total - 1 - len);
+                    else
+                        Data = stream.ReadBytes(-1);
                 }
-                //TODO: Handle other PDUTypes
-            }
-            Data = new Byte[0];
+                break;
+            case PduType.ConnectionRequest:
+            case PduType.ConnectionConfirmed:
+            default:
+                {
+                    Destination = reader.ReadUInt16();
+                    Source = reader.ReadUInt16();
+                    Option = reader.ReadByte();
+
+                    if (stream.Position < stream.Length)
+                    {
+                        var list = new List<TLV>();
+                        while (stream.Position + 3 <= stream.Length)
+                        {
+                            var tlv = new TLV
+                            {
+                                Type = reader.ReadByte(),
+                                Length = reader.ReadByte()
+                            };
+                            var buf = reader.ReadBytes(tlv.Length);
+                            tlv.Value = tlv.Length switch
+                            {
+                                1 => buf[0],
+                                2 => buf.ToUInt16(0, false),
+                                4 => buf.ToUInt32(0, false),
+                                _ => buf,
+                            };
+                            list.Add(tlv);
+                        }
+                        Parameters = list;
+                    }
+                }
+                break;
         }
 
-        /// <summary>
-        /// Reads COTP TPDU (Transport protocol data unit) from the network stream
-        /// See: https://tools.ietf.org/html/rfc905
-        /// </summary>
-        /// <param name="stream">The socket to read from</param>
-        /// <param name="cancellationToken"></param>
-        /// <returns>COTP DPDU instance</returns>
-        public static async Task<TPDU> ReadAsync(Stream stream, CancellationToken cancellationToken)
-        {
-            var tpkt = await TPKT.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
-            if (tpkt.Length == 0) throw new TPDUInvalidException("No protocol data received");
-
-            return new TPDU(tpkt);
-        }
-
-        /// <summary>已重载。</summary>
-        /// <returns></returns>
-        public override String ToString() => $"[{PDUType}] TPDUNumber: {Number} Last: {LastDataUnit} Segment Data: {BitConverter.ToString(Data)}";
+        return true;
     }
+
+    Boolean IAccessor.Write(Stream stream, Object context)
+    {
+        switch (Type)
+        {
+            case PduType.Data:
+                {
+                    var len = 2;
+                    stream.WriteByte((Byte)len);
+                    stream.WriteByte((Byte)Type);
+
+                    var flags = (Byte)(Number & 0x7F);
+                    if (LastDataUnit) flags |= 0x80;
+                    stream.WriteByte(flags);
+
+                    Data?.CopyTo(stream);
+                }
+                break;
+            case PduType.ConnectionRequest:
+                {
+                    var len = 2;
+                    stream.WriteByte((Byte)len);
+                    stream.WriteByte((Byte)Type);
+
+                    var flags = (Byte)(Number & 0x7F);
+                    if (LastDataUnit) flags |= 0x80;
+                    stream.WriteByte(flags);
+
+                    Data?.CopyTo(stream);
+                }
+                break;
+            case PduType.ConnectionConfirmed:
+                {
+                    var len = 2;
+                    stream.WriteByte((Byte)len);
+                    stream.WriteByte((Byte)Type);
+
+                    var flags = (Byte)(Number & 0x7F);
+                    if (LastDataUnit) flags |= 0x80;
+                    stream.WriteByte(flags);
+
+                    Data?.CopyTo(stream);
+                }
+                break;
+            default:
+                break;
+        }
+
+        return true;
+    }
+    #endregion
 
     /// <summary>
-    /// Describes a COTP TSDU (Transport service data unit). One TSDU consist of 1 ore more TPDUs
+    /// Reads COTP TPDU (Transport protocol data unit) from the network stream
+    /// See: https://tools.ietf.org/html/rfc905
     /// </summary>
-    public class TSDU
+    /// <param name="stream">The socket to read from</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>COTP DPDU instance</returns>
+    public static async Task<COTP> ReadAsync(Stream stream, CancellationToken cancellationToken)
     {
-        /// <summary>
-        /// Reads the full COTP TSDU (Transport service data unit)
-        /// See: https://tools.ietf.org/html/rfc905
-        /// </summary>
-        /// <param name="stream">The stream to read from</param>
-        /// <param name="cancellationToken"></param>
-        /// <returns>Data in TSDU</returns>
-        public static async Task<Byte[]> ReadAsync(Stream stream, CancellationToken cancellationToken)
-        {
-            var segment = await TPDU.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
+        var tpkt = await TPKT.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
+        if (tpkt.Length == 0) throw new TPDUInvalidException("No protocol data received");
 
-            if (segment.LastDataUnit) return segment.Data;
+        var cotp = new COTP();
+        if (!cotp.Read(tpkt.Data)) throw new TPDUInvalidException("Invalid protocol data received");
 
-            // More segments are expected, prepare a buffer to store all data
-            var buffer = new Byte[segment.Data.Length];
-            Array.Copy(segment.Data, buffer, segment.Data.Length);
-
-            while (!segment.LastDataUnit)
-            {
-                segment = await TPDU.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
-                var previousLength = buffer.Length;
-                Array.Resize(ref buffer, buffer.Length + segment.Data.Length);
-                Array.Copy(segment.Data, 0, buffer, previousLength, segment.Data.Length);
-            }
-
-            return buffer;
-        }
+        return cotp;
     }
+
+    /// <summary>已重载。</summary>
+    /// <returns></returns>
+    public override String ToString() => $"[{Type}] TPDUNumber: {Number} Last: {LastDataUnit} Data[{Data?.Total}]";
+
+    /// <summary>
+    /// Reads the full COTP TSDU (Transport service data unit)
+    /// See: https://tools.ietf.org/html/rfc905
+    /// </summary>
+    /// <param name="stream">The stream to read from</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>Data in TSDU</returns>
+    public static async Task<Packet> ReadTsduAsync(Stream stream, CancellationToken cancellationToken)
+    {
+        var cotp = await ReadAsync(stream, cancellationToken).ConfigureAwait(false);
+        if (cotp.LastDataUnit) return cotp.Data;
+
+        while (!cotp.LastDataUnit)
+        {
+            var seg = await ReadAsync(stream, cancellationToken).ConfigureAwait(false);
+            if (seg != null && seg.Data != null) cotp.Data.Append(seg.Data);
+
+            cotp = seg;
+        }
+
+        return cotp.Data;
+    }
+
 }

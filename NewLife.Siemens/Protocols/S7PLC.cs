@@ -1,4 +1,5 @@
 ﻿using System.Net.Sockets;
+using NewLife.Data;
 using NewLife.Siemens.Common;
 using NewLife.Siemens.Models;
 
@@ -108,9 +109,9 @@ public partial class S7PLC : DisposeBase
         var requestData = GetCOTPConnectionRequest(TSAP);
         var response = await NoLockRequestTpduAsync(stream, requestData, cancellationToken).ConfigureAwait(false);
 
-        if (response.PDUType != COTP.PduType.ConnectionConfirmed)
+        if (response.Type != PduType.ConnectionConfirmed)
         {
-            throw new InvalidDataException($"Connection request was denied (PDUType={response.PDUType})");
+            throw new InvalidDataException($"Connection request was denied (PDUType={response.Type})");
         }
     }
 
@@ -146,14 +147,14 @@ public partial class S7PLC : DisposeBase
         return buf;
     }
 
-    private async Task<COTP.TPDU> NoLockRequestTpduAsync(Stream stream, Byte[] requestData, CancellationToken cancellationToken = default)
+    private async Task<COTP> NoLockRequestTpduAsync(Stream stream, Byte[] requestData, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         try
         {
             using var closeOnCancellation = cancellationToken.Register(Close);
             await stream.WriteAsync(requestData, 0, requestData.Length, cancellationToken).ConfigureAwait(false);
-            return await COTP.TPDU.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
+            return await COTP.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exc)
         {
@@ -173,14 +174,14 @@ public partial class S7PLC : DisposeBase
         var s7data = await NoLockRequestTsduAsync(stream, setupData, 0, setupData.Length, cancellationToken)
             .ConfigureAwait(false);
 
-        if (s7data.Length < 2)
+        if (s7data.Count < 2)
             throw new WrongNumberOfBytesException("Not enough data received in response to Communication Setup");
 
         //Check for S7 Ack Data
         if (s7data[1] != 0x03)
             throw new InvalidDataException("Error reading Communication Setup response");
 
-        if (s7data.Length < 20)
+        if (s7data.Count < 20)
             throw new WrongNumberOfBytesException("Not enough data received in response to Communication Setup");
 
         // TODO: check if this should not rather be UInt16.
@@ -217,17 +218,13 @@ public partial class S7PLC : DisposeBase
         stream.WriteByte((Byte)amount);
     }
 
-    private Byte[] RequestTsdu(Byte[] requestData) => RequestTsdu(requestData, 0, requestData.Length);
+    private Packet RequestTsdu(Byte[] requestData) => RequestTsdu(requestData, 0, requestData.Length);
 
-    private Byte[] RequestTsdu(Byte[] requestData, Int32 offset, Int32 length, CancellationToken cancellationToken = default)
+    private Packet RequestTsdu(Byte[] requestData, Int32 offset, Int32 length, CancellationToken cancellationToken = default)
     {
         var stream = GetStreamIfAvailable();
 
-        return
-            //queue.Enqueue(() =>
-            NoLockRequestTsduAsync(stream, requestData, offset, length, cancellationToken).GetAwaiter().GetResult();
-        //)
-        ;
+        return NoLockRequestTsduAsync(stream, requestData, offset, length, cancellationToken).GetAwaiter().GetResult();
     }
     #endregion
 
@@ -268,7 +265,8 @@ public partial class S7PLC : DisposeBase
             var s7data = RequestTsdu(dataToSend);
             AssertReadResponse(s7data, count);
 
-            Array.Copy(s7data, 18, buffer, offset, count);
+            //Array.Copy(s7data, 18, buffer, offset, count);
+            s7data.Slice(18).WriteTo(buffer, offset, count);
         }
         catch (Exception exc)
         {
@@ -399,23 +397,23 @@ public partial class S7PLC : DisposeBase
         return bytes;
     }
 
-    private static void AssertReadResponse(Byte[] s7Data, Int32 dataLength)
+    private static void AssertReadResponse(Packet s7Data, Int32 dataLength)
     {
         var expectedLength = dataLength + 18;
 
         PlcException NotEnoughBytes()
         {
-            return new PlcException(ErrorCode.WrongNumberReceivedBytes, $"Received {s7Data.Length} bytes: '{BitConverter.ToString(s7Data)}', expected {expectedLength} bytes.");
+            return new PlcException(ErrorCode.WrongNumberReceivedBytes, $"Received {s7Data.Count} bytes: '{s7Data.ToHex()}', expected {expectedLength} bytes.");
         }
 
         if (s7Data == null)
             throw new PlcException(ErrorCode.WrongNumberReceivedBytes, "No s7Data received.");
 
-        if (s7Data.Length < 15) throw NotEnoughBytes();
+        if (s7Data.Count < 15) throw NotEnoughBytes();
 
         ValidateResponseCode((ReadWriteErrorCode)s7Data[14]);
 
-        if (s7Data.Length < expectedLength) throw NotEnoughBytes();
+        if (s7Data.Count < expectedLength) throw NotEnoughBytes();
     }
 
     internal static void ValidateResponseCode(ReadWriteErrorCode statusCode)
@@ -456,7 +454,7 @@ public partial class S7PLC : DisposeBase
         return [3, 0, 0, 25, 2, 240, 128, 50, 1, 0, 0, 255, 255, 0, 8, 0, 0, 240, 0, 0, 3, 0, 3, 3, 192];
     }
 
-    private async Task<Byte[]> NoLockRequestTsduAsync(Stream stream, Byte[] requestData, Int32 offset, Int32 length,
+    private async Task<Packet> NoLockRequestTsduAsync(Stream stream, Byte[] requestData, Int32 offset, Int32 length,
     CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -464,7 +462,7 @@ public partial class S7PLC : DisposeBase
         {
             using var closeOnCancellation = cancellationToken.Register(Close);
             await stream.WriteAsync(requestData, offset, length, cancellationToken).ConfigureAwait(false);
-            return await COTP.TSDU.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
+            return await COTP.ReadTsduAsync(stream, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exc)
         {

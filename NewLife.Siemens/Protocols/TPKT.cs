@@ -1,4 +1,5 @@
-﻿using NewLife.Siemens.Common;
+﻿using NewLife.Data;
+using NewLife.Siemens.Common;
 
 namespace NewLife.Siemens.Protocols;
 
@@ -15,13 +16,13 @@ public class TPKT
     public Byte Version { get; set; }
 
     /// <summary>保留</summary>
-    public Byte Reserved1 { get; set; }
+    public Byte Reserved { get; set; }
 
     /// <summary>长度</summary>
     public UInt16 Length { get; set; }
 
     /// <summary>数据</summary>
-    public Byte[] Data { get; set; }
+    public Packet Data { get; set; }
 
     /// <summary>实例化</summary>
     public TPKT() { }
@@ -29,9 +30,21 @@ public class TPKT
     private TPKT(Byte version, Byte reserved1, Int32 length, Byte[] data)
     {
         Version = version;
-        Reserved1 = reserved1;
+        Reserved = reserved1;
         Length = (UInt16)length;
         Data = data;
+    }
+
+    /// <summary>解析数据</summary>
+    /// <param name="pk"></param>
+    public void Read(Packet pk)
+    {
+        var buf = pk.ReadBytes(0, 4);
+        Version = buf[0];
+        Reserved = buf[1];
+        Length = buf.ToUInt16(2, false);
+
+        Data = pk.Slice(4, Length);
     }
 
     /// <summary>
