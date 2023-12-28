@@ -113,6 +113,10 @@ public class COTP : IAccessor
 
     Boolean IAccessor.Write(Stream stream, Object context)
     {
+        var pk = context as Packet;
+        stream ??= pk?.GetStream();
+        var writer = new Binary { Stream = stream, IsLittleEndian = false };
+
         switch (Type)
         {
             case PduType.Data:
@@ -129,32 +133,49 @@ public class COTP : IAccessor
                 }
                 break;
             case PduType.ConnectionRequest:
-                {
-                    var len = 2;
-                    stream.WriteByte((Byte)len);
-                    stream.WriteByte((Byte)Type);
-
-                    var flags = (Byte)(Number & 0x7F);
-                    if (LastDataUnit) flags |= 0x80;
-                    stream.WriteByte(flags);
-
-                    Data?.CopyTo(stream);
-                }
-                break;
             case PduType.ConnectionConfirmed:
+            default:
                 {
                     var len = 2;
-                    stream.WriteByte((Byte)len);
-                    stream.WriteByte((Byte)Type);
+                    writer.WriteByte((Byte)len);
+                    writer.WriteByte((Byte)Type);
 
-                    var flags = (Byte)(Number & 0x7F);
-                    if (LastDataUnit) flags |= 0x80;
-                    stream.WriteByte(flags);
+                    writer.Write(Destination);
+                    writer.Write(Source);
+                    writer.WriteByte(Option);
 
-                    Data?.CopyTo(stream);
+                    var ps = Parameters;
+                    if (ps != null)
+                    {
+                        foreach (var item in ps)
+                        {
+                            writer.WriteByte(item.Type);
+
+                            if (item.Value is Byte b)
+                            {
+                                writer.WriteByte(1);
+                                writer.WriteByte(b);
+                            }
+                            else if (item.Value is UInt16 u16)
+                            {
+                                writer.WriteByte(2);
+                                writer.Write(u16);
+                            }
+                            else if (item.Value is UInt32 u32)
+                            {
+                                writer.WriteByte(4);
+                                writer.Write(u32);
+                            }
+                            else if (item.Value is Byte[] buf)
+                            {
+                                writer.WriteByte((Byte)buf.Length);
+                                writer.Write(buf);
+                            }
+                            else
+                                throw new NotSupportedException();
+                        }
+                    }
                 }
-                break;
-            default:
                 break;
         }
 
