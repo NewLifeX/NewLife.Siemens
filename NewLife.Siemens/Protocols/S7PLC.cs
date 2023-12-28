@@ -24,10 +24,10 @@ public partial class S7PLC : DisposeBase
     /// <summary>类型</summary>
     public CpuType CPU { get; set; }
 
-    /// <summary>Rack</summary>
+    /// <summary>机架号。通常为0</summary>
     public Int16 Rack { get; set; }
 
-    /// <summary>Slot</summary>
+    /// <summary>插槽，对于S7300-S7400通常为2，对于S7-1200和S7-1500为0</summary>
     public Int16 Slot { get; set; }
 
     /// <summary>最大PDU大小</summary>
@@ -45,11 +45,14 @@ public partial class S7PLC : DisposeBase
     /// <summary>实例化</summary>
     /// <param name="cpu"></param>
     /// <param name="ip"></param>
+    /// <param name="port"></param>
     /// <param name="rack"></param>
     /// <param name="slot"></param>
-    public S7PLC(CpuType cpu, String ip, Int16 rack, Int16 slot)
+    public S7PLC(CpuType cpu, String ip, Int32 port, Int16 rack = 0, Int16 slot = 0)
     {
         IP = ip;
+        if (port > 0) Port = port;
+
         CPU = cpu;
         Rack = rack;
         Slot = slot;
@@ -83,29 +86,22 @@ public partial class S7PLC : DisposeBase
 
         await client.ConnectAsync(IP, Port).ConfigureAwait(false);
 
-        _stream = client.GetStream();
-        _client = client;
+        var stream = client.GetStream();
 
         try
         {
-            //await queue.Enqueue(async () =>
-            //{
             cancellationToken.ThrowIfCancellationRequested();
-            await EstablishConnection(_stream, cancellationToken).ConfigureAwait(false);
-            //}).ConfigureAwait(false);
+            await RequestConnection(stream, cancellationToken).ConfigureAwait(false);
+            await SetupConnection(stream, cancellationToken).ConfigureAwait(false);
+
+            _stream = stream;
+            _client = client;
         }
         catch (Exception)
         {
-            _stream.Dispose();
-            _stream = null;
+            stream.Dispose();
             throw;
         }
-    }
-
-    private async Task EstablishConnection(Stream stream, CancellationToken cancellationToken)
-    {
-        await RequestConnection(stream, cancellationToken).ConfigureAwait(false);
-        await SetupConnection(stream, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task RequestConnection(Stream stream, CancellationToken cancellationToken)
@@ -121,7 +117,6 @@ public partial class S7PLC : DisposeBase
 
     private Byte[] GetCOTPConnectionRequest(TsapAddress tsap)
     {
-
         if (CPU == CpuType.S7200Smart) return plcHead1_200smart;
 
         Byte[] buf = [

@@ -5,9 +5,8 @@ using NewLife.Caching;
 using NewLife.Log;
 using Xunit;
 
-namespace XUnitTest
+namespace XUnitTest;
+
+public class BasicTest
 {
-    public class BasicTest
-    {
-    }
 }

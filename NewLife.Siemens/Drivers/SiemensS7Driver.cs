@@ -88,11 +88,12 @@ public class SiemensS7Driver : DriverBase
                 {
                     //var ip = address.Substring(0, p);
                     var ip = address[..p];
+                    var port = address[(p + 1)..].ToInt();
 
-                    _plcConn = new S7PLC(cpuType, ip, rack, slot)
+                    _plcConn = new S7PLC(cpuType, ip, port, rack, slot)
                     {
                         Timeout = 5000,
-                        Port = address[(p + 1)..].ToInt(),
+                        //Port = address[(p + 1)..].ToInt(),
                     };
 
                     _plcConn.OpenAsync().GetAwaiter().GetResult();
