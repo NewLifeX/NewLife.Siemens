@@ -47,6 +47,34 @@ public class TPKT
         Data = pk.Slice(4, Length);
     }
 
+    /// <summary>解析数据</summary>
+    /// <param name="stream"></param>
+    public void Read(Stream stream)
+    {
+        var buf = stream.ReadBytes(4);
+        Version = buf[0];
+        Reserved = buf[1];
+        Length = buf.ToUInt16(2, false);
+    }
+
+    /// <summary>写入到数据流</summary>
+    /// <param name="stream"></param>
+    public void Write(Stream stream)
+    {
+        stream.Write(Version);
+        stream.Write(Reserved);
+
+        if (Data != null)
+        {
+            Length = (UInt16)Data.Total;
+            stream.Write(Length.GetBytes(false));
+
+            Data?.CopyTo(stream);
+        }
+        else
+            stream.Write(Length.GetBytes(false));
+    }
+
     /// <summary>
     /// Reads a TPKT from the socket Async
     /// </summary>
@@ -65,7 +93,7 @@ public class TPKT
         var length = buf[2] * 256 + buf[3]; // 大端字节序
 
         // 根据长度读取数据
-        var data = new Byte[length - 4];
+        var data = new Byte[length];
         len = await stream.ReadExactAsync(data, 0, data.Length, cancellationToken).ConfigureAwait(false);
         if (len < data.Length)
             throw new TPKTInvalidException("TPKT payload incomplete / invalid");

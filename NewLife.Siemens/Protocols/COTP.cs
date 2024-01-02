@@ -21,7 +21,7 @@ public class COTP : IAccessor
     public Byte Option { get; set; }
 
     /// <summary>参数集合</summary>
-    public IList<COTPParameter> Parameters { get; set; }
+    public IList<COTPParameter> Parameters { get; set; } = [];
 
     /// <summary>编码</summary>
     public Int32 Number { get; set; }
@@ -49,7 +49,11 @@ public class COTP : IAccessor
         return ms.ToArray();
     }
 
-    Boolean IAccessor.Read(Stream stream, Object context)
+    /// <summary>读取解析数据</summary>
+    /// <param name="stream"></param>
+    /// <param name="context"></param>
+    /// <returns></returns>
+    public Boolean Read(Stream stream, Object context)
     {
         var pk = context as Packet;
         stream ??= pk?.GetStream();
@@ -114,7 +118,11 @@ public class COTP : IAccessor
         return list;
     }
 
-    Boolean IAccessor.Write(Stream stream, Object context)
+    /// <summary>序列化写入数据</summary>
+    /// <param name="stream"></param>
+    /// <param name="context"></param>
+    /// <returns></returns>
+    public Boolean Write(Stream stream, Object context)
     {
         var pk = context as Packet;
         stream ??= pk?.GetStream();
@@ -186,7 +194,29 @@ public class COTP : IAccessor
                 throw new NotSupportedException();
         }
     }
+
+    /// <summary>带TPKT头的写入</summary>
+    /// <param name="stream"></param>
+    /// <returns></returns>
+    public Boolean WriteWithTPKT(Stream stream)
+    {
+        var tpkt = new TPKT { Version = 3, };
+
+        // 先写COTP，得到长度后再回过头写TPKT
+        var ms = new MemoryStream();
+        if (!Write(ms, null)) return false;
+
+        tpkt.Length = (UInt16)ms.Length;
+        tpkt.Write(stream);
+
+        ms.Position = 0;
+        ms.CopyTo(stream);
+
+        return true;
+    }
     #endregion
+
+    #region 方法
 
     /// <summary>
     /// Reads COTP TPDU (Transport protocol data unit) from the network stream
@@ -232,5 +262,5 @@ public class COTP : IAccessor
 
         return cotp.Data;
     }
-
+    #endregion
 }

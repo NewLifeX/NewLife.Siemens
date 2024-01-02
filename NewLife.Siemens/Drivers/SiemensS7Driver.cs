@@ -59,16 +59,11 @@ public class SiemensS7Driver : DriverBase
         var address = pm.Address;
         if (address.IsNullOrEmpty()) throw new ArgumentException("参数中未指定地址address");
 
-        //var p = address.IndexOfAny(new[] { ':', '.' }); // p为3，最后截取不到正确ip
-        var p = address.IndexOfAny([':']);
+        var p = address.IndexOf(':');
         if (p < 0) throw new ArgumentException($"参数中地址address格式错误:{address}");
 
-        var cpuType = pm.CpuType;
-
-        if (!Enum.IsDefined(typeof(CpuType), cpuType))
-        {
+        if (!Enum.IsDefined(typeof(CpuType), pm.CpuType))
             throw new ArgumentException($"参数中未指定地址CpuType，必须为其中之一：{Enum.GetNames(typeof(CpuType)).Join()}");
-        }
 
         var rack = pm.Rack;
         var slot = pm.Slot;
@@ -86,19 +81,15 @@ public class SiemensS7Driver : DriverBase
             {
                 if (_plcConn == null)
                 {
-                    //var ip = address.Substring(0, p);
                     var ip = address[..p];
                     var port = address[(p + 1)..].ToInt();
 
-                    _plcConn = new S7PLC(cpuType, ip, port, rack, slot)
+                    _plcConn = new S7PLC(pm.CpuType, ip, port, rack, slot)
                     {
                         Timeout = 5000,
-                        //Port = address[(p + 1)..].ToInt(),
                     };
 
                     _plcConn.OpenAsync().GetAwaiter().GetResult();
-
-                    //if (!connect.IsSuccess) throw new Exception($"连接失败：{connect.Message}");
                 }
             }
         }

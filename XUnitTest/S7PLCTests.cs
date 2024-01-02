@@ -1,11 +1,36 @@
-﻿using NewLife.Siemens.Models;
+﻿using NewLife.Log;
+using NewLife.Siemens.Models;
 using NewLife.Siemens.Protocols;
+using NewLife.UnitTest;
 using Xunit;
 
 namespace XUnitTest;
 
+[TestCaseOrderer("NewLife.UnitTest.PriorityOrderer", "NewLife.UnitTest")]
 public class S7PLCTests
 {
+    S7Server _server;
+
+    [TestOrder(1)]
+    [Fact]
+    public void StartServer()
+    {
+        var server = new S7Server
+        {
+            Log = XTrace.Log,
+            SessionLog = XTrace.Log,
+            SocketLog = XTrace.Log,
+
+            LogSend = true,
+            LogReceive = true,
+        };
+
+        server.Start();
+
+        _server = server;
+    }
+
+    [TestOrder(2)]
     [Fact]
     public async void Read()
     {

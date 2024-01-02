@@ -117,34 +117,78 @@ public partial class S7PLC : DisposeBase
 
     private Byte[] GetCOTPConnectionRequest(TsapAddress tsap)
     {
-        if (CPU == CpuType.S7200Smart) return plcHead1_200smart;
+        COTP cotp;
+        if (CPU == CpuType.S7200Smart)
+        {
+            cotp = new COTP
+            {
+                Type = PduType.Data,
+                LastDataUnit = true,
+                Data = new Byte[] { 50, 1, 0, 0, 204, 193, 0, 8, 0, 0, 240, 0, 0, 1, 0, 1, 3, 192 }
+            };
+        }
+        else
+        {
+            cotp = new COTP
+            {
+                Type = PduType.ConnectionRequest,
+                Destination = 0x00,
+                Source = 0x2E,
+                Option = 0x00,
+            };
+            cotp.Parameters.Add(new COTPParameter { Kind = COTPParameterKinds.SrcTsap, Value = tsap.Local });
+            cotp.Parameters.Add(new COTPParameter { Kind = COTPParameterKinds.DstTsap, Value = tsap.Remote });
+            cotp.Parameters.Add(new COTPParameter { Kind = COTPParameterKinds.TpduSize, Value = (Byte)0x0A });
+        }
 
-        Byte[] buf = [
-            3,
-            0,
-            0,
-            22, //TPKT
-            17,     //COTP Header Length
-            224,    //Connect Request
-            0,
-            0,   //Destination Reference
-            0,
-            46,  //Source Reference
-            0,      //Flags
-            193,    //Parameter Code (src-tasp)
-            2,      //Parameter Length
-            (Byte)(tsap.Local >> 8),
-            (Byte)(tsap.Local & 0xFF),   //Source TASP
-            194,    //Parameter Code (dst-tasp)
-            2,      //Parameter Length
-            (Byte)(tsap.Remote >> 8),
-            (Byte)(tsap.Remote & 0xFF),   //Destination TASP
-            192,    //Parameter Code (tpdu-size)
-            1,      //Parameter Length
-            10      //TPDU Size (2^10 = 1024)
-                ];
+        //var tpkt = new TPKT { Version = 3, };
 
-        return buf;
+        //// 先写COTP，得到长度后再回过头写TPKT
+        //var ms = new MemoryStream
+        //{
+        //    Position = 4
+        //};
+        //cotp.Write(ms, null);
+
+        //ms.Position = 0;
+        //tpkt.Length = (UInt16)(ms.Length - 4);
+        //tpkt.Write(ms);
+
+        //return ms.ToArray();
+
+        var ms = new MemoryStream();
+        cotp.WriteWithTPKT(ms);
+
+        return ms.ToArray();
+
+        //if (CPU == CpuType.S7200Smart) return plcHead1_200smart;
+
+        //Byte[] buf = [
+        //    3,
+        //    0,
+        //    0,
+        //    22, //TPKT
+        //    17,     //COTP Header Length
+        //    224,    //Connect Request
+        //    0,
+        //    0,   //Destination Reference
+        //    0,
+        //    46,  //Source Reference
+        //    0,      //Flags
+        //    193,    //Parameter Code (src-tasp)
+        //    2,      //Parameter Length
+        //    (Byte)(tsap.Local >> 8),
+        //    (Byte)(tsap.Local & 0xFF),   //Source TASP
+        //    194,    //Parameter Code (dst-tasp)
+        //    2,      //Parameter Length
+        //    (Byte)(tsap.Remote >> 8),
+        //    (Byte)(tsap.Remote & 0xFF),   //Destination TASP
+        //    192,    //Parameter Code (tpdu-size)
+        //    1,      //Parameter Length
+        //    10      //TPDU Size (2^10 = 1024)
+        //        ];
+
+        //return buf;
     }
 
     private async Task<COTP> NoLockRequestTpduAsync(Stream stream, Byte[] requestData, CancellationToken cancellationToken = default)
