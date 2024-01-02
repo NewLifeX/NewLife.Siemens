@@ -49,13 +49,13 @@ public class COTPTests
         var ps = cotp.Parameters;
         Assert.NotEmpty(ps);
 
-        Assert.Equal(0xC1, ps[0].Type);
+        Assert.Equal(COTPParameterKinds.SrcTsap, ps[0].Kind);
         Assert.Equal(0x1000, (UInt16)ps[0].Value);
 
-        Assert.Equal(0xC2, ps[1].Type);
+        Assert.Equal(COTPParameterKinds.DstTsap, ps[1].Kind);
         Assert.Equal(0x0300, (UInt16)ps[1].Value);
 
-        Assert.Equal(0xC0, ps[2].Type);
+        Assert.Equal(COTPParameterKinds.TpduSize, ps[2].Kind);
         Assert.Equal(0x0A, (Byte)ps[2].Value);
     }
 
@@ -83,13 +83,13 @@ public class COTPTests
         var ps = cotp.Parameters;
         Assert.NotEmpty(ps);
 
-        Assert.Equal(0xC1, ps[0].Type);
+        Assert.Equal(COTPParameterKinds.SrcTsap, ps[0].Kind);
         Assert.Equal(0x1000, (UInt16)ps[0].Value);
 
-        Assert.Equal(0xC2, ps[1].Type);
+        Assert.Equal(COTPParameterKinds.DstTsap, ps[1].Kind);
         Assert.Equal(0x0300, (UInt16)ps[1].Value);
 
-        Assert.Equal(0xC0, ps[2].Type);
+        Assert.Equal(COTPParameterKinds.TpduSize, ps[2].Kind);
         Assert.Equal(0x0A, (Byte)ps[2].Value);
     }
 
@@ -118,13 +118,13 @@ public class COTPTests
         var ps = cotp.Parameters;
         Assert.NotEmpty(ps);
 
-        Assert.Equal(0xC0, ps[0].Type);
+        Assert.Equal(COTPParameterKinds.TpduSize, ps[0].Kind);
         Assert.Equal(0x0A, (Byte)ps[0].Value);
 
-        Assert.Equal(0xC1, ps[1].Type);
+        Assert.Equal(COTPParameterKinds.SrcTsap, ps[1].Kind);
         Assert.Equal(0x1000, (UInt16)ps[1].Value);
 
-        Assert.Equal(0xC2, ps[2].Type);
+        Assert.Equal(COTPParameterKinds.DstTsap, ps[2].Kind);
         Assert.Equal(0x0300, (UInt16)ps[2].Value);
     }
 

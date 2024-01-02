@@ -21,7 +21,7 @@ public class COTP : IAccessor
     public Byte Option { get; set; }
 
     /// <summary>参数集合</summary>
-    public IList<TLV> Parameters { get; set; }
+    public IList<COTPParameter> Parameters { get; set; }
 
     /// <summary>编码</summary>
     public Int32 Number { get; set; }
@@ -55,7 +55,7 @@ public class COTP : IAccessor
         stream ??= pk?.GetStream();
         var reader = new Binary { Stream = stream, IsLittleEndian = false };
 
-        // 头部长度。当前字节之后就是头部，然后是数据
+        // 头部长度。当前字节之后就是头部，然后是数据，一般为17 bytes
         var len = reader.ReadByte();
         Type = (PduType)reader.ReadByte();
 
@@ -81,34 +81,37 @@ public class COTP : IAccessor
                     Destination = reader.ReadUInt16();
                     Source = reader.ReadUInt16();
                     Option = reader.ReadByte();
-
-                    if (stream.Position < stream.Length)
-                    {
-                        var list = new List<TLV>();
-                        while (stream.Position + 3 <= stream.Length)
-                        {
-                            var tlv = new TLV
-                            {
-                                Type = reader.ReadByte(),
-                                Length = reader.ReadByte()
-                            };
-                            var buf = reader.ReadBytes(tlv.Length);
-                            tlv.Value = tlv.Length switch
-                            {
-                                1 => buf[0],
-                                2 => buf.ToUInt16(0, false),
-                                4 => buf.ToUInt32(0, false),
-                                _ => buf,
-                            };
-                            list.Add(tlv);
-                        }
-                        Parameters = list;
-                    }
+                    Parameters = ReadParameters(reader);
                 }
                 break;
         }
 
         return true;
+    }
+
+    IList<COTPParameter> ReadParameters(Binary reader)
+    {
+        var stream = reader.Stream;
+        var list = new List<COTPParameter>();
+        while (stream.Position + 3 <= stream.Length)
+        {
+            var tlv = new COTPParameter
+            {
+                Kind = (COTPParameterKinds)reader.ReadByte(),
+                Length = reader.ReadByte()
+            };
+            var buf = reader.ReadBytes(tlv.Length);
+            tlv.Value = tlv.Length switch
+            {
+                1 => buf[0],
+                2 => buf.ToUInt16(0, false),
+                4 => buf.ToUInt32(0, false),
+                _ => buf,
+            };
+            list.Add(tlv);
+        }
+
+        return list;
     }
 
     Boolean IAccessor.Write(Stream stream, Object context)
@@ -145,41 +148,43 @@ public class COTP : IAccessor
                     writer.WriteByte(Option);
 
                     var ps = Parameters;
-                    if (ps != null)
-                    {
-                        foreach (var item in ps)
-                        {
-                            writer.WriteByte(item.Type);
-
-                            if (item.Value is Byte b)
-                            {
-                                writer.WriteByte(1);
-                                writer.WriteByte(b);
-                            }
-                            else if (item.Value is UInt16 u16)
-                            {
-                                writer.WriteByte(2);
-                                writer.Write(u16);
-                            }
-                            else if (item.Value is UInt32 u32)
-                            {
-                                writer.WriteByte(4);
-                                writer.Write(u32);
-                            }
-                            else if (item.Value is Byte[] buf)
-                            {
-                                writer.WriteByte((Byte)buf.Length);
-                                writer.Write(buf);
-                            }
-                            else
-                                throw new NotSupportedException();
-                        }
-                    }
+                    if (ps != null) WriteParameters(writer, ps);
                 }
                 break;
         }
 
         return true;
+    }
+
+    void WriteParameters(Binary writer, IList<COTPParameter> parameters)
+    {
+        foreach (var item in parameters)
+        {
+            writer.WriteByte((Byte)item.Kind);
+
+            if (item.Value is Byte b)
+            {
+                writer.WriteByte(1);
+                writer.WriteByte(b);
+            }
+            else if (item.Value is UInt16 u16)
+            {
+                writer.WriteByte(2);
+                writer.Write(u16);
+            }
+            else if (item.Value is UInt32 u32)
+            {
+                writer.WriteByte(4);
+                writer.Write(u32);
+            }
+            else if (item.Value is Byte[] buf)
+            {
+                writer.WriteByte((Byte)buf.Length);
+                writer.Write(buf);
+            }
+            else
+                throw new NotSupportedException();
+        }
     }
     #endregion
 

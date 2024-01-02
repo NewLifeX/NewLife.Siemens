@@ -1,33 +1,35 @@
 ﻿using NewLife.Siemens.Models;
 
-namespace NewLife.Siemens.Common
+namespace NewLife.Siemens.Common;
+
+/// <summary>PLC异常</summary>
+public class PlcException : Exception
 {
-#if NET_FULL
-    [Serializable]
-#endif
-    public class PlcException : Exception
+    /// <summary>错误码</summary>
+    public ErrorCode ErrorCode { get; }
+
+    /// <summary>实例化</summary>
+    /// <param name="errorCode"></param>
+    public PlcException(ErrorCode errorCode) : this(errorCode, $"PLC communication failed with error '{errorCode}'.")
     {
-        public ErrorCode ErrorCode { get; }
-
-        public PlcException(ErrorCode errorCode) : this(errorCode, $"PLC communication failed with error '{errorCode}'.")
-        {
-        }
-
-        public PlcException(ErrorCode errorCode, Exception innerException) : this(errorCode, innerException.Message,
-            innerException)
-        {
-        }
-
-        public PlcException(ErrorCode errorCode, String message) : base(message) => ErrorCode = errorCode;
-
-        public PlcException(ErrorCode errorCode, String message, Exception inner) : base(message, inner) => ErrorCode = errorCode;
-
-#if NET_FULL
-        protected PlcException(System.Runtime.Serialization.SerializationInfo info,
-            System.Runtime.Serialization.StreamingContext context) : base(info, context)
-        {
-            ErrorCode = (ErrorCode) info.GetInt32(nameof(ErrorCode));
-        }
-#endif
     }
+
+    /// <summary>实例化</summary>
+    /// <param name="errorCode"></param>
+    /// <param name="innerException"></param>
+    public PlcException(ErrorCode errorCode, Exception innerException) : this(errorCode, innerException.Message,
+        innerException)
+    {
+    }
+
+    /// <summary>实例化</summary>
+    /// <param name="errorCode"></param>
+    /// <param name="message"></param>
+    public PlcException(ErrorCode errorCode, String message) : base(message) => ErrorCode = errorCode;
+
+    /// <summary>实例化</summary>
+    /// <param name="errorCode"></param>
+    /// <param name="message"></param>
+    /// <param name="inner"></param>
+    public PlcException(ErrorCode errorCode, String message, Exception inner) : base(message, inner) => ErrorCode = errorCode;
 }
