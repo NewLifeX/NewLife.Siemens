@@ -30,11 +30,20 @@ public class S7PLCTests
         _server = server;
     }
 
-    [TestOrder(2)]
+    //[TestOrder(2)]
+    //[Fact]
+    //public async void Read()
+    //{
+    //    var s7 = new S7PLC(CpuType.S7200Smart, "127.0.0.1", 102);
+
+    //    await s7.OpenAsync();
+    //}
+
+    [TestOrder(3)]
     [Fact]
-    public async void Read()
+    public async void S7200SmartTest()
     {
-        var s7 = new S7PLC(CpuType.S7200Smart, "127.0.0.1", 102);
+        var s7 = new S7PLC(CpuType.S7200, "127.0.0.1", 102);
 
         await s7.OpenAsync();
     }

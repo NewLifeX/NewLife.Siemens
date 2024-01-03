@@ -71,9 +71,7 @@ public partial class S7PLC : DisposeBase
     #endregion
 
     #region 连接
-    /// <summary>
-    /// 打开连接
-    /// </summary>
+    /// <summary>打开连接</summary>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     public async Task OpenAsync(CancellationToken cancellationToken = default)
@@ -106,16 +104,14 @@ public partial class S7PLC : DisposeBase
 
     private async Task RequestConnection(Stream stream, CancellationToken cancellationToken)
     {
-        var requestData = GetCOTPConnectionRequest(TSAP);
-        var response = await NoLockRequestTpduAsync(stream, requestData, cancellationToken).ConfigureAwait(false);
+        var request = GetConnectionRequest(TSAP);
+        var response = await RequestAsync(stream, request, cancellationToken).ConfigureAwait(false);
 
         if (response.Type != PduType.ConnectionConfirmed)
-        {
             throw new InvalidDataException($"Connection request was denied (PDUType={response.Type})");
-        }
     }
 
-    private Byte[] GetCOTPConnectionRequest(TsapAddress tsap)
+    private COTP GetConnectionRequest(TsapAddress tsap)
     {
         COTP cotp;
         if (CPU == CpuType.S7200Smart)
@@ -156,10 +152,11 @@ public partial class S7PLC : DisposeBase
 
         //return ms.ToArray();
 
-        var ms = new MemoryStream();
-        cotp.WriteWithTPKT(ms);
+        //var ms = new MemoryStream();
+        //cotp.WriteWithTPKT(ms);
 
-        return ms.ToArray();
+        //return ms.ToArray();
+        return cotp;
 
         //if (CPU == CpuType.S7200Smart) return plcHead1_200smart;
 
@@ -191,31 +188,11 @@ public partial class S7PLC : DisposeBase
         //return buf;
     }
 
-    private async Task<COTP> NoLockRequestTpduAsync(Stream stream, Byte[] requestData, CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        try
-        {
-            using var closeOnCancellation = cancellationToken.Register(Close);
-            await stream.WriteAsync(requestData, 0, requestData.Length, cancellationToken).ConfigureAwait(false);
-            return await COTP.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception exc)
-        {
-            if (exc is TPDUInvalidException || exc is TPKTInvalidException)
-            {
-                Close();
-            }
-
-            throw;
-        }
-    }
-
     private async Task SetupConnection(Stream stream, CancellationToken cancellationToken)
     {
         var setupData = GetS7ConnectionSetup();
 
-        var s7data = await NoLockRequestTsduAsync(stream, setupData, 0, setupData.Length, cancellationToken)
+        var s7data = await RequestAsync(stream, setupData, 0, setupData.Length, cancellationToken)
             .ConfigureAwait(false);
 
         if (s7data.Count < 2)
@@ -232,15 +209,19 @@ public partial class S7PLC : DisposeBase
         MaxPDUSize = s7data[18] * 256 + s7data[19];
     }
 
-    /// <summary>
-    /// Close connection to PLC
-    /// </summary>
+    private Byte[] GetS7ConnectionSetup()
+    {
+        if (CPU == CpuType.S7200Smart) return plcHead2_200smart;
+
+        return [3, 0, 0, 25, 2, 240, 128, 50, 1, 0, 0, 255, 255, 0, 8, 0, 0, 240, 0, 0, 3, 0, 3, 3, 192];
+    }
+
+    /// <summary>关闭连接</summary>
     public void Close()
     {
         _client?.Close();
         _client = null;
     }
-
     #endregion
 
     #region 核心方法
@@ -262,13 +243,68 @@ public partial class S7PLC : DisposeBase
         stream.WriteByte((Byte)amount);
     }
 
-    private Packet RequestTsdu(Byte[] requestData) => RequestTsdu(requestData, 0, requestData.Length);
+    /// <summary>异步请求</summary>
+    /// <param name="stream"></param>
+    /// <param name="request"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    private async Task<COTP> RequestAsync(Stream stream, COTP request, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        try
+        {
+            var pk = request.GetBytes(true);
 
-    private Packet RequestTsdu(Byte[] requestData, Int32 offset, Int32 length, CancellationToken cancellationToken = default)
+            using var closeOnCancellation = cancellationToken.Register(Close);
+            await pk.CopyToAsync(stream, cancellationToken);
+            return await COTP.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exc)
+        {
+            if (exc is TPDUInvalidException || exc is TPKTInvalidException)
+            {
+                Close();
+            }
+
+            throw;
+        }
+    }
+
+    /// <summary>异步请求</summary>
+    /// <param name="stream"></param>
+    /// <param name="request"></param>
+    /// <param name="offset"></param>
+    /// <param name="length"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    private async Task<Packet> RequestAsync(Stream stream, Byte[] request, Int32 offset, Int32 length,
+    CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        try
+        {
+            using var closeOnCancellation = cancellationToken.Register(Close);
+            await stream.WriteAsync(request, offset, length, cancellationToken).ConfigureAwait(false);
+            return await COTP.ReadAllAsync(stream, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exc)
+        {
+            if (exc is TPDUInvalidException || exc is TPKTInvalidException)
+            {
+                Close();
+            }
+
+            throw;
+        }
+    }
+
+    private Packet Request(Byte[] requestData) => Request(requestData, 0, requestData.Length);
+
+    private Packet Request(Byte[] requestData, Int32 offset, Int32 length, CancellationToken cancellationToken = default)
     {
         var stream = GetStreamIfAvailable();
 
-        return NoLockRequestTsduAsync(stream, requestData, offset, length, cancellationToken).GetAwaiter().GetResult();
+        return RequestAsync(stream, requestData, offset, length, cancellationToken).GetAwaiter().GetResult();
     }
     #endregion
 
@@ -306,7 +342,7 @@ public partial class S7PLC : DisposeBase
             BuildReadDataRequestPackage(package, dataType, db, startByteAdr, count);
 
             var dataToSend = package.ToArray();
-            var s7data = RequestTsdu(dataToSend);
+            var s7data = Request(dataToSend);
             AssertReadResponse(s7data, count);
 
             //Array.Copy(s7data, 18, buffer, offset, count);
@@ -385,7 +421,7 @@ public partial class S7PLC : DisposeBase
         try
         {
             var dataToSend = BuildWriteBytesPackage(dataType, db, startByteAdr, value, dataOffset, count);
-            var s7data = RequestTsdu(dataToSend);
+            var s7data = Request(dataToSend);
 
             ValidateResponseCode((ReadWriteErrorCode)s7data[14]);
         }
@@ -489,34 +525,6 @@ public partial class S7PLC : DisposeBase
             throw new PlcException(ErrorCode.ConnectionError, "Plc is not connected");
 
         return _stream;
-    }
-
-    private Byte[] GetS7ConnectionSetup()
-    {
-        if (CPU == CpuType.S7200Smart) return plcHead2_200smart;
-
-        return [3, 0, 0, 25, 2, 240, 128, 50, 1, 0, 0, 255, 255, 0, 8, 0, 0, 240, 0, 0, 3, 0, 3, 3, 192];
-    }
-
-    private async Task<Packet> NoLockRequestTsduAsync(Stream stream, Byte[] requestData, Int32 offset, Int32 length,
-    CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        try
-        {
-            using var closeOnCancellation = cancellationToken.Register(Close);
-            await stream.WriteAsync(requestData, offset, length, cancellationToken).ConfigureAwait(false);
-            return await COTP.ReadTsduAsync(stream, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception exc)
-        {
-            if (exc is TPDUInvalidException || exc is TPKTInvalidException)
-            {
-                Close();
-            }
-
-            throw;
-        }
     }
     #endregion
 }

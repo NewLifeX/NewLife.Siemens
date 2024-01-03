@@ -27,24 +27,28 @@ public class S7Session : NetSession<S7Server>
         var tpkt = new TPKT();
         tpkt.Read(ms);
 
-        var cotp = new COTP();
-        if (cotp.Read(ms, null))
+        // 足够一帧
+        if (tpkt.Length > 0 && ms.Position + tpkt.Length <= ms.Length)
         {
-            switch (cotp.Type)
+            var cotp = new COTP();
+            if (cotp.Read(ms, null))
             {
-                case PduType.Data:
-                    if (!_logined)
+                switch (cotp.Type)
+                {
+                    case PduType.Data:
+                        if (!_logined)
+                            OnConnectionRequest(cotp);
+                        else
+                            OnData(cotp);
+                        break;
+                    case PduType.ConnectionRequest:
                         OnConnectionRequest(cotp);
-                    else
-                        OnData(cotp);
-                    break;
-                case PduType.ConnectionRequest:
-                    OnConnectionRequest(cotp);
-                    break;
-                //case PduType.ConnectionConfirmed:
-                //    break;
-                default:
-                    break;
+                        break;
+                    //case PduType.ConnectionConfirmed:
+                    //    break;
+                    default:
+                        break;
+                }
             }
         }
 

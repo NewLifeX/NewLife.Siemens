@@ -1,10 +1,14 @@
-﻿using NewLife.Data;
+﻿using System.IO;
+using NewLife.Data;
 using NewLife.Serialization;
 using NewLife.Siemens.Common;
 
 namespace NewLife.Siemens.Protocols;
 
 /// <summary>面向连接的传输协议(Connection-Oriented Transport Protocol)</summary>
+/// <remarks>
+/// 文档：https://tools.ietf.org/html/rfc905
+/// </remarks>
 public class COTP : IAccessor
 {
     #region 属性
@@ -214,17 +218,34 @@ public class COTP : IAccessor
 
         return true;
     }
+
+    /// <summary>获取内容</summary>
+    /// <param name="withTPKT"></param>
+    /// <returns></returns>
+    public Packet GetBytes(Boolean withTPKT = true)
+    {
+        var ms = new MemoryStream();
+        if (!Write(ms, null)) return null;
+
+        ms.Position = 0;
+        var pk = new Packet(ms);
+        if (!withTPKT) return pk;
+
+        var tpkt = new TPKT { Version = 3, };
+        tpkt.Length = (UInt16)ms.Length;
+
+        var rs = new Packet(tpkt.ToArray());
+        rs.Append(pk);
+
+        return rs;
+    }
     #endregion
 
     #region 方法
-
-    /// <summary>
-    /// Reads COTP TPDU (Transport protocol data unit) from the network stream
-    /// See: https://tools.ietf.org/html/rfc905
-    /// </summary>
-    /// <param name="stream">The socket to read from</param>
+    /// <summary>从网络流读取一个COTP帧</summary>
+    /// <param name="stream">网络流</param>
     /// <param name="cancellationToken"></param>
-    /// <returns>COTP DPDU instance</returns>
+    /// <returns></returns>
     public static async Task<COTP> ReadAsync(Stream stream, CancellationToken cancellationToken)
     {
         var tpkt = await TPKT.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
@@ -236,18 +257,11 @@ public class COTP : IAccessor
         return cotp;
     }
 
-    /// <summary>已重载。</summary>
-    /// <returns></returns>
-    public override String ToString() => $"[{Type}] TPDUNumber: {Number} Last: {LastDataUnit} Data[{Data?.Total}]";
-
-    /// <summary>
-    /// Reads the full COTP TSDU (Transport service data unit)
-    /// See: https://tools.ietf.org/html/rfc905
-    /// </summary>
-    /// <param name="stream">The stream to read from</param>
+    /// <summary>从网络流读取多个帧，直到最后一个数据单元</summary>
+    /// <param name="stream">网络流</param>
     /// <param name="cancellationToken"></param>
-    /// <returns>Data in TSDU</returns>
-    public static async Task<Packet> ReadTsduAsync(Stream stream, CancellationToken cancellationToken)
+    /// <returns></returns>
+    public static async Task<Packet> ReadAllAsync(Stream stream, CancellationToken cancellationToken)
     {
         var cotp = await ReadAsync(stream, cancellationToken).ConfigureAwait(false);
         if (cotp.LastDataUnit) return cotp.Data;
@@ -262,5 +276,9 @@ public class COTP : IAccessor
 
         return cotp.Data;
     }
+
+    /// <summary>已重载</summary>
+    /// <returns></returns>
+    public override String ToString() => $"[{Type}] TPDUNumber: {Number} Last: {LastDataUnit} Data[{Data?.Total}]";
     #endregion
 }

@@ -75,6 +75,15 @@ public class TPKT
             stream.Write(Length.GetBytes(false));
     }
 
+    /// <summary>获取字节数组</summary>
+    /// <returns></returns>
+    public Byte[] ToArray()
+    {
+        var ms = new MemoryStream();
+        Write(ms);
+        return ms.ToArray();
+    }
+
     /// <summary>
     /// Reads a TPKT from the socket Async
     /// </summary>
