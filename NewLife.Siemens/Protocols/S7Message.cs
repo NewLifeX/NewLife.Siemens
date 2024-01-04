@@ -104,7 +104,7 @@ public class S7Message : IAccessor
         writer.WriteUInt16(Reserved);
         writer.WriteUInt16(Sequence);
 
-        var ps = SaveParameters();
+        var ps = SaveParameters(Parameters);
         var dt = Data;
         var plen = ps?.Length ?? 0;
         var dlen = dt?.Total ?? 0;
@@ -119,9 +119,27 @@ public class S7Message : IAccessor
         return true;
     }
 
-    Byte[] SaveParameters()
+    Byte[] SaveParameters(IList<S7Parameter> ps)
     {
-        return null;
+        if (ps == null || ps.Count == 0) return null;
+
+        var writer = new Binary { IsLittleEndian = false };
+        foreach (var pm in ps)
+        {
+            pm.Write(null, writer);
+        }
+
+        return writer.GetBytes();
+    }
+
+    /// <summary>序列化</summary>
+    /// <returns></returns>
+    public Byte[] GetBytes()
+    {
+        var ms = new MemoryStream();
+        Write(ms, null);
+
+        return ms.ToArray();
     }
     #endregion
 }

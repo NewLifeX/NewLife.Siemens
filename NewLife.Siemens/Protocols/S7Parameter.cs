@@ -29,6 +29,7 @@ public class S7Parameter : IAccessor
         reader ??= new Binary { Stream = stream ?? (context as Packet)?.GetStream(), IsLittleEndian = false };
 
         Code = (S7Functions)reader.ReadByte();
+        _ = reader.ReadByte();
 
         OnRead(reader);
 
@@ -49,6 +50,7 @@ public class S7Parameter : IAccessor
         writer ??= new Binary { Stream = stream ?? (context as Packet)?.GetStream(), IsLittleEndian = false };
 
         writer.WriteByte((Byte)Code);
+        writer.WriteByte(0);
 
         OnWrite(writer);
 
@@ -67,17 +69,37 @@ public class S7SetupParameter : S7Parameter
 {
     #region 属性
     /// <summary>Ack队列的大小（主叫）</summary>
-    public Byte MaxAmqCaller { get; set; }
+    public UInt16 MaxAmqCaller { get; set; }
 
     /// <summary>Ack队列的大小（被叫）</summary>
-    public Byte MaxAmqCallee { get; set; }
+    public UInt16 MaxAmqCallee { get; set; }
 
     /// <summary>PDU长度</summary>
-    public Byte PduLength { get; set; }
+    public UInt16 PduLength { get; set; }
     #endregion
 
     #region 构造
     /// <summary>实例化</summary>
     public S7SetupParameter() => Code = S7Functions.Setup;
+    #endregion
+
+    #region 方法
+    /// <summary>读取</summary>
+    /// <param name="reader"></param>
+    protected override void OnRead(Binary reader)
+    {
+        MaxAmqCaller = reader.ReadUInt16();
+        MaxAmqCallee = reader.ReadUInt16();
+        PduLength = reader.ReadUInt16();
+    }
+
+    /// <summary>写入</summary>
+    /// <param name="writer"></param>
+    protected override void OnWrite(Binary writer)
+    {
+        writer.WriteUInt16(MaxAmqCaller);
+        writer.WriteUInt16(MaxAmqCallee);
+        writer.WriteUInt16(PduLength);
+    }
     #endregion
 }

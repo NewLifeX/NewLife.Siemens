@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using NewLife;
 using NewLife.Siemens.Protocols;
 using Xunit;
@@ -34,5 +33,9 @@ public class S7MessageTests
         Assert.Equal(0x03C0, pm.PduLength);
 
         Assert.Null(msg.Data);
+
+        // 序列化
+        var buf = msg.GetBytes();
+        Assert.Equal(hex.ToHex(), buf.ToHex());
     }
 }
