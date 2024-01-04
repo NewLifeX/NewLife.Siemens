@@ -59,10 +59,11 @@ public class COTPTests
         Assert.Equal(0x0A, (Byte)ps[2].Value);
     }
 
+    Byte[] plcHead1_200smart = [3, 0, 0, 22, 17, 224, 0, 0, 0, 1, 0, 193, 2, 16, 0, 194, 2, 3, 0, 192, 1, 10];
+    Byte[] plcHead2_200smart = [3, 0, 0, 25, 2, 240, 128, 50, 1, 0, 0, 204, 193, 0, 8, 0, 0, 240, 0, 0, 1, 0, 1, 3, 192];
     [Fact]
-    public void DecodeCR2()
+    public void Decode_200smart_CR()
     {
-        Byte[] plcHead1_200smart = [3, 0, 0, 22, 17, 224, 0, 0, 0, 1, 0, 193, 2, 16, 0, 194, 2, 3, 0, 192, 1, 10];
         var pk = new Packet(plcHead1_200smart);
 
         // 前面有TPKT头
@@ -91,6 +92,39 @@ public class COTPTests
 
         Assert.Equal(COTPParameterKinds.TpduSize, ps[2].Kind);
         Assert.Equal(0x0A, (Byte)ps[2].Value);
+    }
+
+    [Fact]
+    public void Decode_200smart_Data()
+    {
+        var pk = new Packet(plcHead2_200smart);
+
+        // 前面有TPKT头
+        var tpkt = new TPKT();
+        tpkt.Read(pk);
+        Assert.Equal(3, tpkt.Version);
+        Assert.Equal(0, tpkt.Reserved);
+        Assert.Equal(0x19, tpkt.Length);
+
+        var cotp = new COTP();
+        var rs = cotp.Read(tpkt.Data);
+        Assert.True(rs);
+        Assert.Equal(PduType.Data, cotp.Type);
+        Assert.True(cotp.LastDataUnit);
+
+        Assert.NotNull(cotp.Data);
+        Assert.Equal(18, cotp.Data.Total);
+
+        var msg = new S7Message();
+        var rs2 = msg.Read(cotp.Data.ReadBytes());
+        Assert.True(rs2);
+
+        Assert.Equal(0x32, msg.ProtocolId);
+        Assert.Equal(S7Kinds.Job, msg.Kind);
+        Assert.Equal(0x0000, msg.Reserved);
+        Assert.Equal(0xCCC1, msg.Sequence);
+
+        Assert.Single(msg.Parameters);
     }
 
     [Fact]
@@ -148,7 +182,7 @@ public class COTPTests
         Assert.True(cotp.LastDataUnit);
 
         Assert.NotNull(cotp.Data);
-        Assert.Equal(17, cotp.Data.Total);
+        Assert.Equal(18, cotp.Data.Total);
     }
 
     [Fact]

@@ -33,10 +33,6 @@ public partial class S7PLC : DisposeBase
     /// <summary>最大PDU大小</summary>
     public Int32 MaxPDUSize { get; private set; } = 240;
 
-    private readonly Byte[] plcHead1 = [3, 0, 0, 22, 17, 224, 0, 0, 0, 1, 0, 192, 1, 10, 193, 2, 1, 2, 194, 2, 1, 0];
-    private readonly Byte[] plcHead2 = [3, 0, 0, 25, 2, 240, 128, 50, 1, 0, 0, 4, 0, 0, 8, 0, 0, 240, 0, 0, 1, 0, 1, 1, 224];
-    private readonly Byte[] plcHead1_200smart = [3, 0, 0, 22, 17, 224, 0, 0, 0, 1, 0, 193, 2, 16, 0, 194, 2, 3, 0, 192, 1, 10];
-    private readonly Byte[] plcHead2_200smart = [3, 0, 0, 25, 2, 240, 128, 50, 1, 0, 0, 204, 193, 0, 8, 0, 0, 240, 0, 0, 1, 0, 1, 3, 192];
     private TcpClient _client;
     private NetworkStream _stream;
     #endregion
@@ -116,12 +112,13 @@ public partial class S7PLC : DisposeBase
         COTP cotp;
         if (CPU == CpuType.S7200Smart)
         {
-            cotp = new COTP
+            var msg = new S7Message
             {
-                Type = PduType.Data,
-                LastDataUnit = true,
-                Data = new Byte[] { 50, 1, 0, 0, 204, 193, 0, 8, 0, 0, 240, 0, 0, 1, 0, 1, 3, 192 }
+                Kind = S7Kinds.Job,
+                Sequence = 0xCCC1
             };
+            msg.Setup(0x0001, 960);
+            cotp = msg.ToCOTP();
         }
         else
         {
@@ -137,83 +134,57 @@ public partial class S7PLC : DisposeBase
             cotp.Parameters.Add(new COTPParameter { Kind = COTPParameterKinds.TpduSize, Value = (Byte)0x0A });
         }
 
-        //var tpkt = new TPKT { Version = 3, };
-
-        //// 先写COTP，得到长度后再回过头写TPKT
-        //var ms = new MemoryStream
-        //{
-        //    Position = 4
-        //};
-        //cotp.Write(ms, null);
-
-        //ms.Position = 0;
-        //tpkt.Length = (UInt16)(ms.Length - 4);
-        //tpkt.Write(ms);
-
-        //return ms.ToArray();
-
-        //var ms = new MemoryStream();
-        //cotp.WriteWithTPKT(ms);
-
-        //return ms.ToArray();
         return cotp;
-
-        //if (CPU == CpuType.S7200Smart) return plcHead1_200smart;
-
-        //Byte[] buf = [
-        //    3,
-        //    0,
-        //    0,
-        //    22, //TPKT
-        //    17,     //COTP Header Length
-        //    224,    //Connect Request
-        //    0,
-        //    0,   //Destination Reference
-        //    0,
-        //    46,  //Source Reference
-        //    0,      //Flags
-        //    193,    //Parameter Code (src-tasp)
-        //    2,      //Parameter Length
-        //    (Byte)(tsap.Local >> 8),
-        //    (Byte)(tsap.Local & 0xFF),   //Source TASP
-        //    194,    //Parameter Code (dst-tasp)
-        //    2,      //Parameter Length
-        //    (Byte)(tsap.Remote >> 8),
-        //    (Byte)(tsap.Remote & 0xFF),   //Destination TASP
-        //    192,    //Parameter Code (tpdu-size)
-        //    1,      //Parameter Length
-        //    10      //TPDU Size (2^10 = 1024)
-        //        ];
-
-        //return buf;
     }
 
     private async Task SetupConnection(Stream stream, CancellationToken cancellationToken)
     {
-        var setupData = GetS7ConnectionSetup();
+        var setup = GetS7ConnectionSetup();
 
-        var s7data = await RequestAsync(stream, setupData, 0, setupData.Length, cancellationToken)
+        var s7data = await RequestAsync(stream, setup, cancellationToken)
             .ConfigureAwait(false);
 
-        if (s7data.Count < 2)
-            throw new WrongNumberOfBytesException("Not enough data received in response to Communication Setup");
+        var rs = new S7Message();
+        if (!rs.Read(s7data.Data.ReadBytes())) return;
 
-        //Check for S7 Ack Data
-        if (s7data[1] != 0x03)
+        if (rs.Kind != S7Kinds.AckData)
             throw new InvalidDataException("Error reading Communication Setup response");
 
-        if (s7data.Count < 20)
-            throw new WrongNumberOfBytesException("Not enough data received in response to Communication Setup");
+        var pm = rs.Parameters?.FirstOrDefault(e => e.Code == S7Functions.Setup) as S7SetupParameter;
+        if (pm != null) MaxPDUSize = pm.PduLength;
 
-        // TODO: check if this should not rather be UInt16.
-        MaxPDUSize = s7data[18] * 256 + s7data[19];
+        //if (s7data.Count < 2)
+        //    throw new WrongNumberOfBytesException("Not enough data received in response to Communication Setup");
+
+        ////Check for S7 Ack Data
+        //if (s7data[1] != 0x03)
+        //    throw new InvalidDataException("Error reading Communication Setup response");
+
+        //if (s7data.Count < 20)
+        //    throw new WrongNumberOfBytesException("Not enough data received in response to Communication Setup");
+
+        //// TODO: check if this should not rather be UInt16.
+        //MaxPDUSize = s7data[18] * 256 + s7data[19];
     }
 
-    private Byte[] GetS7ConnectionSetup()
+    private COTP GetS7ConnectionSetup()
     {
-        if (CPU == CpuType.S7200Smart) return plcHead2_200smart;
+        var msg = new S7Message
+        {
+            Kind = S7Kinds.Job,
+        };
+        if (CPU == CpuType.S7200Smart)
+        {
+            msg.Sequence = 0xCCC1;
+            msg.Setup(0x0003, 960);
+        }
+        else
+        {
+            msg.Sequence = 0xFFFF;
+            msg.Setup(0x0001, 960);
+        }
 
-        return [3, 0, 0, 25, 2, 240, 128, 50, 1, 0, 0, 255, 255, 0, 8, 0, 0, 240, 0, 0, 3, 0, 3, 3, 192];
+        return msg.ToCOTP();
     }
 
     /// <summary>关闭连接</summary>

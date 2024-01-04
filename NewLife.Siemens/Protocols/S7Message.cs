@@ -142,4 +142,55 @@ public class S7Message : IAccessor
         return ms.ToArray();
     }
     #endregion
+
+    #region 参数
+    /// <summary>获取参数</summary>
+    /// <param name="code"></param>
+    /// <returns></returns>
+    public S7Parameter GetParameter(S7Functions code) => Parameters?.FirstOrDefault(e => e.Code == code);
+
+    /// <summary>设置参数</summary>
+    /// <param name="pm"></param>
+    public void SetParameter(S7Parameter pm)
+    {
+        for (var i = 0; i < Parameters.Count; i++)
+        {
+            var pm2 = Parameters[i];
+            if (pm2.Code == pm.Code)
+            {
+                Parameters[i] = pm;
+                return;
+            }
+        }
+
+        Parameters.Add(pm);
+    }
+
+    /// <summary>设置参数</summary>
+    /// <param name="amq"></param>
+    /// <param name="pdu"></param>
+    public void Setup(UInt16 amq, UInt16 pdu)
+    {
+        SetParameter(new S7SetupParameter
+        {
+            MaxAmqCaller = amq,
+            MaxAmqCallee = amq,
+            PduLength = pdu,
+        });
+    }
+    #endregion
+
+    #region 辅助
+    /// <summary>序列化为COTP</summary>
+    /// <returns></returns>
+    public COTP ToCOTP()
+    {
+        return new COTP
+        {
+            Type = PduType.Data,
+            LastDataUnit = true,
+            Data = GetBytes()
+        };
+    }
+    #endregion
 }

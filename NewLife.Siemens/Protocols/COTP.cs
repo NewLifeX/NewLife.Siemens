@@ -77,7 +77,7 @@ public class COTP : IAccessor
                     LastDataUnit = (flags & 0x80) > 0;
 
                     if (pk != null)
-                        Data = pk.Slice(4, pk.Total - 1 - len);
+                        Data = pk.Slice(1 + len, pk.Total - 1 - len);
                     else
                         Data = stream.ReadBytes(-1);
                 }
