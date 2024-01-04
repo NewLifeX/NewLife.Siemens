@@ -65,7 +65,6 @@ public class S7Session : NetSession<S7Server>
         rs.WriteWithTPKT(ms);
         ms.Position = 0;
 
-        var buf = ms.ToArray();
         Send(ms);
 
         _logined = true;
@@ -73,10 +72,30 @@ public class S7Session : NetSession<S7Server>
 
     void OnData(COTP cotp)
     {
-        var ms = new MemoryStream();
-        cotp.WriteWithTPKT(ms);
-        ms.Position = 0;
+        var msg = new S7Message();
+        if (!msg.Read(cotp.Data)) return;
 
-        Send(ms);
+        switch (msg.Kind)
+        {
+            case S7Kinds.Job:
+                {
+                    var rs = new S7Message
+                    {
+                        Kind = S7Kinds.AckData,
+                        Sequence = msg.Sequence,
+                    };
+
+                    Send(rs.ToCOTP().ToPacket(true));
+                }
+                break;
+            case S7Kinds.Ack:
+                break;
+            case S7Kinds.AckData:
+                break;
+            case S7Kinds.UserData:
+                break;
+            default:
+                break;
+        }
     }
 }

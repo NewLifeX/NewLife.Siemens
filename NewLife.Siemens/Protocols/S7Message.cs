@@ -28,9 +28,9 @@ public class S7Message : IAccessor
 
     #region 读写
     /// <summary>读取</summary>
-    /// <param name="buf"></param>
+    /// <param name="pk"></param>
     /// <returns></returns>
-    public Boolean Read(Byte[] buf) => Read(new MemoryStream(buf), null);
+    public Boolean Read(Packet pk) => Read(null, pk);
 
     /// <summary>读取</summary>
     /// <param name="stream"></param>

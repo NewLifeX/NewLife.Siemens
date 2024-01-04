@@ -241,7 +241,7 @@ public class COTP : IAccessor
     /// <summary>获取内容</summary>
     /// <param name="withTPKT"></param>
     /// <returns></returns>
-    public Packet GetBytes(Boolean withTPKT = true)
+    public Packet ToPacket(Boolean withTPKT = true)
     {
         var ms = new MemoryStream();
         if (!Write(ms, null)) return null;

@@ -225,7 +225,7 @@ public partial class S7PLC : DisposeBase
         cancellationToken.ThrowIfCancellationRequested();
         try
         {
-            var pk = request.GetBytes(true);
+            var pk = request.ToPacket(true);
             //var buf = pk.ReadBytes();
 
             using var closeOnCancellation = cancellationToken.Register(Close);
