@@ -12,6 +12,7 @@ namespace NewLife.Siemens.Protocols;
 /// </remarks>
 public class TPKT
 {
+    #region 属性
     /// <summary>版本</summary>
     public Byte Version { get; set; }
 
@@ -23,21 +24,11 @@ public class TPKT
 
     /// <summary>数据</summary>
     public Packet Data { get; set; }
-
-    /// <summary>实例化</summary>
-    public TPKT() { }
-
-    private TPKT(Byte version, Byte reserved1, Int32 length, Byte[] data)
-    {
-        Version = version;
-        Reserved = reserved1;
-        Length = (UInt16)length;
-        Data = data;
-    }
+    #endregion
 
     /// <summary>解析数据</summary>
     /// <param name="pk"></param>
-    public void Read(Packet pk)
+    public TPKT Read(Packet pk)
     {
         var buf = pk.ReadBytes(0, 4);
         Version = buf[0];
@@ -45,6 +36,8 @@ public class TPKT
         Length = buf.ToUInt16(2, false);
 
         if (pk.Total > 4) Data = pk.Slice(4, Length);
+
+        return this;
     }
 
     /// <summary>解析数据</summary>
@@ -85,6 +78,15 @@ public class TPKT
         var ms = new MemoryStream();
         Write(ms);
         return ms.ToArray();
+    }
+
+    /// <summary>获取字节数组</summary>
+    /// <returns></returns>
+    public Packet ToPacket()
+    {
+        var ms = new MemoryStream();
+        Write(ms);
+        return new Packet(ms);
     }
 
     /// <summary>
