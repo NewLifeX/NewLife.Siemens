@@ -24,33 +24,26 @@ public class S7Session : NetSession<S7Server>
     /// <param name="e"></param>
     protected override void OnReceive(ReceivedEventArgs e)
     {
-        // 由于不考虑高并发粘包问题，因此不需要Codec解码器
-        var ms = e.Packet.GetStream();
-        var tpkt = new TPKT();
-        tpkt.Read(ms);
+        if (e.Message is not TPKT tpkt || tpkt.Data == null) return;
 
-        // 足够一帧
-        if (tpkt.Length > 0 && ms.Position + tpkt.Length - 4 <= ms.Length)
+        var cotp = new COTP();
+        if (cotp.Read(tpkt.Data))
         {
-            var cotp = new COTP();
-            if (cotp.Read(ms, null))
+            switch (cotp.Type)
             {
-                switch (cotp.Type)
-                {
-                    case PduType.Data:
-                        if (!_logined)
-                            OnConnectionRequest(cotp);
-                        else
-                            OnData(cotp);
-                        break;
-                    case PduType.ConnectionRequest:
+                case PduType.Data:
+                    if (!_logined)
                         OnConnectionRequest(cotp);
-                        break;
-                    //case PduType.ConnectionConfirmed:
-                    //    break;
-                    default:
-                        break;
-                }
+                    else
+                        OnData(cotp);
+                    break;
+                case PduType.ConnectionRequest:
+                    OnConnectionRequest(cotp);
+                    break;
+                //case PduType.ConnectionConfirmed:
+                //    break;
+                default:
+                    break;
             }
         }
 
