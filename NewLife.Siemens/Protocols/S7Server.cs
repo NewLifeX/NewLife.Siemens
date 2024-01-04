@@ -28,7 +28,7 @@ public class S7Session : NetSession<S7Server>
         tpkt.Read(ms);
 
         // 足够一帧
-        if (tpkt.Length > 0 && ms.Position + tpkt.Length <= ms.Length)
+        if (tpkt.Length > 0 && ms.Position + tpkt.Length - 4 <= ms.Length)
         {
             var cotp = new COTP();
             if (cotp.Read(ms, null))

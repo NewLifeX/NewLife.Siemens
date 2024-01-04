@@ -18,7 +18,7 @@ public class TPKT
     /// <summary>保留</summary>
     public Byte Reserved { get; set; }
 
-    /// <summary>长度</summary>
+    /// <summary>长度。包括当前TPKT头和后续数据</summary>
     public UInt16 Length { get; set; }
 
     /// <summary>数据</summary>
@@ -44,7 +44,7 @@ public class TPKT
         Reserved = buf[1];
         Length = buf.ToUInt16(2, false);
 
-        Data = pk.Slice(4, Length);
+        if (pk.Total > 4) Data = pk.Slice(4, Length);
     }
 
     /// <summary>解析数据</summary>
@@ -66,13 +66,16 @@ public class TPKT
 
         if (Data != null)
         {
-            Length = (UInt16)Data.Total;
+            Length = (UInt16)(4 + Data.Total);
             stream.Write(Length.GetBytes(false));
 
             Data?.CopyTo(stream);
         }
         else
+        {
+            if (Length == 0) Length = 4;
             stream.Write(Length.GetBytes(false));
+        }
     }
 
     /// <summary>获取字节数组</summary>
@@ -97,22 +100,17 @@ public class TPKT
         var len = await stream.ReadExactAsync(buf, 0, 4, cancellationToken).ConfigureAwait(false);
         if (len < 4) throw new TPKTInvalidException("TPKT is incomplete / invalid");
 
-        var version = buf[0];
-        var reserved1 = buf[1];
-        var length = buf[2] * 256 + buf[3]; // 大端字节序
+        var tpkt = new TPKT();
+        tpkt.Read(buf);
 
         // 根据长度读取数据
-        var data = new Byte[length];
+        var data = new Byte[tpkt.Length - 4];
         len = await stream.ReadExactAsync(data, 0, data.Length, cancellationToken).ConfigureAwait(false);
         if (len < data.Length)
             throw new TPKTInvalidException("TPKT payload incomplete / invalid");
 
-        return new TPKT
-        (
-            version: version,
-            reserved1: reserved1,
-            length: length,
-            data: data
-        );
+        tpkt.Data = data;
+
+        return tpkt;
     }
 }

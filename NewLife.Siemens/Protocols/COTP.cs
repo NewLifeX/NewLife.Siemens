@@ -136,7 +136,8 @@ public class COTP : IAccessor
         {
             case PduType.Data:
                 {
-                    var len = 2;
+                    var len = 1 + 1;
+                    if (Data != null) len += Data.Total;
                     stream.WriteByte((Byte)len);
                     stream.WriteByte((Byte)Type);
 
@@ -151,7 +152,16 @@ public class COTP : IAccessor
             case PduType.ConnectionConfirmed:
             default:
                 {
-                    var len = 2;
+                    var ps = Parameters;
+                    var len = 1 + 2 + 2 + 1;
+                    if (ps != null)
+                    {
+                        FixParameters(ps);
+                        foreach (var item in ps)
+                        {
+                            len += 1 + 1 + item.Length;
+                        }
+                    }
                     writer.WriteByte((Byte)len);
                     writer.WriteByte((Byte)Type);
 
@@ -159,7 +169,6 @@ public class COTP : IAccessor
                     writer.Write(Source);
                     writer.WriteByte(Option);
 
-                    var ps = Parameters;
                     if (ps != null) WriteParameters(writer, ps);
                 }
                 break;
@@ -168,32 +177,42 @@ public class COTP : IAccessor
         return true;
     }
 
+    void FixParameters(IList<COTPParameter> parameters)
+    {
+        foreach (var item in parameters)
+        {
+            item.Length = item.Kind switch
+            {
+                COTPParameterKinds.TpduSize => 1,
+                COTPParameterKinds.SrcTsap => 2,
+                COTPParameterKinds.DstTsap => 2,
+                _ => item.Value switch
+                {
+                    Byte => 1,
+                    UInt16 or Int16 => 2,
+                    UInt32 or Int32 => 4,
+                    Byte[] buf => (Byte)buf.Length,
+                    _ => throw new NotSupportedException(),
+                },
+            };
+        }
+    }
+
     void WriteParameters(Binary writer, IList<COTPParameter> parameters)
     {
         foreach (var item in parameters)
         {
             writer.WriteByte((Byte)item.Kind);
+            writer.WriteByte(item.Length);
 
             if (item.Value is Byte b)
-            {
-                writer.WriteByte(1);
                 writer.WriteByte(b);
-            }
             else if (item.Value is UInt16 u16)
-            {
-                writer.WriteByte(2);
                 writer.Write(u16);
-            }
             else if (item.Value is UInt32 u32)
-            {
-                writer.WriteByte(4);
                 writer.Write(u32);
-            }
             else if (item.Value is Byte[] buf)
-            {
-                writer.WriteByte((Byte)buf.Length);
                 writer.Write(buf);
-            }
             else
                 throw new NotSupportedException();
         }
@@ -210,7 +229,7 @@ public class COTP : IAccessor
         var ms = new MemoryStream();
         if (!Write(ms, null)) return false;
 
-        tpkt.Length = (UInt16)ms.Length;
+        tpkt.Length = (UInt16)(4 + ms.Length);
         tpkt.Write(stream);
 
         ms.Position = 0;
@@ -232,7 +251,7 @@ public class COTP : IAccessor
         if (!withTPKT) return pk;
 
         var tpkt = new TPKT { Version = 3, };
-        tpkt.Length = (UInt16)ms.Length;
+        tpkt.Length = (UInt16)(4 + ms.Length);
 
         var rs = new Packet(tpkt.ToArray());
         rs.Append(pk);
