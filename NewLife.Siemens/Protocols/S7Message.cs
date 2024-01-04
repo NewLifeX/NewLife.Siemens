@@ -150,20 +150,20 @@ public class S7Message : IAccessor
     public S7Parameter GetParameter(S7Functions code) => Parameters?.FirstOrDefault(e => e.Code == code);
 
     /// <summary>设置参数</summary>
-    /// <param name="pm"></param>
-    public void SetParameter(S7Parameter pm)
+    /// <param name="parameter"></param>
+    public void SetParameter(S7Parameter parameter)
     {
         for (var i = 0; i < Parameters.Count; i++)
         {
             var pm2 = Parameters[i];
-            if (pm2.Code == pm.Code)
+            if (pm2.Code == parameter.Code)
             {
-                Parameters[i] = pm;
+                Parameters[i] = parameter;
                 return;
             }
         }
 
-        Parameters.Add(pm);
+        Parameters.Add(parameter);
     }
 
     /// <summary>设置参数</summary>

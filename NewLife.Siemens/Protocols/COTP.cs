@@ -137,7 +137,7 @@ public class COTP : IAccessor
             case PduType.Data:
                 {
                     var len = 1 + 1;
-                    if (Data != null) len += Data.Total;
+                    //if (Data != null) len += Data.Total;
                     stream.WriteByte((Byte)len);
                     stream.WriteByte((Byte)Type);
 
@@ -258,6 +258,45 @@ public class COTP : IAccessor
 
         return rs;
     }
+    #endregion
+
+    #region 参数
+    /// <summary>获取参数</summary>
+    /// <param name="kind"></param>
+    /// <returns></returns>
+    public COTPParameter GetParameter(COTPParameterKinds kind) => Parameters?.FirstOrDefault(e => e.Kind == kind);
+
+    /// <summary>设置参数</summary>
+    /// <param name="parameter"></param>
+    public void SetParameter(COTPParameter parameter)
+    {
+        for (var i = 0; i < Parameters.Count; i++)
+        {
+            var pm2 = Parameters[i];
+            if (pm2.Kind == parameter.Kind)
+            {
+                Parameters[i] = parameter;
+                return;
+            }
+        }
+
+        Parameters.Add(parameter);
+    }
+
+    /// <summary>设置参数</summary>
+    /// <param name="kind"></param>
+    /// <param name="value"></param>
+    public void SetParameter(COTPParameterKinds kind, Byte value) => SetParameter(new COTPParameter { Kind = kind, Length = 1, Value = value, });
+
+    /// <summary>设置参数</summary>
+    /// <param name="kind"></param>
+    /// <param name="value"></param>
+    public void SetParameter(COTPParameterKinds kind, UInt16 value) => SetParameter(new COTPParameter { Kind = kind, Length = 2, Value = value, });
+
+    /// <summary>设置参数</summary>
+    /// <param name="kind"></param>
+    /// <param name="value"></param>
+    public void SetParameter(COTPParameterKinds kind, UInt32 value) => SetParameter(new COTPParameter { Kind = kind, Length = 4, Value = value, });
     #endregion
 
     #region 方法

@@ -18,8 +18,8 @@ public partial class S7PLC : DisposeBase
     /// <summary>超时时间。默认5000毫秒</summary>
     public Int32 Timeout { get; set; } = 5_000;
 
-    /// <summary>TSAP地址</summary>
-    public TsapAddress TSAP { get; set; }
+    ///// <summary>TSAP地址</summary>
+    //public TsapAddress TSAP { get; set; }
 
     /// <summary>类型</summary>
     public CpuType CPU { get; set; }
@@ -53,7 +53,7 @@ public partial class S7PLC : DisposeBase
         Rack = rack;
         Slot = slot;
 
-        TSAP = TsapAddress.GetDefaultTsapPair(cpu, rack, slot);
+        //TSAP = TsapAddress.GetDefaultTsapPair(cpu, rack, slot);
     }
 
     /// <summary>销毁</summary>
@@ -100,7 +100,8 @@ public partial class S7PLC : DisposeBase
 
     private async Task RequestConnection(Stream stream, CancellationToken cancellationToken)
     {
-        var request = GetConnectionRequest(TSAP);
+        var tsap = TsapAddress.GetDefaultTsapPair(CPU, Rack, Slot);
+        var request = GetConnectionRequest(tsap);
         var response = await RequestAsync(stream, request, cancellationToken).ConfigureAwait(false);
 
         if (response.Type != PduType.ConnectionConfirmed)
@@ -129,9 +130,9 @@ public partial class S7PLC : DisposeBase
                 Source = 0x2E,
                 Option = 0x00,
             };
-            cotp.Parameters.Add(new COTPParameter { Kind = COTPParameterKinds.SrcTsap, Value = tsap.Local });
-            cotp.Parameters.Add(new COTPParameter { Kind = COTPParameterKinds.DstTsap, Value = tsap.Remote });
-            cotp.Parameters.Add(new COTPParameter { Kind = COTPParameterKinds.TpduSize, Value = (Byte)0x0A });
+            cotp.SetParameter(COTPParameterKinds.SrcTsap, tsap.Local);
+            cotp.SetParameter(COTPParameterKinds.DstTsap, tsap.Remote);
+            cotp.SetParameter(COTPParameterKinds.TpduSize, (Byte)0x0A);
         }
 
         return cotp;
