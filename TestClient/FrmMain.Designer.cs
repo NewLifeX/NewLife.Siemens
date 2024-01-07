@@ -1,6 +1,6 @@
 ﻿namespace TestClient
 {
-    partial class Form1
+    partial class FrmMain
     {
         /// <summary>
         ///  Required designer variable.
@@ -49,42 +49,47 @@
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(17, 29);
+            label1.Location = new Point(14, 24);
+            label1.Margin = new Padding(2, 0, 2, 0);
             label1.Name = "label1";
-            label1.Size = new Size(64, 24);
+            label1.Size = new Size(54, 20);
             label1.TabIndex = 0;
             label1.Text = "地址：";
             // 
             // label2
             // 
             label2.AutoSize = true;
-            label2.Location = new Point(301, 29);
+            label2.Location = new Point(246, 24);
+            label2.Margin = new Padding(2, 0, 2, 0);
             label2.Name = "label2";
-            label2.Size = new Size(64, 24);
+            label2.Size = new Size(54, 20);
             label2.TabIndex = 1;
             label2.Text = "端口：";
             // 
             // tb_address
             // 
-            tb_address.Location = new Point(86, 26);
+            tb_address.Location = new Point(70, 22);
+            tb_address.Margin = new Padding(2);
             tb_address.Name = "tb_address";
-            tb_address.Size = new Size(209, 30);
+            tb_address.Size = new Size(172, 27);
             tb_address.TabIndex = 2;
             tb_address.Text = "127.0.0.1";
             // 
             // tb_port
             // 
-            tb_port.Location = new Point(370, 26);
+            tb_port.Location = new Point(303, 22);
+            tb_port.Margin = new Padding(2);
             tb_port.Name = "tb_port";
-            tb_port.Size = new Size(184, 30);
+            tb_port.Size = new Size(151, 27);
             tb_port.TabIndex = 3;
             tb_port.Text = "102";
             // 
             // btn_conn
             // 
-            btn_conn.Location = new Point(572, 24);
+            btn_conn.Location = new Point(468, 20);
+            btn_conn.Margin = new Padding(2);
             btn_conn.Name = "btn_conn";
-            btn_conn.Size = new Size(112, 34);
+            btn_conn.Size = new Size(92, 28);
             btn_conn.TabIndex = 4;
             btn_conn.Text = "连接";
             btn_conn.UseVisualStyleBackColor = true;
@@ -93,17 +98,19 @@
             // rtb_content
             // 
             rtb_content.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            rtb_content.Location = new Point(12, 173);
+            rtb_content.Location = new Point(10, 144);
+            rtb_content.Margin = new Padding(2);
             rtb_content.Name = "rtb_content";
-            rtb_content.Size = new Size(930, 409);
+            rtb_content.Size = new Size(762, 342);
             rtb_content.TabIndex = 5;
             rtb_content.Text = "";
             // 
             // btn_write
             // 
-            btn_write.Location = new Point(572, 73);
+            btn_write.Location = new Point(468, 61);
+            btn_write.Margin = new Padding(2);
             btn_write.Name = "btn_write";
-            btn_write.Size = new Size(112, 34);
+            btn_write.Size = new Size(92, 28);
             btn_write.TabIndex = 6;
             btn_write.Text = "写入";
             btn_write.UseVisualStyleBackColor = true;
@@ -111,41 +118,46 @@
             // 
             // tb_pointAddress
             // 
-            tb_pointAddress.Location = new Point(86, 75);
+            tb_pointAddress.Location = new Point(70, 62);
+            tb_pointAddress.Margin = new Padding(2);
             tb_pointAddress.Name = "tb_pointAddress";
-            tb_pointAddress.Size = new Size(209, 30);
+            tb_pointAddress.Size = new Size(172, 27);
             tb_pointAddress.TabIndex = 7;
             // 
             // tb_value
             // 
-            tb_value.Location = new Point(370, 75);
+            tb_value.Location = new Point(303, 62);
+            tb_value.Margin = new Padding(2);
             tb_value.Name = "tb_value";
-            tb_value.Size = new Size(184, 30);
+            tb_value.Size = new Size(151, 27);
             tb_value.TabIndex = 8;
             // 
             // label3
             // 
             label3.AutoSize = true;
-            label3.Location = new Point(17, 78);
+            label3.Location = new Point(14, 65);
+            label3.Margin = new Padding(2, 0, 2, 0);
             label3.Name = "label3";
-            label3.Size = new Size(64, 24);
+            label3.Size = new Size(54, 20);
             label3.TabIndex = 9;
             label3.Text = "点位：";
             // 
             // label4
             // 
             label4.AutoSize = true;
-            label4.Location = new Point(319, 78);
+            label4.Location = new Point(261, 65);
+            label4.Margin = new Padding(2, 0, 2, 0);
             label4.Name = "label4";
-            label4.Size = new Size(46, 24);
+            label4.Size = new Size(39, 20);
             label4.TabIndex = 10;
             label4.Text = "值：";
             // 
             // btn_read
             // 
-            btn_read.Location = new Point(706, 73);
+            btn_read.Location = new Point(578, 61);
+            btn_read.Margin = new Padding(2);
             btn_read.Name = "btn_read";
-            btn_read.Size = new Size(112, 34);
+            btn_read.Size = new Size(92, 28);
             btn_read.TabIndex = 11;
             btn_read.Text = "读取";
             btn_read.UseVisualStyleBackColor = true;
@@ -154,40 +166,44 @@
             // label5
             // 
             label5.AutoSize = true;
-            label5.Location = new Point(17, 127);
+            label5.Location = new Point(14, 106);
+            label5.Margin = new Padding(2, 0, 2, 0);
             label5.Name = "label5";
-            label5.Size = new Size(64, 24);
+            label5.Size = new Size(54, 20);
             label5.TabIndex = 12;
             label5.Text = "类型：";
             // 
             // label6
             // 
             label6.AutoSize = true;
-            label6.Location = new Point(301, 127);
+            label6.Location = new Point(246, 106);
+            label6.Margin = new Padding(2, 0, 2, 0);
             label6.Name = "label6";
-            label6.Size = new Size(64, 24);
+            label6.Size = new Size(54, 20);
             label6.TabIndex = 13;
             label6.Text = "长度：";
             // 
             // tb_type
             // 
-            tb_type.Location = new Point(86, 124);
+            tb_type.Location = new Point(70, 103);
+            tb_type.Margin = new Padding(2);
             tb_type.Name = "tb_type";
-            tb_type.Size = new Size(209, 30);
+            tb_type.Size = new Size(172, 27);
             tb_type.TabIndex = 14;
             // 
             // tb_length
             // 
-            tb_length.Location = new Point(370, 124);
+            tb_length.Location = new Point(303, 103);
+            tb_length.Margin = new Padding(2);
             tb_length.Name = "tb_length";
-            tb_length.Size = new Size(184, 30);
+            tb_length.Size = new Size(151, 27);
             tb_length.TabIndex = 15;
             // 
-            // Form1
+            // FrmMain
             // 
-            AutoScaleDimensions = new SizeF(11F, 24F);
+            AutoScaleDimensions = new SizeF(9F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(954, 594);
+            ClientSize = new Size(781, 495);
             Controls.Add(tb_length);
             Controls.Add(tb_type);
             Controls.Add(label6);
@@ -204,8 +220,11 @@
             Controls.Add(tb_address);
             Controls.Add(label2);
             Controls.Add(label1);
-            Name = "Form1";
+            Margin = new Padding(2);
+            Name = "FrmMain";
+            StartPosition = FormStartPosition.CenterScreen;
             Text = "Form1";
+            Load += FrmMain_Load;
             ResumeLayout(false);
             PerformLayout();
         }

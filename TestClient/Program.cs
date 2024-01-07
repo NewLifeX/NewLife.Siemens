@@ -1,3 +1,5 @@
+﻿using NewLife.Log;
+
 namespace TestClient
 {
     internal static class Program
@@ -8,10 +10,12 @@ namespace TestClient
         [STAThread]
         static void Main()
         {
+            XTrace.UseWinForm();
+
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
-            Application.Run(new Form1());
+            Application.Run(new FrmMain());
         }
     }
 }
