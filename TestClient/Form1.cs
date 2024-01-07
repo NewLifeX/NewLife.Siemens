@@ -4,6 +4,7 @@ using NewLife.IoT.Drivers;
 using NewLife.IoT.ThingModels;
 using NewLife.Siemens.Drivers;
 using NewLife.Siemens.Models;
+using NewLife.Serialization;
 
 namespace TestClient
 {
@@ -19,48 +20,67 @@ namespace TestClient
 
         private void button1_Click(object sender, EventArgs e)
         {
-            if (_driver == null)
+            try
             {
-                var driver = new SiemensS7Driver();
-                var pm = new SiemensParameter
-                {
-                    Address = $"{tb_address.Text}:{tb_port.Text}",
-                    CpuType = CpuType.S7200Smart,
-                    Rack = 0,
-                    Slot = 2,
-                };
 
-                _node = driver.Open(null, pm) as SiemensNode;
-                if (_node is SiemensNode node)
+                if (_driver == null)
                 {
-                    _driver = driver;
+                    var driver = new SiemensS7Driver();
+                    var pm = new SiemensParameter
+                    {
+                        Address = $"{tb_address.Text}:{tb_port.Text}",
+                        CpuType = CpuType.S7200Smart,
+                        Rack = 0,
+                        Slot = 0,
+                    };
 
                     this.Invoke(() =>
                     {
-                        btn_conn.Text = "断开";
-                        rtb_content.Append("连接成功");
+                        rtb_content.Append($"{pm.ToJson()}");
                         rtb_content.Append("\r\n");
                     });
+
+                    _node = driver.Open(null, pm) as SiemensNode;
+                    if (_node is SiemensNode node)
+                    {
+                        _driver = driver;
+
+                        this.Invoke(() =>
+                        {
+                            btn_conn.Text = "断开";
+                            rtb_content.Append("连接成功");
+                            rtb_content.Append("\r\n");
+                        });
+                    }
+                    else
+                    {
+                        this.Invoke(() =>
+                        {
+                            rtb_content.Append("连接失败");
+                            rtb_content.Append("\r\n");
+                        });
+                    }
                 }
                 else
                 {
+                    _driver.Dispose();
+                    _driver = null;
+
                     this.Invoke(() =>
                     {
-                        rtb_content.Append("连接失败");
+                        btn_conn.Text = "连接";
+
+                        rtb_content.Append("断开链接");
                         rtb_content.Append("\r\n");
                     });
                 }
-            }
-            else
-            {
-                _driver.Dispose();
-                _driver = null;
 
+            }
+            catch (Exception ex)
+            {
                 this.Invoke(() =>
                 {
-                    btn_conn.Text = "连接";
-
-                    rtb_content.Append("断开链接");
+                    rtb_content.Append($"连接失败,{ex}");
                     rtb_content.Append("\r\n");
                 });
             }
@@ -73,7 +93,7 @@ namespace TestClient
             var length = tb_length.Text.ToInt();
             var type = tb_type.Text;
 
-            var point = new Point
+            var point = new Pointx
             {
                 Name = "污泥泵停止时间",
                 Address = pointAdd, // "M100",
@@ -115,7 +135,7 @@ namespace TestClient
             var length = tb_length.Text.ToInt();
             var type = tb_type.Text;
 
-            var point = new Point
+            var point = new Pointx
             {
                 Name = "污泥泵停止时间",
                 Address = pointAdd, // "M100",
@@ -150,7 +170,7 @@ namespace TestClient
         }
     }
 
-    public class Point : IPoint
+    public class Pointx : IPoint
     {
         public String Name { get; set; }
         public String Address { get; set; }
