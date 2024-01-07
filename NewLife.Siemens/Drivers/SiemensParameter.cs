@@ -2,7 +2,7 @@
 using NewLife.IoT.Drivers;
 using NewLife.Siemens.Models;
 
-namespace NewLife.Omron.Drivers;
+namespace NewLife.Siemens.Drivers;
 
 /// <summary>Omron参数</summary>
 public class SiemensParameter : IDriverParameter

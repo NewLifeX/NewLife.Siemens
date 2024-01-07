@@ -4,7 +4,6 @@ using NewLife;
 using NewLife.IoT;
 using NewLife.IoT.Drivers;
 using NewLife.IoT.ThingModels;
-using NewLife.Omron.Drivers;
 using NewLife.Siemens.Drivers;
 using NewLife.Siemens.Models;
 
