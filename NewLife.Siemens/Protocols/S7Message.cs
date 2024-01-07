@@ -1,5 +1,6 @@
 ﻿using NewLife.Data;
 using NewLife.Serialization;
+using NewLife.Siemens.Messages;
 
 namespace NewLife.Siemens.Protocols;
 
@@ -103,6 +104,13 @@ public class S7Message : IAccessor
                     var pm = new SetupMessage();
                     if (pm.Read(null, reader))
                         Parameters.Add(pm);
+                    break;
+                case S7Functions.ReadVar:
+                    var rv = new ReadVarRequest();
+                    if (rv.Read(null, reader))
+                        Parameters.Add(rv);
+                    break;
+                case S7Functions.WriteVar:
                     break;
                 default:
                     throw new NotSupportedException($"不支持的S7参数类型[{kind}]");

@@ -1,9 +1,11 @@
 ﻿using NewLife.Serialization;
+using NewLife.Siemens.Models;
 
 namespace NewLife.Siemens.Messages;
 
-/// <summary>数据项</summary>
-public class DataItem
+/// <summary>请求数据项</summary>
+/// <remarks>共12字节</remarks>
+public class RequestItem
 {
     #region 属性
     /// <summary>标识</summary>
@@ -22,7 +24,7 @@ public class DataItem
     public UInt16 DbNumber { get; set; }
 
     /// <summary>区块</summary>
-    public Byte Area { get; set; }
+    public DataType Area { get; set; }
 
     /// <summary>起始地址</summary>
     public UInt32 Address { get; set; }
@@ -39,7 +41,7 @@ public class DataItem
         TransportSize = reader.ReadByte();
         Length = reader.ReadUInt16();
         DbNumber = reader.ReadUInt16();
-        Area = reader.ReadByte();
+        Area = (DataType)reader.ReadByte();
         Address = reader.ReadBytes(3).ToUInt32();
     }
 
@@ -49,12 +51,12 @@ public class DataItem
 
         var len = 1 + 1 + 2 + 2 + 1 + 3;
         writer.WriteByte((Byte)len);
-        writer.Write(SyntaxId);
-        writer.Write(TransportSize);
+        writer.WriteByte(SyntaxId);
+        writer.WriteByte(TransportSize);
         writer.Write(Length);
         writer.Write(DbNumber);
-        writer.Write(Area);
-        writer.Write(Address.GetBytes(false).Take(3).ToArray());
+        writer.WriteByte((Byte)Area);
+        writer.Write(Address.GetBytes(false).Skip(1).Take(3).ToArray());
     }
     #endregion
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using NewLife;
+using NewLife.Siemens.Messages;
 using NewLife.Siemens.Protocols;
 using Xunit;
 

@@ -12,7 +12,7 @@ public enum DataType
     /// <summary>内存区 (M0, M0.0, ...)</summary>
     Memory = 131,
 
-    /// <summary>数据块(DB1, DB2, ...)</summary>
+    /// <summary>数据块(DB1, DB2, ...) 0x84</summary>
     DataBlock = 132,
 
     /// <summary>定时器(T1, T2, ...)</summary>

@@ -1,6 +1,7 @@
 ﻿using System.Net.Sockets;
 using NewLife.Data;
 using NewLife.Siemens.Common;
+using NewLife.Siemens.Messages;
 using NewLife.Siemens.Models;
 
 namespace NewLife.Siemens.Protocols;
@@ -119,7 +120,7 @@ public partial class S7PLC : DisposeBase
         };
         cotp.SetParameter(COTPParameterKinds.SrcTsap, tsap.Local);
         cotp.SetParameter(COTPParameterKinds.DstTsap, tsap.Remote);
-        cotp.SetParameter(COTPParameterKinds.TpduSize, (Byte)MaxPDUSize);
+        cotp.SetParameter(COTPParameterKinds.TpduSize, (Byte)0xA0);
 
         return cotp;
     }
@@ -176,21 +177,6 @@ public partial class S7PLC : DisposeBase
     /// <returns></returns>
     private static void BuildHeaderPackage(MemoryStream stream, Int32 amount = 1)
     {
-        var msg = new S7Message
-        {
-            Kind = S7Kinds.Job,
-        };
-        if (CPU == CpuType.S7200Smart)
-        {
-            msg.Sequence = 0xCCC1;
-            msg.Setup(0x0003, 960);
-        }
-        else
-        {
-            msg.Sequence = 0xFFFF;
-            msg.Setup(0x0001, 960);
-        }
-
         //header size = 19 bytes
         stream.WriteByteArray([0x03, 0x00]);
         //complete package size
@@ -271,88 +257,91 @@ public partial class S7PLC : DisposeBase
     #endregion
 
     #region 读取
-    /// <summary>从指定DB开始，读取多个字节</summary>
-    /// <param name="dataType">Data type of the memory area, can be DB, Timer, Counter, Merker(Memory), Input, Output.</param>
-    /// <param name="db">Address of the memory area (if you want to read DB1, this is set to 1). This must be set also for other memory area types: counters, timers,etc.</param>
-    /// <param name="startByteAdr">Start byte address. If you want to read DB1.DBW200, this is 200.</param>
-    /// <param name="count">Byte count, if you want to read 120 bytes, set this to 120.</param>
-    /// <returns>Returns the bytes in an array</returns>
+    /// <summary>读取多个字节</summary>
+    /// <param name="dataType"></param>
+    /// <param name="db"></param>
+    /// <param name="startByteAdr"></param>
+    /// <param name="count"></param>
+    /// <returns></returns>
     public Byte[] ReadBytes(DataType dataType, Int32 db, Int32 startByteAdr, Int32 count)
     {
         var result = new Byte[count];
         var index = 0;
         while (count > 0)
         {
-            //This works up to MaxPDUSize-1 on SNAP7. But not MaxPDUSize-0.
+            // 最大PDU大小
             var maxToRead = Math.Min(count, MaxPDUSize - 18);
-            ReadBytesWithSingleRequest(dataType, db, startByteAdr + index, result, index, maxToRead);
+
+            var msg = new S7Message
+            {
+                Kind = S7Kinds.Job,
+            };
+
+            var request = new ReadVarRequest();
+            msg.SetParameter(request);
+
+            var di = BuildRead(dataType, db, startByteAdr + index, count);
+            request.Items.Add(di);
+
+            //ReadBytesWithSingleRequest(dataType, db, startByteAdr + index, result, index, maxToRead);
+            var rs = Request(msg.ToCOTP().ToArray());
+
             count -= maxToRead;
             index += maxToRead;
         }
         return result;
     }
 
-    private void ReadBytesWithSingleRequest(DataType dataType, Int32 db, Int32 startByteAdr, Byte[] buffer, Int32 offset, Int32 count)
+    private static RequestItem BuildRead(DataType dataType, Int32 db, Int32 startByteAdr, Int32 count = 1)
     {
-        try
+        var request = new RequestItem
         {
-            // first create the header
-            var packageSize = 19 + 12; // 19 header + 12 for 1 request
-            var package = new MemoryStream(packageSize);
-            BuildHeaderPackage(package);
-            // package.Add(0x02);  // datenart
-            BuildReadDataRequestPackage(package, dataType, db, startByteAdr, count);
+            // S7ANY
+            SyntaxId = 0x10,
+            // BIT
+            TransportSize = 0x01,
+            Length = 1,
+            DbNumber = (UInt16)db,
+            Area = dataType,
 
-            var dataToSend = package.ToArray();
-            var s7data = Request(dataToSend);
-            AssertReadResponse(s7data, count);
+            Address = (UInt32)startByteAdr,
+        };
 
-            //Array.Copy(s7data, 18, buffer, offset, count);
-            s7data.Slice(18).WriteTo(buffer, offset, count);
-        }
-        catch (Exception exc)
+        request.TransportSize = dataType switch
         {
-            throw new PlcException(ErrorCode.ReadData, exc);
-        }
-    }
+            DataType.Timer or DataType.Counter => (Byte)dataType,
+            _ => 0x02,
+        };
+        return request;
 
-    /// <summary>创建请求包</summary>
-    /// <param name="stream"></param>
-    /// <param name="dataType">MemoryType (DB, Timer, Counter, etc.)</param>
-    /// <param name="db">Address of the memory to be read</param>
-    /// <param name="startByteAdr">Start address of the byte</param>
-    /// <param name="count">Number of bytes to be read</param>
-    /// <returns></returns>
-    private static void BuildReadDataRequestPackage(MemoryStream stream, DataType dataType, Int32 db, Int32 startByteAdr, Int32 count = 1)
-    {
-        //single data req = 12
-        stream.WriteByteArray([0x12, 0x0a, 0x10]);
-        switch (dataType)
-        {
-            case DataType.Timer:
-            case DataType.Counter:
-                stream.WriteByte((Byte)dataType);
-                break;
-            default:
-                stream.WriteByte(0x02);
-                break;
-        }
+        ////single data req = 12
+        //stream.WriteByteArray([0x12, 0x0a, 0x10]);
+        //switch (dataType)
+        //{
+        //    case DataType.Timer:
+        //    case DataType.Counter:
+        //        stream.WriteByte((Byte)dataType);
+        //        break;
+        //    default:
+        //        stream.WriteByte(0x02);
+        //        break;
+        //}
 
-        stream.WriteByteArray(ToByteArray((UInt16)(count)));
-        stream.WriteByteArray(ToByteArray((UInt16)(db)));
-        stream.WriteByte((Byte)dataType);
-        var overflow = (Int32)(startByteAdr * 8 / 0xffffU); // handles words with address bigger than 8191
-        stream.WriteByte((Byte)overflow);
-        switch (dataType)
-        {
-            case DataType.Timer:
-            case DataType.Counter:
-                stream.WriteByteArray(ToByteArray((UInt16)(startByteAdr)));
-                break;
-            default:
-                stream.WriteByteArray(ToByteArray((UInt16)((startByteAdr) * 8)));
-                break;
-        }
+        //stream.WriteByteArray(ToByteArray((UInt16)(count)));
+        //stream.WriteByteArray(ToByteArray((UInt16)(db)));
+        //stream.WriteByte((Byte)dataType);
+        //var overflow = (Int32)(startByteAdr * 8 / 0xffffU); // handles words with address bigger than 8191
+        //stream.WriteByte((Byte)overflow);
+        //switch (dataType)
+        //{
+        //    case DataType.Timer:
+        //    case DataType.Counter:
+        //        stream.WriteByteArray(ToByteArray((UInt16)(startByteAdr)));
+        //        break;
+        //    default:
+        //        stream.WriteByteArray(ToByteArray((UInt16)((startByteAdr) * 8)));
+        //        break;
+        //}
     }
     #endregion
 

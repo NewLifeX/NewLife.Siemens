@@ -31,7 +31,8 @@ public class TsapAddress(UInt16 local, UInt16 remote)
         {
             CpuType.S7200 => new TsapAddress(0x1000, 0x1001),
             CpuType.Logo0BA8 => new TsapAddress(0x0100, 0x0102),
-            CpuType.S7200Smart or CpuType.S71200 or CpuType.S71500 or CpuType.S7300 or CpuType.S7400 => new TsapAddress(0x0100, (UInt16)(0x03 << 8 | (Byte)((rack << 5) | slot))),
+            CpuType.S7200Smart => new TsapAddress(0x1000, (UInt16)(0x03 << 8 | (Byte)((rack << 5) | slot))),
+            CpuType.S71200 or CpuType.S71500 or CpuType.S7300 or CpuType.S7400 => new TsapAddress(0x0100, (UInt16)(0x03 << 8 | (Byte)((rack << 5) | slot))),
             _ => throw new NotSupportedException(),
         };
     }

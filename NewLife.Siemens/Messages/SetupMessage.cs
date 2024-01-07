@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using NewLife.Serialization;
 using NewLife.Siemens.Protocols;
 
 namespace NewLife.Siemens.Messages;
