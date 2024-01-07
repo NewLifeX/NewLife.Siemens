@@ -226,11 +226,11 @@ public partial class S7PLC : DisposeBase
         try
         {
             var pk = request.ToPacket(true);
-            //var buf = pk.ReadBytes();
+            var buf = pk.ReadBytes();
 
             using var closeOnCancellation = cancellationToken.Register(Close);
-            await pk.CopyToAsync(stream, cancellationToken);
-            //await stream.WriteAsync(buf, 0, buf.Length, cancellationToken);
+            //await pk.CopyToAsync(stream, cancellationToken);
+            await stream.WriteAsync(buf, 0, buf.Length, cancellationToken);
             return await COTP.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exc)
