@@ -4,8 +4,23 @@ using NewLife;
 using NewLife.IoT;
 using NewLife.IoT.Drivers;
 using NewLife.IoT.ThingModels;
+using NewLife.Log;
 using NewLife.Siemens.Drivers;
 using NewLife.Siemens.Models;
+using NewLife.Siemens.Protocols;
+
+XTrace.UseConsole();
+
+var server = new S7Server
+{
+    Log = XTrace.Log,
+    SessionLog = XTrace.Log,
+    SocketLog = XTrace.Log,
+    LogSend = true,
+    LogReceive = true
+};
+
+server.Start();
 
 Console.WriteLine("服务端地址默认为：127.0.0.1:102，保持默认请回车开始连接，否则请输入服务端地址：");
 var address = Console.ReadLine();
