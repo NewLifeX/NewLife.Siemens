@@ -19,6 +19,10 @@ public class S7Message : IAccessor
     /// <summary>序列号。由主站生成，每次新传输递增，用于链接对其请求的响应。小端字节序</summary>
     public UInt16 Sequence { get; set; }
 
+    public Byte ErrorClass { get; set; }
+
+    public Byte ErrorCode { get; set; }
+
     /// <summary>参数集合</summary>
     public IList<S7Parameter> Parameters { get; set; } = [];
 
@@ -51,6 +55,23 @@ public class S7Message : IAccessor
         var plen = reader.ReadUInt16();
         var dlen = reader.ReadUInt16();
 
+        // 错误码
+        switch (Kind)
+        {
+            case S7Kinds.Job:
+                break;
+            case S7Kinds.Ack:
+                break;
+            case S7Kinds.AckData:
+                ErrorClass = reader.ReadByte();
+                ErrorCode = reader.ReadByte();
+                break;
+            case S7Kinds.UserData:
+                break;
+            default:
+                break;
+        }
+
         // 读取参数
         if (plen > 0)
         {
@@ -79,7 +100,7 @@ public class S7Message : IAccessor
             switch (kind)
             {
                 case S7Functions.Setup:
-                    var pm = new S7SetupParameter();
+                    var pm = new SetupMessage();
                     if (pm.Read(null, reader))
                         Parameters.Add(pm);
                     break;
@@ -111,6 +132,22 @@ public class S7Message : IAccessor
 
         writer.WriteUInt16((UInt16)plen);
         writer.WriteUInt16((UInt16)dlen);
+
+        switch (Kind)
+        {
+            case S7Kinds.Job:
+                break;
+            case S7Kinds.Ack:
+                break;
+            case S7Kinds.AckData:
+                writer.WriteByte(ErrorClass);
+                writer.WriteByte(ErrorCode);
+                break;
+            case S7Kinds.UserData:
+                break;
+            default:
+                break;
+        }
 
         if (ps != null && ps.Length > 0) writer.Write(ps, 0, ps.Length);
 
@@ -171,7 +208,7 @@ public class S7Message : IAccessor
     /// <param name="pdu"></param>
     public void Setup(UInt16 amq, UInt16 pdu)
     {
-        SetParameter(new S7SetupParameter
+        SetParameter(new SetupMessage
         {
             MaxAmqCaller = amq,
             MaxAmqCallee = amq,

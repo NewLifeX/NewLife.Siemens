@@ -8,6 +8,12 @@ public enum S7Functions : Byte
 {
     /// <summary>设置通信</summary>
     Setup = 0xF0,
+
+    /// <summary>读取变量</summary>
+    ReadVar = 0x04,
+
+    /// <summary>写入变量</summary>
+    WriteVar = 0x05,
 }
 
 /// <summary>数据项（类型+长度+数值）</summary>
@@ -60,46 +66,5 @@ public class S7Parameter : IAccessor
     /// <summary>写入</summary>
     /// <param name="writer"></param>
     protected virtual void OnWrite(Binary writer) { }
-    #endregion
-}
-
-/// <summary>设置通信</summary>
-/// <remarks>各个字段都是大端</remarks>
-public class S7SetupParameter : S7Parameter
-{
-    #region 属性
-    /// <summary>Ack队列的大小（主叫）</summary>
-    public UInt16 MaxAmqCaller { get; set; }
-
-    /// <summary>Ack队列的大小（被叫）</summary>
-    public UInt16 MaxAmqCallee { get; set; }
-
-    /// <summary>PDU长度</summary>
-    public UInt16 PduLength { get; set; }
-    #endregion
-
-    #region 构造
-    /// <summary>实例化</summary>
-    public S7SetupParameter() => Code = S7Functions.Setup;
-    #endregion
-
-    #region 方法
-    /// <summary>读取</summary>
-    /// <param name="reader"></param>
-    protected override void OnRead(Binary reader)
-    {
-        MaxAmqCaller = reader.ReadUInt16();
-        MaxAmqCallee = reader.ReadUInt16();
-        PduLength = reader.ReadUInt16();
-    }
-
-    /// <summary>写入</summary>
-    /// <param name="writer"></param>
-    protected override void OnWrite(Binary writer)
-    {
-        writer.WriteUInt16(MaxAmqCaller);
-        writer.WriteUInt16(MaxAmqCallee);
-        writer.WriteUInt16(PduLength);
-    }
     #endregion
 }

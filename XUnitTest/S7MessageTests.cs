@@ -26,7 +26,7 @@ public class S7MessageTests
 
         Assert.Single(msg.Parameters);
 
-        var pm = msg.Parameters[0] as S7SetupParameter;
+        var pm = msg.Parameters[0] as SetupMessage;
         Assert.NotNull(pm);
         Assert.Equal(S7Functions.Setup, pm.Code);
         Assert.Equal(3, pm.MaxAmqCaller);
@@ -58,7 +58,7 @@ public class S7MessageTests
 
         Assert.Single(msg.Parameters);
 
-        var pm = msg.Parameters[0] as S7SetupParameter;
+        var pm = msg.Parameters[0] as SetupMessage;
         Assert.NotNull(pm);
         Assert.Equal(S7Functions.Setup, pm.Code);
         Assert.Equal(1, pm.MaxAmqCaller);

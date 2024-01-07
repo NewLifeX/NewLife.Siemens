@@ -20,6 +20,27 @@ public class S7Session : NetSession<S7Server>
 {
     private Boolean _logined;
 
+    protected override void OnConnected()
+    {
+        WriteLog("S7连接：{0}", Remote);
+
+        base.OnConnected();
+    }
+
+    protected override void OnDisconnected()
+    {
+        WriteLog("S7断开：{0}", Remote);
+
+        base.OnDisconnected();
+    }
+
+    protected override void OnError(Object sender, ExceptionEventArgs e)
+    {
+        WriteLog("S7错误：{0}", e.Exception.Message);
+
+        base.OnError(sender, e);
+    }
+
     /// <summary>收到数据时</summary>
     /// <param name="e"></param>
     protected override void OnReceive(ReceivedEventArgs e)
@@ -29,6 +50,8 @@ public class S7Session : NetSession<S7Server>
         var cotp = new COTP();
         if (cotp.Read(tpkt.Data))
         {
+            WriteLog("<={0}", cotp.ToString());
+
             switch (cotp.Type)
             {
                 case PduType.Data:

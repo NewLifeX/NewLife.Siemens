@@ -45,7 +45,7 @@ public partial class FrmMain : Form
                 XTrace.WriteLine(pm.ToJson(true));
 
                 _node = driver.Open(null, pm) as SiemensNode;
-                if (_node is SiemensNode node)
+                if (_node != null)
                 {
                     _driver = driver;
 
