@@ -25,6 +25,8 @@ public class S7Parameter : IAccessor
     #endregion
 
     #region 方法
+    public Boolean Read(Packet pk) => Read(pk.GetStream(), pk);
+
     /// <summary>读取</summary>
     /// <param name="stream"></param>
     /// <param name="context"></param>
@@ -35,7 +37,6 @@ public class S7Parameter : IAccessor
         reader ??= new Binary { Stream = stream ?? (context as Packet)?.GetStream(), IsLittleEndian = false };
 
         Code = (S7Functions)reader.ReadByte();
-        _ = reader.ReadByte();
 
         OnRead(reader);
 
@@ -54,11 +55,21 @@ public class S7Parameter : IAccessor
     {
         var writer = context as Binary;
         writer ??= new Binary { Stream = stream ?? (context as Packet)?.GetStream(), IsLittleEndian = false };
+        stream = writer.Stream;
 
         writer.WriteByte((Byte)Code);
-        writer.WriteByte(0);
+
+        var ms = new MemoryStream();
+        writer.Stream = ms;
 
         OnWrite(writer);
+
+        writer.Stream = stream;
+
+        writer.WriteByte((Byte)ms.Length);
+
+        ms.Position = 0;
+        ms.CopyTo(writer.Stream);
 
         return true;
     }

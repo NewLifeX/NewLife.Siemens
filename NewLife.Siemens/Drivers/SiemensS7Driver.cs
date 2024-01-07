@@ -143,6 +143,8 @@ public class SiemensS7Driver : DriverBase
             var db = adr.DbNumber;
             var startByteAdr = adr.StartByte;
 
+            if (point.Length == 0) point.Length = 2;
+
             var data = _plcConn.ReadBytes(dataType, db, startByteAdr, (UInt16)point.Length);
 
             // 借助物模型转换数据类型

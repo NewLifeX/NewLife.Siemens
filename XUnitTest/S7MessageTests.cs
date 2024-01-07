@@ -77,4 +77,38 @@ public class S7MessageTests
         var buf = msg.GetBytes();
         Assert.Equal(hex.ToHex(), buf.ToHex());
     }
+
+    [Fact]
+    public void ReadVar()
+    {
+        var str = "32 01 00 00 00 01 00 0e 00 00 04 01 12 0a 10 01 00 01 00 01 84 00 00 50";
+        var hex = str.ToHex();
+
+        var msg = new S7Message();
+
+        var rs = msg.Read(new MemoryStream(hex), null);
+        Assert.True(rs);
+
+        Assert.Equal(0x32, msg.ProtocolId);
+        Assert.Equal(S7Kinds.Job, msg.Kind);
+        Assert.Equal(0x0000, msg.Reserved);
+        Assert.Equal(1, msg.Sequence);
+
+        Assert.Single(msg.Parameters);
+
+        var pm = msg.Parameters[0] as ReadVarRequest;
+        Assert.NotNull(pm);
+        Assert.Equal(S7Functions.ReadVar, pm.Code);
+        Assert.Single(pm.Items);
+
+        var pm2 = msg.GetParameter(S7Functions.ReadVar);
+        Assert.NotNull(pm2);
+        Assert.Equal(pm, pm2);
+
+        Assert.Null(msg.Data);
+
+        // 序列化
+        var buf = msg.GetBytes();
+        Assert.Equal(hex.ToHex(), buf.ToHex());
+    }
 }

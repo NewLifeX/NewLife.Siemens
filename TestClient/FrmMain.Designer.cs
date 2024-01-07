@@ -123,6 +123,7 @@
             tb_pointAddress.Name = "tb_pointAddress";
             tb_pointAddress.Size = new Size(172, 27);
             tb_pointAddress.TabIndex = 7;
+            tb_pointAddress.Text = "DB1.DBD32";
             // 
             // tb_value
             // 
@@ -223,7 +224,7 @@
             Margin = new Padding(2);
             Name = "FrmMain";
             StartPosition = FormStartPosition.CenterScreen;
-            Text = "Form1";
+            Text = "S7测试";
             Load += FrmMain_Load;
             ResumeLayout(false);
             PerformLayout();

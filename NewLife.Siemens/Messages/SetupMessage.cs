@@ -28,6 +28,9 @@ public class SetupMessage : S7Parameter
     /// <param name="reader"></param>
     protected override void OnRead(Binary reader)
     {
+        // 读取保留字节
+        _ = reader.ReadByte();
+
         MaxAmqCaller = reader.ReadUInt16();
         MaxAmqCallee = reader.ReadUInt16();
         PduLength = reader.ReadUInt16();
@@ -37,6 +40,8 @@ public class SetupMessage : S7Parameter
     /// <param name="writer"></param>
     protected override void OnWrite(Binary writer)
     {
+        writer.WriteByte(0);
+
         writer.WriteUInt16(MaxAmqCaller);
         writer.WriteUInt16(MaxAmqCallee);
         writer.WriteUInt16(PduLength);

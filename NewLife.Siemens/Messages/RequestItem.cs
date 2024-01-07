@@ -42,7 +42,11 @@ public class RequestItem
         Length = reader.ReadUInt16();
         DbNumber = reader.ReadUInt16();
         Area = (DataType)reader.ReadByte();
-        Address = reader.ReadBytes(3).ToUInt32();
+
+        var buf = reader.ReadBytes(3);
+        var buf2 = new Byte[4];
+        buf.CopyTo(buf2, 1);
+        Address = buf2.ToUInt32();
     }
 
     public void Writer(Binary writer)
@@ -56,7 +60,11 @@ public class RequestItem
         writer.Write(Length);
         writer.Write(DbNumber);
         writer.WriteByte((Byte)Area);
-        writer.Write(Address.GetBytes(false).Skip(1).Take(3).ToArray());
+
+        var buf = Address.GetBytes(false);
+        buf = buf.Skip(1).Take(3).ToArray();
+
+        writer.Write(buf);
     }
     #endregion
 }

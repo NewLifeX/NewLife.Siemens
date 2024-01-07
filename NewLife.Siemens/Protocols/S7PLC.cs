@@ -1,5 +1,6 @@
 ﻿using System.Net.Sockets;
 using NewLife.Data;
+using NewLife.Log;
 using NewLife.Siemens.Common;
 using NewLife.Siemens.Messages;
 using NewLife.Siemens.Models;
@@ -189,6 +190,25 @@ public partial class S7PLC : DisposeBase
         stream.WriteByte((Byte)amount);
     }
 
+    public async Task<S7Message> RequestAsync(S7Message request, CancellationToken cancellationToken = default)
+    {
+        XTrace.WriteLine("=> {0}", request);
+        var data = request.ToCOTP().ToPacket(true).ReadBytes();
+        XTrace.WriteLine("=> {0}", data.ToHex("-", 4));
+
+        var cotp = await RequestAsync(_stream, data, 0, data.Length, cancellationToken);
+        if (cotp == null) return null;
+
+        XTrace.WriteLine("<= {0}", cotp);
+
+        var msg = new S7Message();
+        if (!msg.Read(cotp.Data)) return null;
+
+        XTrace.WriteLine("<= {0}", msg);
+
+        return msg;
+    }
+
     /// <summary>异步请求</summary>
     /// <param name="stream"></param>
     /// <param name="request"></param>
@@ -265,7 +285,7 @@ public partial class S7PLC : DisposeBase
     /// <returns></returns>
     public Byte[] ReadBytes(DataType dataType, Int32 db, Int32 startByteAdr, Int32 count)
     {
-        var result = new Byte[count];
+        var ms = new MemoryStream();
         var index = 0;
         while (count > 0)
         {
@@ -280,16 +300,28 @@ public partial class S7PLC : DisposeBase
             var request = new ReadVarRequest();
             msg.SetParameter(request);
 
-            var di = BuildRead(dataType, db, startByteAdr + index, count);
+            var di = BuildRead(dataType, db, startByteAdr + index, maxToRead);
             request.Items.Add(di);
 
-            //ReadBytesWithSingleRequest(dataType, db, startByteAdr + index, result, index, maxToRead);
-            var rs = Request(msg.ToCOTP().ToArray());
+            var rs = RequestAsync(msg).Result;
+            if (rs == null || rs.Data == null) break;
+
+            var res = new ReadVarResponse();
+            if (!res.Read(rs.Data)) break;
+
+            if (res.Items != null)
+            {
+                foreach (var item in res.Items)
+                {
+                    if (item.Code == 0xFF && item.Data != null)
+                        ms.Write(item.Data, 0, item.Data.Length);
+                }
+            }
 
             count -= maxToRead;
             index += maxToRead;
         }
-        return result;
+        return ms.ToArray();
     }
 
     private static RequestItem BuildRead(DataType dataType, Int32 db, Int32 startByteAdr, Int32 count = 1)

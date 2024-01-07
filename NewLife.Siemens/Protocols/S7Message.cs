@@ -31,6 +31,10 @@ public class S7Message : IAccessor
     public Packet Data { get; set; }
     #endregion
 
+    #region 构造
+    public override String ToString() => $"[{Kind}]<{Parameters?.Count}> ({ErrorClass:X8})";
+    #endregion
+
     #region 读写
     /// <summary>读取</summary>
     /// <param name="pk"></param>
@@ -198,17 +202,18 @@ public class S7Message : IAccessor
     /// <param name="parameter"></param>
     public void SetParameter(S7Parameter parameter)
     {
-        for (var i = 0; i < Parameters.Count; i++)
+        var ps = Parameters;
+        for (var i = 0; i < ps.Count; i++)
         {
-            var pm2 = Parameters[i];
+            var pm2 = ps[i];
             if (pm2.Code == parameter.Code)
             {
-                Parameters[i] = parameter;
+                ps[i] = parameter;
                 return;
             }
         }
 
-        Parameters.Add(parameter);
+        ps.Add(parameter);
     }
 
     /// <summary>设置参数</summary>
