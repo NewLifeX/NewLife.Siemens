@@ -3,7 +3,7 @@
 namespace NewLife.Siemens.Messages;
 
 /// <summary>数据项</summary>
-public class ResponseItem
+public class DataItem
 {
     #region 属性
     /// <summary>错误码。0xFF表示成功</summary>
@@ -17,6 +17,8 @@ public class ResponseItem
     #endregion
 
     #region 方法
+    /// <summary>读取</summary>
+    /// <param name="reader"></param>
     public void Read(Binary reader)
     {
         Code = reader.ReadByte();
@@ -26,6 +28,8 @@ public class ResponseItem
         Data = reader.ReadBytes(len);
     }
 
+    /// <summary>写入</summary>
+    /// <param name="writer"></param>
     public void Writer(Binary writer)
     {
         writer.WriteByte(Code);

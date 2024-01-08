@@ -7,7 +7,7 @@ static class Helper
     /// <summary>是否已达到末尾</summary>
     /// <param name="binary"></param>
     /// <returns></returns>
-    public static Boolean EndOfStream(this Binary binary) => binary.Stream.Position < binary.Stream.Length;
+    public static Boolean EndOfStream(this Binary binary) => binary.Stream.Position >= binary.Stream.Length;
 
     /// <summary>检查剩余量是否足够</summary>
     /// <param name="binary"></param>

@@ -8,22 +8,22 @@ namespace NewLife.Siemens.Messages;
 public class RequestItem
 {
     #region 属性
-    /// <summary>标识</summary>
-    public Byte Id { get; set; }
+    /// <summary>结构类型。总是0x12</summary>
+    public Byte SpecType { get; set; } = 0x12;
 
-    /// <summary>DB块号</summary>
+    /// <summary>寻址模式。任意类型S7ANY用0x10</summary>
     public Byte SyntaxId { get; set; }
 
-    /// <summary>起始地址</summary>
-    public Byte TransportSize { get; set; }
+    /// <summary>变量类型</summary>
+    public VarType Type { get; set; }
 
-    /// <summary>长度</summary>
-    public UInt16 Length { get; set; }
+    /// <summary>个数</summary>
+    public UInt16 Count { get; set; }
 
-    /// <summary>DB块号</summary>
+    /// <summary>数据库地址</summary>
     public UInt16 DbNumber { get; set; }
 
-    /// <summary>区块</summary>
+    /// <summary>存储区域</summary>
     public DataType Area { get; set; }
 
     /// <summary>起始地址</summary>
@@ -35,13 +35,13 @@ public class RequestItem
     /// <param name="reader"></param>
     public void Read(Binary reader)
     {
-        Id = reader.ReadByte();
+        SpecType = reader.ReadByte();
 
         var len = reader.ReadByte();
 
         SyntaxId = reader.ReadByte();
-        TransportSize = reader.ReadByte();
-        Length = reader.ReadUInt16();
+        Type = (VarType)reader.ReadByte();
+        Count = reader.ReadUInt16();
         DbNumber = reader.ReadUInt16();
         Area = (DataType)reader.ReadByte();
 
@@ -55,13 +55,13 @@ public class RequestItem
     /// <param name="writer"></param>
     public void Writer(Binary writer)
     {
-        writer.WriteByte(Id);
+        writer.WriteByte(SpecType);
 
         var len = 1 + 1 + 2 + 2 + 1 + 3;
         writer.WriteByte((Byte)len);
         writer.WriteByte(SyntaxId);
-        writer.WriteByte(TransportSize);
-        writer.Write(Length);
+        writer.WriteByte((Byte)Type);
+        writer.Write(Count);
         writer.Write(DbNumber);
         writer.WriteByte((Byte)Area);
 

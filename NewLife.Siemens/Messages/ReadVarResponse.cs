@@ -8,7 +8,7 @@ public class ReadVarResponse : S7Parameter
 {
     #region 属性
     /// <summary>数据项</summary>
-    public IList<ResponseItem> Items { get; set; } = [];
+    public IList<DataItem> Items { get; set; } = [];
     #endregion
 
     #region 构造
@@ -23,10 +23,10 @@ public class ReadVarResponse : S7Parameter
     {
         var count = reader.ReadByte();
 
-        var list = new List<ResponseItem>();
+        var list = new List<DataItem>();
         for (var i = 0; i < count; i++)
         {
-            var di = new ResponseItem();
+            var di = new DataItem();
             di.Read(reader);
 
             list.Add(di);

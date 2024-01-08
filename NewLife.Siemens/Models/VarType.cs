@@ -1,7 +1,7 @@
 ﻿namespace NewLife.Siemens.Models;
 
 /// <summary>变量类型</summary>
-public enum VarType
+public enum VarType : Byte
 {
     /// <summary>位。布尔型</summary>
     Bit,

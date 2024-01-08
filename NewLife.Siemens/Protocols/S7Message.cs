@@ -70,17 +70,17 @@ public class S7Message : IAccessor
         }
 
         // 读取参数
-        if (plen > 0)
+        if (plen > 0 || dlen > 0)
         {
-            var buf = reader.ReadBytes(plen);
+            var buf = reader.ReadBytes(plen + dlen);
             ReadParameter(buf);
         }
 
-        // 读取数据
-        if (dlen > 0)
-        {
-            Data = reader.ReadBytes(dlen);
-        }
+        //// 读取数据
+        //if (dlen > 0)
+        //{
+        //    Data = reader.ReadBytes(dlen);
+        //}
 
         return true;
     }
@@ -102,9 +102,18 @@ public class S7Message : IAccessor
                         Parameters.Add(pm);
                     break;
                 case S7Functions.ReadVar:
-                    var rv = new ReadVarRequest();
-                    if (rv.Read(null, reader))
-                        Parameters.Add(rv);
+                    if (Kind == S7Kinds.AckData)
+                    {
+                        var rv = new ReadVarResponse();
+                        if (rv.Read(null, reader))
+                            Parameters.Add(rv);
+                    }
+                    else
+                    {
+                        var rv = new ReadVarRequest();
+                        if (rv.Read(null, reader))
+                            Parameters.Add(rv);
+                    }
                     break;
                 case S7Functions.WriteVar:
                     break;
@@ -134,17 +143,26 @@ public class S7Message : IAccessor
         var plen = ps?.Length ?? 0;
         var dlen = dt?.Total ?? 0;
 
-        writer.WriteUInt16((UInt16)plen);
-        writer.WriteUInt16((UInt16)dlen);
-
         if (Kind == S7Kinds.AckData)
         {
+            dlen = plen - 2;
+            plen = 2;
+            writer.WriteUInt16((UInt16)plen);
+            writer.WriteUInt16((UInt16)dlen);
+
             writer.WriteByte(ErrorClass);
             writer.WriteByte(ErrorCode);
-        }
 
-        if (ps != null && ps.Length > 0) writer.Write(ps, 0, ps.Length);
-        if (dt != null && dt.Total > 0) writer.Write(dt);
+            if (ps != null && ps.Length > 0) writer.Write(ps, 0, ps.Length);
+        }
+        else
+        {
+            writer.WriteUInt16((UInt16)plen);
+            writer.WriteUInt16((UInt16)dlen);
+
+            if (ps != null && ps.Length > 0) writer.Write(ps, 0, ps.Length);
+            if (dt != null && dt.Total > 0) writer.Write(dt);
+        }
 
         return true;
     }

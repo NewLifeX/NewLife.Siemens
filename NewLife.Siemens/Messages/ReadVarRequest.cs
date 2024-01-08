@@ -7,6 +7,9 @@ namespace NewLife.Siemens.Messages;
 public class ReadVarRequest : S7Parameter
 {
     #region 属性
+    ///// <summary>项个数</summary>
+    //public Byte ItemCount { get; set; }
+
     /// <summary>数据项</summary>
     public IList<RequestItem> Items { get; set; } = [];
     #endregion
@@ -31,6 +34,7 @@ public class ReadVarRequest : S7Parameter
 
             list.Add(di);
         }
+
         Items = list;
     }
 

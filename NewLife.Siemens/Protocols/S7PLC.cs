@@ -331,19 +331,21 @@ public partial class S7PLC : DisposeBase
             // S7ANY
             SyntaxId = 0x10,
             // BIT
-            TransportSize = 0x01,
-            Length = 1,
+            Type = VarType.Bit,
+            Count = 1,
             DbNumber = (UInt16)db,
             Area = dataType,
 
             Address = (UInt32)startByteAdr,
         };
 
-        request.TransportSize = dataType switch
+        request.Type = dataType switch
         {
-            DataType.Timer or DataType.Counter => (Byte)dataType,
-            _ => 0x02,
+            DataType.Timer => VarType.Timer,
+            DataType.Counter => VarType.Counter,
+            _ => VarType.Word,
         };
+
         return request;
 
         ////single data req = 12
