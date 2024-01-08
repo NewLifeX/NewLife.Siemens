@@ -118,6 +118,18 @@ public class S7Message : IAccessor
                     }
                     break;
                 case S7Functions.WriteVar:
+                    if (Kind == S7Kinds.AckData)
+                    {
+                        var rv = new WriteResponse();
+                        if (rv.Read(null, reader))
+                            Parameters.Add(rv);
+                    }
+                    else
+                    {
+                        var rv = new WriteRequest();
+                        if (rv.Read(null, reader))
+                            Parameters.Add(rv);
+                    }
                     break;
                 default:
                     throw new NotSupportedException($"不支持的S7参数类型[{kind}]");

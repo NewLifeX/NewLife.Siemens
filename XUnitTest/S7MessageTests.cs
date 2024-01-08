@@ -84,6 +84,7 @@ public class S7MessageTests
     {
         var str = "32 01 00 00 00 01" +
             "00 0e 00 00" +
+            // 读取请求项
             "04 01 12 0a 10 01 00 01 00 01 84 00 00 50";
         var hex = str.ToHex();
 
@@ -128,6 +129,112 @@ public class S7MessageTests
     public void ReadVarResponse()
     {
         var str = "32 03 00 00 00 01" +
+            // plen + dlen
+            "00 02 00 05 " +
+            // error code
+            "00 00 " +
+            // 读取请求项
+            "04 01 " +
+            // 数据项
+            "ff 03 00 01 00";
+        var hex = str.ToHex();
+
+        var msg = new S7Message();
+
+        var rs = msg.Read(new MemoryStream(hex), null);
+        Assert.True(rs);
+
+        Assert.Equal(0x32, msg.ProtocolId);
+        Assert.Equal(S7Kinds.AckData, msg.Kind);
+        Assert.Equal(0x0000, msg.Reserved);
+        Assert.Equal(1, msg.Sequence);
+
+        Assert.Equal(0, msg.ErrorClass);
+        Assert.Equal(0, msg.ErrorCode);
+
+        Assert.Single(msg.Parameters);
+
+        var pm = msg.Parameters[0] as ReadResponse;
+        Assert.NotNull(pm);
+        Assert.Equal(S7Functions.ReadVar, pm.Code);
+        Assert.Single(pm.Items);
+
+        var pm2 = msg.GetParameter(S7Functions.ReadVar);
+        Assert.NotNull(pm2);
+        Assert.Equal(pm, pm2);
+
+        var di = pm.Items[0];
+        Assert.Equal(0xFF, di.Code);
+        Assert.Equal(VarType.DWord, di.Type);
+        Assert.Single(di.Data);
+        Assert.Equal(0x00, di.Data[0]);
+
+        //Assert.NotNull(msg.Data);
+
+        // 序列化
+        var buf = msg.GetBytes();
+        Assert.Equal(hex.ToHex(), buf.ToHex());
+    }
+
+    [Fact]
+    public void WriteVar()
+    {
+        var str = "32 01 00 00 00 01 " +
+            // plen + dlen
+            "00 0e 00 05 " +
+            // 写入请求项
+            "05 01 12 0a 10 01 00 01 00 01 84 00 00 50 " +
+            // 数据项
+            "00 03 00 01 01";
+        var hex = str.ToHex();
+
+        var msg = new S7Message();
+
+        var rs = msg.Read(new MemoryStream(hex), null);
+        Assert.True(rs);
+
+        Assert.Equal(0x32, msg.ProtocolId);
+        Assert.Equal(S7Kinds.Job, msg.Kind);
+        Assert.Equal(0x0000, msg.Reserved);
+        Assert.Equal(1, msg.Sequence);
+
+        Assert.Single(msg.Parameters);
+
+        var pm = msg.Parameters[0] as WriteRequest;
+        Assert.NotNull(pm);
+        Assert.Equal(S7Functions.WriteVar, pm.Code);
+        Assert.Single(pm.Items);
+
+        var pm2 = msg.GetParameter(S7Functions.WriteVar);
+        Assert.NotNull(pm2);
+        Assert.Equal(pm, pm2);
+
+        var ri = pm.Items[0];
+        Assert.Equal(0x12, ri.SpecType);
+        Assert.Equal(0x10, ri.SyntaxId);
+        Assert.Equal(VarType.Byte, ri.Type);
+        Assert.Equal(1, ri.Count);
+        Assert.Equal(1, ri.DbNumber);
+        Assert.Equal(DataType.DataBlock, ri.Area);
+        Assert.Equal(0x50u, ri.Address);
+
+        var di = pm.DataItems[0];
+        Assert.Equal(0, di.Code);
+        Assert.Equal(VarType.DWord, di.Type);
+        Assert.Single(di.Data);
+        Assert.Equal(1, di.Data[0]);
+
+        //Assert.Null(msg.Data);
+
+        // 序列化
+        var buf = msg.GetBytes();
+        Assert.Equal(hex.ToHex(), buf.ToHex());
+    }
+
+    [Fact]
+    public void WriteVarResponse()
+    {
+        var str = "32 03 00 00 00 01" +
             "00 02 00 05 " +
             "00 00 " +
             "04 01 " +
@@ -148,18 +255,18 @@ public class S7MessageTests
 
         Assert.Single(msg.Parameters);
 
-        var pm = msg.Parameters[0] as ReadResponse;
+        var pm = msg.Parameters[0] as WriteResponse;
         Assert.NotNull(pm);
-        Assert.Equal(S7Functions.ReadVar, pm.Code);
+        Assert.Equal(S7Functions.WriteVar, pm.Code);
         Assert.Single(pm.Items);
 
-        var pm2 = msg.GetParameter(S7Functions.ReadVar);
+        var pm2 = msg.GetParameter(S7Functions.WriteVar);
         Assert.NotNull(pm2);
         Assert.Equal(pm, pm2);
 
         var di = pm.Items[0];
         Assert.Equal(0xFF, di.Code);
-        Assert.Equal(0x03, di.TransportSize);
+        Assert.Equal(VarType.Word, di.Type);
         Assert.Single(di.Data);
         Assert.Equal(0x00, di.Data[0]);
 
