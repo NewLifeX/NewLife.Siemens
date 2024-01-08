@@ -4,7 +4,7 @@ namespace NewLife.Siemens.Messages;
 
 /// <summary>读取变量</summary>
 /// <remarks></remarks>
-public class ReadVarRequest : S7Parameter
+public class ReadRequest : S7Parameter
 {
     #region 属性
     ///// <summary>项个数</summary>
@@ -16,7 +16,7 @@ public class ReadVarRequest : S7Parameter
 
     #region 构造
     /// <summary>实例化</summary>
-    public ReadVarRequest() => Code = S7Functions.ReadVar;
+    public ReadRequest() => Code = S7Functions.ReadVar;
     #endregion
 
     #region 方法

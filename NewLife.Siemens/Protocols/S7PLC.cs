@@ -297,17 +297,17 @@ public partial class S7PLC : DisposeBase
                 Kind = S7Kinds.Job,
             };
 
-            var request = new ReadVarRequest();
+            var request = new ReadRequest();
             msg.SetParameter(request);
 
             var di = BuildRead(dataType, db, startByteAdr + index, maxToRead);
             request.Items.Add(di);
 
             var rs = RequestAsync(msg).Result;
-            if (rs == null || rs.Data == null) break;
+            if (rs == null) break;
 
-            var res = new ReadVarResponse();
-            if (!res.Read(rs.Data)) break;
+            var res = rs.GetParameter(S7Functions.ReadVar) as ReadResponse;
+            if (res == null) break;
 
             if (res.Items != null)
             {

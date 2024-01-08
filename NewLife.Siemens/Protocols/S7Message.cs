@@ -29,12 +29,14 @@ public class S7Message : IAccessor
     /// <summary>参数集合</summary>
     public IList<S7Parameter> Parameters { get; set; } = [];
 
-    /// <summary>数据</summary>
-    public Packet Data { get; set; }
+    ///// <summary>数据</summary>
+    //public Packet Data { get; set; }
     #endregion
 
     #region 构造
-    public override String ToString() => $"[{Kind}]<{Parameters?.Count}> ({ErrorClass:X8})";
+    /// <summary>友好显示</summary>
+    /// <returns></returns>
+    public override String ToString() => $"[{Kind}]<{Parameters?.Count}> ({ErrorClass:X2}-{ErrorCode:X2})";
     #endregion
 
     #region 读写
@@ -104,13 +106,13 @@ public class S7Message : IAccessor
                 case S7Functions.ReadVar:
                     if (Kind == S7Kinds.AckData)
                     {
-                        var rv = new ReadVarResponse();
+                        var rv = new ReadResponse();
                         if (rv.Read(null, reader))
                             Parameters.Add(rv);
                     }
                     else
                     {
-                        var rv = new ReadVarRequest();
+                        var rv = new ReadRequest();
                         if (rv.Read(null, reader))
                             Parameters.Add(rv);
                     }
@@ -139,9 +141,10 @@ public class S7Message : IAccessor
         writer.WriteUInt16(Sequence);
 
         var ps = SaveParameters(Parameters);
-        var dt = Data;
+        //var dt = Data;
         var plen = ps?.Length ?? 0;
-        var dlen = dt?.Total ?? 0;
+        //var dlen = dt?.Total ?? 0;
+        var dlen = 0;
 
         if (Kind == S7Kinds.AckData)
         {
@@ -161,7 +164,7 @@ public class S7Message : IAccessor
             writer.WriteUInt16((UInt16)dlen);
 
             if (ps != null && ps.Length > 0) writer.Write(ps, 0, ps.Length);
-            if (dt != null && dt.Total > 0) writer.Write(dt);
+            //if (dt != null && dt.Total > 0) writer.Write(dt);
         }
 
         return true;
