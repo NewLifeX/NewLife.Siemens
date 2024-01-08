@@ -12,7 +12,7 @@ namespace NewLife.Siemens.Drivers;
 [DisplayName("西门子PLC")]
 public class SiemensS7Driver : DriverBase
 {
-    private S7PLC _plcConn;
+    private S7PLC _plc;
 
     /// <summary>
     /// 打开通道数量
@@ -28,7 +28,7 @@ public class SiemensS7Driver : DriverBase
     {
         base.Dispose(disposing);
 
-        _plcConn.TryDispose();
+        _plc.TryDispose();
     }
     #endregion
 
@@ -74,21 +74,21 @@ public class SiemensS7Driver : DriverBase
             Parameter = pm,
         };
 
-        if (_plcConn == null)
+        if (_plc == null)
         {
             lock (this)
             {
-                if (_plcConn == null)
+                if (_plc == null)
                 {
                     var ip = address[..p];
                     var port = address[(p + 1)..].ToInt();
 
-                    _plcConn = new S7PLC(pm.CpuType, ip, port, rack, slot)
+                    _plc = new S7PLC(pm.CpuType, ip, port, rack, slot)
                     {
                         Timeout = 5000,
                     };
 
-                    _plcConn.OpenAsync().GetAwaiter().GetResult();
+                    _plc.OpenAsync().GetAwaiter().GetResult();
                 }
             }
         }
@@ -106,9 +106,9 @@ public class SiemensS7Driver : DriverBase
     {
         if (Interlocked.Decrement(ref _nodes) <= 0)
         {
-            _plcConn?.Close();
-            _plcConn.TryDispose();
-            _plcConn = null;
+            _plc?.Close();
+            _plc.TryDispose();
+            _plc = null;
         }
     }
 
@@ -137,15 +137,10 @@ public class SiemensS7Driver : DriverBase
             // 操作字节数组，不用设置bitNumber，但是解析需要带上
             if (addr.IndexOf('.') == -1) addr += ".0";
 
-            var adr = new PLCAddress(addr);
-
-            var dataType = adr.DataType;
-            var db = adr.DbNumber;
-            var startByteAdr = adr.StartByte;
-
+            var plcAddress = new PLCAddress(addr);
             if (point.Length == 0) point.Length = 2;
 
-            var data = _plcConn.ReadBytes(dataType, db, startByteAdr, (UInt16)point.Length);
+            var data = _plc.ReadBytes(plcAddress.DataType, plcAddress.DbNumber, plcAddress.StartByte, (UInt16)point.Length);
 
             // 借助物模型转换数据类型
             var v = spec?.DecodeByThingModel(data, point);
@@ -197,21 +192,14 @@ public class SiemensS7Driver : DriverBase
         // 操作字节数组，不用设置bitNumber，但是解析需要带上
         if (addr.IndexOf('.') == -1) addr += ".0";
 
-        var plc_adr = new PLCAddress(addr);
-
-        var dataType = plc_adr.DataType;
-        var db = plc_adr.DbNumber;
-        var startByteAdr = plc_adr.StartByte;
+        var plcAddress = new PLCAddress(addr);
 
         Byte[] bytes = null;
-
         if (value is Byte[] v)
             bytes = v;
         else
         {
-            var typeStr = point.Type.ToLower();
-
-            bytes = typeStr switch
+            bytes = point.Type.ToLower() switch
             {
                 "boolean" or "bool" => BitConverter.GetBytes(value.ToBoolean()),
                 "short" => BitConverter.GetBytes(Int16.Parse(value + "")),
@@ -226,7 +214,7 @@ public class SiemensS7Driver : DriverBase
             };
         }
 
-        _plcConn.WriteBytes(dataType, db, startByteAdr, bytes);
+        _plc.WriteBytes(plcAddress.DataType, plcAddress.DbNumber, plcAddress.StartByte, bytes);
 
         return null;
     }

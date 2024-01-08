@@ -1,5 +1,4 @@
 ﻿using NewLife.Serialization;
-using NewLife.Siemens.Protocols;
 
 namespace NewLife.Siemens.Messages;
 

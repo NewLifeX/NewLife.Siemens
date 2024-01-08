@@ -31,6 +31,8 @@ public class RequestItem
     #endregion
 
     #region 方法
+    /// <summary>读取</summary>
+    /// <param name="reader"></param>
     public void Read(Binary reader)
     {
         Id = reader.ReadByte();
@@ -46,9 +48,11 @@ public class RequestItem
         var buf = reader.ReadBytes(3);
         var buf2 = new Byte[4];
         buf.CopyTo(buf2, 1);
-        Address = buf2.ToUInt32();
+        Address = buf2.ToUInt32(0, false);
     }
 
+    /// <summary>写入</summary>
+    /// <param name="writer"></param>
     public void Writer(Binary writer)
     {
         writer.WriteByte(Id);
@@ -62,9 +66,7 @@ public class RequestItem
         writer.WriteByte((Byte)Area);
 
         var buf = Address.GetBytes(false);
-        buf = buf.Skip(1).Take(3).ToArray();
-
-        writer.Write(buf);
+        writer.Write(buf, 1, 3);
     }
     #endregion
 }

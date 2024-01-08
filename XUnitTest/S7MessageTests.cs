@@ -4,6 +4,7 @@ using NewLife;
 using NewLife.Siemens.Messages;
 using NewLife.Siemens.Protocols;
 using Xunit;
+using NewLife.Siemens.Models;
 
 namespace XUnitTest;
 
@@ -81,7 +82,7 @@ public class S7MessageTests
     [Fact]
     public void ReadVar()
     {
-        var str = "32 01 00 00 00 01 00 0e 00 00 04 01 12 0a 10 01 00 01 00 01 84 00 00 50";
+        var str = "32 01 00 00 00 01-00 0e 00 00-04 01 12 0a 10 01 00 01 00 01 84 00 00 50";
         var hex = str.ToHex();
 
         var msg = new S7Message();
@@ -104,6 +105,15 @@ public class S7MessageTests
         var pm2 = msg.GetParameter(S7Functions.ReadVar);
         Assert.NotNull(pm2);
         Assert.Equal(pm, pm2);
+
+        var di = pm.Items[0];
+        Assert.Equal(0x12, di.Id);
+        Assert.Equal(0x10, di.SyntaxId);
+        Assert.Equal(1, di.TransportSize);
+        Assert.Equal(1, di.Length);
+        Assert.Equal(1, di.DbNumber);
+        Assert.Equal(DataType.DataBlock, di.Area);
+        Assert.Equal(0x50u, di.Address);
 
         Assert.Null(msg.Data);
 

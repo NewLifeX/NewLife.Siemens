@@ -3,8 +3,10 @@ using NewLife.Siemens.Models;
 
 namespace NewLife.Siemens.Protocols;
 
+/// <summary>PLC地址</summary>
 internal class PLCAddress
 {
+    /// <summary>数据类型</summary>
     public DataType DataType { get; set; }
 
     public Int32 DbNumber { get; set; }
@@ -183,6 +185,7 @@ internal class PLCAddress
                 bitNumber = Int32.Parse(txt2[(txt2.IndexOf(".") + 1)..]);
                 if (bitNumber > 7)
                     throw new InvalidAddressException("Bit can only be 0-7");
+
                 return;
         }
     }
