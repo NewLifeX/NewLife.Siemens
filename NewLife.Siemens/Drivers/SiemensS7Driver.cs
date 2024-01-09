@@ -210,7 +210,7 @@ public class SiemensS7Driver : DriverBase
                 "double" => BitConverter.GetBytes(value.ToDouble()),
                 "time" => BitConverter.GetBytes(value.ToDateTime().Ticks),
                 "string" or "text" => (value + "").GetBytes(),
-                _ => throw new ArgumentException("数据value不是字节数组或有效类型！"),
+                _ => throw new ArgumentException($"数据value不是字节数组或有效类型[{point.Type}]！"),
             };
         }
 
