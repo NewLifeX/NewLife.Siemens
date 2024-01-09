@@ -3,12 +3,6 @@
 /// <summary>COTP参数类型</summary>
 public enum COTPParameterKinds : Byte
 {
-    ///// <summary>站点号</summary>
-    //Station = 1,
-
-    ///// <summary>站点号</summary>
-    //IPAddress = 2,
-
     /// <summary>数据单元大小</summary>
     TpduSize = 0xC0,
 

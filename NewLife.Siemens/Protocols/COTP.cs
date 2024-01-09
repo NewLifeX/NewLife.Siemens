@@ -1,5 +1,4 @@
-﻿using System.IO;
-using NewLife.Data;
+﻿using NewLife.Data;
 using NewLife.Serialization;
 using NewLife.Siemens.Common;
 
@@ -9,12 +8,17 @@ namespace NewLife.Siemens.Protocols;
 /// <remarks>
 /// 文档：https://tools.ietf.org/html/rfc905
 /// </remarks>
-public class COTP : IAccessor
+public class COTP
 {
     #region 属性
-    /// <summary>包类型</summary>
-    public PduType Type { get; set; }
+    /// <summary>头部长度。不包含长度字段所在字节</summary>
+    public Byte Length { get; set; }
 
+    /// <summary>包类型。常用CR连接、CC确认、DT数据</summary>
+    public PduType Type { get; set; }
+    #endregion
+
+    #region CR/CC包
     /// <summary>目标的引用，可以认为是用来唯一标识目标</summary>
     public UInt16 Destination { get; set; }
 
@@ -24,47 +28,36 @@ public class COTP : IAccessor
     /// <summary>选项</summary>
     public Byte Option { get; set; }
 
-    /// <summary>参数集合</summary>
+    /// <summary>参数集合。一般CR/CC带有参数，交换Tsap和Tpdu大小</summary>
     public IList<COTPParameter> Parameters { get; set; } = [];
+    #endregion
 
-    /// <summary>编码</summary>
+    #region DT包
+    /// <summary>编码。仅存在于DT包</summary>
     public Int32 Number { get; set; }
 
-    /// <summary>是否最后数据单元</summary>
+    /// <summary>是否最后数据单元。仅存在于DT包</summary>
     public Boolean LastDataUnit { get; set; }
 
-    /// <summary>数据</summary>
-    public Packet Data { get; set; }
+    /// <summary>数据。仅存在于DT包</summary>
+    public Packet? Data { get; set; }
     #endregion
 
     #region 读写
     /// <summary>解析数据</summary>
     /// <param name="data"></param>
     /// <returns></returns>
-    public Boolean Read(Packet data) => (this as IAccessor).Read(null, data);
-
-    /// <summary>序列化</summary>
-    /// <returns></returns>
-    public Byte[] ToArray()
-    {
-        var ms = new MemoryStream();
-        (this as IAccessor).Write(ms, null);
-
-        return ms.ToArray();
-    }
+    public Boolean Read(Packet data) => Read(data.GetStream());
 
     /// <summary>读取解析数据</summary>
     /// <param name="stream"></param>
-    /// <param name="context"></param>
     /// <returns></returns>
-    public Boolean Read(Stream stream, Object context)
+    public Boolean Read(Stream stream)
     {
-        var pk = context as Packet;
-        stream ??= pk?.GetStream();
         var reader = new Binary { Stream = stream, IsLittleEndian = false };
 
-        // 头部长度。当前字节之后就是头部，然后是数据，一般为17 bytes
-        var len = reader.ReadByte();
+        // 头部长度。当前字节之后就是头部，然后是数据。CR/CC一般为17字节，DT一般为2字节
+        Length = reader.ReadByte();
         Type = (PduType)reader.ReadByte();
 
         // 解析不同数据帧
@@ -76,10 +69,7 @@ public class COTP : IAccessor
                     Number = flags & 0x7F;
                     LastDataUnit = (flags & 0x80) > 0;
 
-                    if (pk != null)
-                        Data = pk.Slice(1 + len, pk.Total - 1 - len);
-                    else
-                        Data = stream.ReadBytes(-1);
+                    Data = stream.ReadBytes(-1);
                 }
                 break;
             case PduType.ConnectionRequest:
@@ -99,15 +89,11 @@ public class COTP : IAccessor
 
     IList<COTPParameter> ReadParameters(Binary reader)
     {
-        var stream = reader.Stream;
         var list = new List<COTPParameter>();
-        while (stream.Position + 3 <= stream.Length)
+        while (reader.CheckRemain(1 + 1))
         {
-            var tlv = new COTPParameter
-            {
-                Kind = (COTPParameterKinds)reader.ReadByte(),
-                Length = reader.ReadByte()
-            };
+            var tlv = new COTPParameter((COTPParameterKinds)reader.ReadByte(), reader.ReadByte(), null);
+
             var buf = reader.ReadBytes(tlv.Length);
             tlv.Value = tlv.Length switch
             {
@@ -126,51 +112,44 @@ public class COTP : IAccessor
     /// <param name="stream"></param>
     /// <param name="context"></param>
     /// <returns></returns>
-    public Boolean Write(Stream stream, Object context)
+    public Boolean Write(Stream stream)
     {
-        var pk = context as Packet;
-        stream ??= pk?.GetStream();
         var writer = new Binary { Stream = stream, IsLittleEndian = false };
 
         switch (Type)
         {
             case PduType.Data:
-                {
-                    var len = 1 + 1;
-                    //if (Data != null) len += Data.Total;
-                    stream.WriteByte((Byte)len);
-                    stream.WriteByte((Byte)Type);
+                stream.WriteByte((Byte)(1 + 1));
+                stream.WriteByte((Byte)Type);
 
-                    var flags = (Byte)(Number & 0x7F);
-                    if (LastDataUnit) flags |= 0x80;
-                    stream.WriteByte(flags);
+                var flags = (Byte)(Number & 0x7F);
+                if (LastDataUnit) flags |= 0x80;
+                stream.WriteByte(flags);
 
-                    Data?.CopyTo(stream);
-                }
+                Data?.CopyTo(stream);
                 break;
             case PduType.ConnectionRequest:
             case PduType.ConnectionConfirmed:
             default:
+                // 计算长度。再次之前需要先计算参数长度
+                var ps = Parameters;
+                var len = 1 + 2 + 2 + 1;
+                if (ps != null)
                 {
-                    var ps = Parameters;
-                    var len = 1 + 2 + 2 + 1;
-                    if (ps != null)
+                    FixParameters(ps);
+                    foreach (var item in ps)
                     {
-                        FixParameters(ps);
-                        foreach (var item in ps)
-                        {
-                            len += 1 + 1 + item.Length;
-                        }
+                        len += 1 + 1 + item.Length;
                     }
-                    writer.WriteByte((Byte)len);
-                    writer.WriteByte((Byte)Type);
-
-                    writer.Write(Destination);
-                    writer.Write(Source);
-                    writer.WriteByte(Option);
-
-                    if (ps != null) WriteParameters(writer, ps);
                 }
+                writer.WriteByte((Byte)len);
+                writer.WriteByte((Byte)Type);
+
+                writer.Write(Destination);
+                writer.Write(Source);
+                writer.WriteByte(Option);
+
+                if (ps != null) WriteParameters(writer, ps);
                 break;
         }
 
@@ -218,45 +197,19 @@ public class COTP : IAccessor
         }
     }
 
-    /// <summary>带TPKT头的写入</summary>
-    /// <param name="stream"></param>
-    /// <returns></returns>
-    public Boolean WriteWithTPKT(Stream stream)
-    {
-        var tpkt = new TPKT { Version = 3, };
-
-        // 先写COTP，得到长度后再回过头写TPKT
-        var ms = new MemoryStream();
-        if (!Write(ms, null)) return false;
-
-        tpkt.Length = (UInt16)(4 + ms.Length);
-        tpkt.Write(stream);
-
-        ms.Position = 0;
-        ms.CopyTo(stream);
-
-        return true;
-    }
-
-    /// <summary>获取内容</summary>
-    /// <param name="withTPKT"></param>
+    /// <summary>序列化消息</summary>
+    /// <param name="withTPKT">是否带TPKT头</param>
     /// <returns></returns>
     public Packet ToPacket(Boolean withTPKT = true)
     {
         var ms = new MemoryStream();
-        if (!Write(ms, null)) return null;
+        Write(ms);
 
         ms.Position = 0;
         var pk = new Packet(ms);
-        if (!withTPKT) return pk;
+        if (withTPKT) return new TPKT { Data = pk }.ToPacket();
 
-        var tpkt = new TPKT { Version = 3, };
-        tpkt.Length = (UInt16)(4 + ms.Length);
-
-        var rs = new Packet(tpkt.ToArray());
-        rs.Append(pk);
-
-        return rs;
+        return pk;
     }
     #endregion
 
@@ -264,39 +217,40 @@ public class COTP : IAccessor
     /// <summary>获取参数</summary>
     /// <param name="kind"></param>
     /// <returns></returns>
-    public COTPParameter GetParameter(COTPParameterKinds kind) => Parameters?.FirstOrDefault(e => e.Kind == kind);
+    public COTPParameter? GetParameter(COTPParameterKinds kind) => Parameters?.FirstOrDefault(e => e.Kind == kind);
 
     /// <summary>设置参数</summary>
     /// <param name="parameter"></param>
     public void SetParameter(COTPParameter parameter)
     {
-        for (var i = 0; i < Parameters.Count; i++)
+        var ps = Parameters;
+        for (var i = 0; i < ps.Count; i++)
         {
-            var pm2 = Parameters[i];
+            var pm2 = ps[i];
             if (pm2.Kind == parameter.Kind)
             {
-                Parameters[i] = parameter;
+                ps[i] = parameter;
                 return;
             }
         }
 
-        Parameters.Add(parameter);
+        ps.Add(parameter);
     }
 
     /// <summary>设置参数</summary>
     /// <param name="kind"></param>
     /// <param name="value"></param>
-    public void SetParameter(COTPParameterKinds kind, Byte value) => SetParameter(new COTPParameter { Kind = kind, Length = 1, Value = value, });
+    public void SetParameter(COTPParameterKinds kind, Byte value) => SetParameter(new(kind, 1, value));
 
     /// <summary>设置参数</summary>
     /// <param name="kind"></param>
     /// <param name="value"></param>
-    public void SetParameter(COTPParameterKinds kind, UInt16 value) => SetParameter(new COTPParameter { Kind = kind, Length = 2, Value = value, });
+    public void SetParameter(COTPParameterKinds kind, UInt16 value) => SetParameter(new(kind, 2, value));
 
     /// <summary>设置参数</summary>
     /// <param name="kind"></param>
     /// <param name="value"></param>
-    public void SetParameter(COTPParameterKinds kind, UInt32 value) => SetParameter(new COTPParameter { Kind = kind, Length = 4, Value = value, });
+    public void SetParameter(COTPParameterKinds kind, UInt32 value) => SetParameter(new(kind, 4, value));
     #endregion
 
     #region 方法
@@ -306,11 +260,11 @@ public class COTP : IAccessor
     /// <returns></returns>
     public static async Task<COTP> ReadAsync(Stream stream, CancellationToken cancellationToken)
     {
-        var tpkt = await TPKT.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
-        if (tpkt.Length == 0) throw new TPDUInvalidException("No protocol data received");
+        var data = await TPKT.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
+        if (data.Length == 0) throw new TPDUInvalidException("No protocol data received");
 
         var cotp = new COTP();
-        if (!cotp.Read(tpkt.Data)) throw new TPDUInvalidException("Invalid protocol data received");
+        if (!cotp.Read(data)) throw new TPDUInvalidException("Invalid protocol data received");
 
         return cotp;
     }
@@ -319,24 +273,25 @@ public class COTP : IAccessor
     /// <param name="stream">网络流</param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Packet> ReadAllAsync(Stream stream, CancellationToken cancellationToken)
+    public static async Task<Packet?> ReadAllAsync(Stream stream, CancellationToken cancellationToken)
     {
-        var cotp = await ReadAsync(stream, cancellationToken).ConfigureAwait(false);
-        if (cotp.LastDataUnit) return cotp.Data;
-
-        while (!cotp.LastDataUnit)
+        Packet? rs = null;
+        while (true)
         {
-            var seg = await ReadAsync(stream, cancellationToken).ConfigureAwait(false);
-            if (seg != null && seg.Data != null) cotp.Data.Append(seg.Data);
+            var cotp = await ReadAsync(stream, cancellationToken).ConfigureAwait(false);
+            if (rs == null)
+                rs = cotp.Data;
+            else if (cotp.Data != null)
+                rs.Append(cotp.Data);
 
-            cotp = seg;
+            if (cotp.LastDataUnit) break;
         }
 
-        return cotp.Data;
+        return rs;
     }
 
     /// <summary>已重载</summary>
     /// <returns></returns>
-    public override String ToString() => $"[{Type}] TPDUNumber: {Number} Last: {LastDataUnit} Data[{Data?.Total}]";
+    public override String ToString() => $"[{Type}] Data[{Data?.Total}]";
     #endregion
 }

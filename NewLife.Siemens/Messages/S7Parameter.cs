@@ -4,7 +4,7 @@ using NewLife.Serialization;
 namespace NewLife.Siemens.Messages;
 
 /// <summary>数据项（类型+长度+数值）</summary>
-public class S7Parameter : IAccessor
+public class S7Parameter
 {
     #region 属性
     /// <summary>功能码</summary>
@@ -15,17 +15,13 @@ public class S7Parameter : IAccessor
     /// <summary>读取</summary>
     /// <param name="pk"></param>
     /// <returns></returns>
-    public Boolean Read(Packet pk) => Read(pk.GetStream(), pk);
+    public Boolean Read(Packet pk) => Read(new Binary { Stream = pk.GetStream(), IsLittleEndian = false });
 
     /// <summary>读取</summary>
-    /// <param name="stream"></param>
-    /// <param name="context"></param>
+    /// <param name="reader"></param>
     /// <returns></returns>
-    public Boolean Read(Stream stream, Object context)
+    public Boolean Read(Binary reader)
     {
-        var reader = context as Binary;
-        reader ??= new Binary { Stream = stream ?? (context as Packet)?.GetStream(), IsLittleEndian = false };
-
         Code = (S7Functions)reader.ReadByte();
 
         OnRead(reader);
@@ -38,28 +34,13 @@ public class S7Parameter : IAccessor
     protected virtual void OnRead(Binary reader) { }
 
     /// <summary>写入</summary>
-    /// <param name="stream"></param>
-    /// <param name="context"></param>
+    /// <param name="writer"></param>
     /// <returns></returns>
-    public Boolean Write(Stream stream, Object context)
+    public Boolean Write(Binary writer)
     {
-        var writer = context as Binary;
-        writer ??= new Binary { Stream = stream ?? (context as Packet)?.GetStream(), IsLittleEndian = false };
-        stream = writer.Stream;
-
         writer.WriteByte((Byte)Code);
 
-        var ms = new MemoryStream();
-        writer.Stream = ms;
-
         OnWrite(writer);
-
-        writer.Stream = stream;
-
-        //writer.WriteByte((Byte)ms.Length);
-
-        ms.Position = 0;
-        ms.CopyTo(writer.Stream);
 
         return true;
     }

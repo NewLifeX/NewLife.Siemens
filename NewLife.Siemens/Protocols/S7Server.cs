@@ -81,14 +81,9 @@ public class S7Session : NetSession<S7Server>
             Destination = cotp.Source,
             Source = cotp.Destination,
             Number = cotp.Number,
-            LastDataUnit = true,
         };
 
-        var ms = new MemoryStream();
-        rs.WriteWithTPKT(ms);
-        ms.Position = 0;
-
-        Send(ms);
+        Send(rs.ToPacket(true));
 
         _logined = true;
     }

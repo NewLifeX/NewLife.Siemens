@@ -9,7 +9,7 @@ namespace NewLife.Siemens.Protocols;
 public class TPKTCodec : MessageCodec<TPKT>
 {
     /// <summary>实例化编码器</summary>
-    public TPKTCodec() => UserPacket = false;
+    public TPKTCodec() => UserPacket = true;
 
     /// <summary>编码</summary>
     /// <param name="context"></param>

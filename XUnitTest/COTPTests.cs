@@ -16,10 +16,10 @@ public class COTPTests
             Type = PduType.Data
         };
 
-        var buf = cotp.ToArray();
+        var pk = cotp.ToPacket(false);
 
         var cotp2 = new COTP();
-        var rs = cotp2.Read(buf);
+        var rs = cotp2.Read(pk);
         Assert.True(rs);
         Assert.Equal(cotp.Type, cotp2.Type);
     }
@@ -37,6 +37,7 @@ public class COTPTests
         Assert.Equal(3, tpkt.Version);
         Assert.Equal(0, tpkt.Reserved);
         Assert.Equal(0x16, tpkt.Length);
+        Assert.Equal(pk.Slice(4).ToHex(), tpkt.Data.ToHex());
 
         var cotp = new COTP();
         var rs = cotp.Read(tpkt.Data);
@@ -72,6 +73,7 @@ public class COTPTests
         Assert.Equal(3, tpkt.Version);
         Assert.Equal(0, tpkt.Reserved);
         Assert.Equal(0x16, tpkt.Length);
+        Assert.Equal(pk.Slice(4).ToHex(), tpkt.Data.ToHex());
 
         var cotp = new COTP();
         var rs = cotp.Read(tpkt.Data);
@@ -105,6 +107,7 @@ public class COTPTests
         Assert.Equal(3, tpkt.Version);
         Assert.Equal(0, tpkt.Reserved);
         Assert.Equal(0x19, tpkt.Length);
+        Assert.Equal(pk.Slice(4).ToHex(), tpkt.Data.ToHex());
 
         var cotp = new COTP();
         var rs = cotp.Read(tpkt.Data);
@@ -140,6 +143,7 @@ public class COTPTests
         Assert.Equal(3, tpkt.Version);
         Assert.Equal(0, tpkt.Reserved);
         Assert.Equal(0x16, tpkt.Length);
+        Assert.Equal(pk.Slice(4).ToHex(), tpkt.Data.ToHex());
 
         var cotp = new COTP();
         var rs = cotp.Read(tpkt.Data);
@@ -174,6 +178,7 @@ public class COTPTests
         Assert.Equal(3, tpkt.Version);
         Assert.Equal(0, tpkt.Reserved);
         Assert.Equal(25, tpkt.Length);
+        Assert.Equal(pk.Slice(4).ToHex(), tpkt.Data.ToHex());
 
         var cotp = new COTP();
         var rs = cotp.Read(tpkt.Data);
@@ -193,10 +198,10 @@ public class COTPTests
             Type = PduType.ConnectionRequest
         };
 
-        var buf = cotp.ToArray();
+        var pk = cotp.ToPacket(false);
 
         var cotp2 = new COTP();
-        var rs = cotp2.Read(buf);
+        var rs = cotp2.Read(pk);
         Assert.True(rs);
         Assert.Equal(cotp.Type, cotp2.Type);
     }
@@ -209,10 +214,10 @@ public class COTPTests
             Type = PduType.ConnectionConfirmed
         };
 
-        var buf = cotp.ToArray();
+        var pk = cotp.ToPacket(false);
 
         var cotp2 = new COTP();
-        var rs = cotp2.Read(buf);
+        var rs = cotp2.Read(pk);
         Assert.True(rs);
         Assert.Equal(cotp.Type, cotp2.Type);
     }

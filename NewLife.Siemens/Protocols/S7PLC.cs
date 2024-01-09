@@ -121,7 +121,7 @@ public partial class S7PLC : DisposeBase
         };
         cotp.SetParameter(COTPParameterKinds.SrcTsap, tsap.Local);
         cotp.SetParameter(COTPParameterKinds.DstTsap, tsap.Remote);
-        cotp.SetParameter(COTPParameterKinds.TpduSize, (Byte)0xA0);
+        cotp.SetParameter(COTPParameterKinds.TpduSize, (Byte)0x0A);
 
         return cotp;
     }
@@ -134,7 +134,7 @@ public partial class S7PLC : DisposeBase
             .ConfigureAwait(false);
 
         var rs = new S7Message();
-        if (!rs.Read(s7data.Data.ReadBytes())) return;
+        if (!rs.Read(s7data.Data)) return;
 
         if (rs.Kind != S7Kinds.AckData)
             throw new InvalidDataException("Error reading Communication Setup response");

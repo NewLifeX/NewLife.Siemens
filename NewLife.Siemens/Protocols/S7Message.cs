@@ -100,20 +100,20 @@ public class S7Message : IAccessor
             {
                 case S7Functions.Setup:
                     var pm = new SetupMessage();
-                    if (pm.Read(null, reader))
+                    if (pm.Read(reader))
                         Parameters.Add(pm);
                     break;
                 case S7Functions.ReadVar:
                     if (Kind == S7Kinds.AckData)
                     {
                         var rv = new ReadResponse();
-                        if (rv.Read(null, reader))
+                        if (rv.Read(reader))
                             Parameters.Add(rv);
                     }
                     else
                     {
                         var rv = new ReadRequest();
-                        if (rv.Read(null, reader))
+                        if (rv.Read(reader))
                             Parameters.Add(rv);
                     }
                     break;
@@ -121,13 +121,13 @@ public class S7Message : IAccessor
                     if (Kind == S7Kinds.AckData)
                     {
                         var rv = new WriteResponse();
-                        if (rv.Read(null, reader))
+                        if (rv.Read(reader))
                             Parameters.Add(rv);
                     }
                     else
                     {
                         var rv = new WriteRequest();
-                        if (rv.Read(null, reader))
+                        if (rv.Read(reader))
                             Parameters.Add(rv);
                     }
                     break;
@@ -182,14 +182,14 @@ public class S7Message : IAccessor
         return true;
     }
 
-    Byte[] SaveParameters(IList<S7Parameter> ps)
+    Byte[]? SaveParameters(IList<S7Parameter> ps)
     {
         if (ps == null || ps.Count == 0) return null;
 
         var writer = new Binary { IsLittleEndian = false };
         foreach (var pm in ps)
         {
-            pm.Write(null, writer);
+            pm.Write(writer);
         }
 
         return writer.GetBytes();

@@ -14,7 +14,7 @@ public class TPKT
 {
     #region 属性
     /// <summary>版本</summary>
-    public Byte Version { get; set; }
+    public Byte Version { get; set; } = 3;
 
     /// <summary>保留</summary>
     public Byte Reserved { get; set; }
@@ -23,96 +23,80 @@ public class TPKT
     public UInt16 Length { get; set; }
 
     /// <summary>数据</summary>
-    public Packet Data { get; set; }
+    public Packet? Data { get; set; }
     #endregion
 
-    /// <summary>解析数据</summary>
-    /// <param name="pk"></param>
-    public TPKT Read(Packet pk)
+    #region 读写
+    /// <summary>解析头部数据</summary>
+    /// <param name="buf"></param>
+    public TPKT ReadHeader(Byte[] buf)
     {
-        var buf = pk.ReadBytes(0, 4);
         Version = buf[0];
         Reserved = buf[1];
         Length = buf.ToUInt16(2, false);
-
-        if (pk.Total > 4) Data = pk.Slice(4, Length);
 
         return this;
     }
 
-    /// <summary>解析数据</summary>
-    /// <param name="stream"></param>
-    public void Read(Stream stream)
+    /// <summary>序列化头部数据</summary>
+    /// <param name="buf"></param>
+    public void WriteHeader(Byte[] buf)
     {
-        var buf = stream.ReadBytes(4);
-        Version = buf[0];
-        Reserved = buf[1];
-        Length = buf.ToUInt16(2, false);
+        buf[0] = Version;
+        buf[1] = Reserved;
+        buf[2] = (Byte)(Length >> 8);
+        buf[3] = (Byte)(Length & 0xFF);
     }
 
-    /// <summary>写入到数据流</summary>
-    /// <param name="stream"></param>
-    public void Write(Stream stream)
+    /// <summary>解析头部以及负载数据</summary>
+    /// <param name="pk"></param>
+    public TPKT Read(Packet pk)
     {
-        stream.Write(Version);
-        stream.Write(Reserved);
+        var buf = pk.ReadBytes(0, 4);
+        ReadHeader(buf);
 
-        if (Data != null)
-        {
-            Length = (UInt16)(4 + Data.Total);
-            stream.Write(Length.GetBytes(false));
+        if (pk.Total > 4) Data = pk.Slice(4, Length - 4);
 
-            Data?.CopyTo(stream);
-        }
-        else
-        {
-            if (Length == 0) Length = 4;
-            stream.Write(Length.GetBytes(false));
-        }
+        return this;
     }
 
-    /// <summary>获取字节数组</summary>
-    /// <returns></returns>
-    public Byte[] ToArray()
-    {
-        var ms = new MemoryStream();
-        Write(ms);
-        return ms.ToArray();
-    }
-
-    /// <summary>获取字节数组</summary>
+    /// <summary>序列化消息，包括头部和负载数据</summary>
     /// <returns></returns>
     public Packet ToPacket()
     {
-        var ms = new MemoryStream();
-        Write(ms);
-        return new Packet(ms);
-    }
+        // 根据数据长度计算总长度
+        Length = (UInt16)(4 + Data?.Total ?? 0);
 
-    /// <summary>
-    /// Reads a TPKT from the socket Async
-    /// </summary>
-    /// <param name="stream">The stream to read from</param>
+        var buf = new Byte[4];
+        WriteHeader(buf);
+
+        var pk = new Packet(buf);
+        if (Data != null) pk.Append(Data);
+
+        return pk;
+    }
+    #endregion
+
+    /// <summary>读取TPKT数据</summary>
+    /// <param name="stream"></param>
     /// <param name="cancellationToken"></param>
-    /// <returns>Task TPKT Instace</returns>
-    public static async Task<TPKT> ReadAsync(Stream stream, CancellationToken cancellationToken)
+    /// <returns></returns>
+    public static async Task<Byte[]> ReadAsync(Stream stream, CancellationToken cancellationToken)
     {
         // 读取4字节头部
         var buf = new Byte[4];
-        var len = await stream.ReadExactAsync(buf, 0, 4, cancellationToken).ConfigureAwait(false);
+        var len = await stream.ReadAsync(buf, 0, 4, cancellationToken).ConfigureAwait(false);
         if (len < 4) throw new TPKTInvalidException("TPKT is incomplete / invalid");
 
         var tpkt = new TPKT();
-        tpkt.Read(buf);
+        tpkt.ReadHeader(buf);
 
         // 根据长度读取数据
         var data = new Byte[tpkt.Length - 4];
-        len = await stream.ReadExactAsync(data, 0, data.Length, cancellationToken).ConfigureAwait(false);
+        len = await stream.ReadAsync(data, 0, data.Length, cancellationToken).ConfigureAwait(false);
         if (len < data.Length)
             throw new TPKTInvalidException("TPKT payload incomplete / invalid");
 
-        tpkt.Data = data;
-
-        return tpkt;
+        return data;
     }
 }
