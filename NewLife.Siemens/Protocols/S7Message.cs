@@ -20,10 +20,10 @@ public class S7Message : IAccessor
     /// <summary>序列号。由主站生成，每次新传输递增，用于链接对其请求的响应。小端字节序</summary>
     public UInt16 Sequence { get; set; }
 
-    /// <summary>错误类型</summary>
+    /// <summary>错误类型。仅出现在AckData</summary>
     public Byte ErrorClass { get; set; }
 
-    /// <summary>错误码</summary>
+    /// <summary>错误码。仅出现在AckData</summary>
     public Byte ErrorCode { get; set; }
 
     /// <summary>参数集合</summary>
@@ -72,25 +72,26 @@ public class S7Message : IAccessor
         }
 
         // 读取参数
-        if (plen > 0 || dlen > 0)
+        if (plen > 0)
         {
-            var buf = reader.ReadBytes(plen + dlen);
-            ReadParameter(buf);
+            var buf = reader.ReadBytes(plen);
+            ReadParameters(buf);
         }
 
-        //// 读取数据
-        //if (dlen > 0)
-        //{
-        //    Data = reader.ReadBytes(dlen);
-        //}
+        // 读取数据
+        if (dlen > 0)
+        {
+            var buf = reader.ReadBytes(dlen);
+            ReadParameterItems(buf);
+        }
 
         return true;
     }
 
-    void ReadParameter(Byte[] buf)
+    void ReadParameters(Byte[] buf)
     {
         var ms = new MemoryStream(buf);
-        var reader = new Binary { Stream = ms };
+        var reader = new Binary { Stream = ms, IsLittleEndian = false };
 
         while (ms.Position < ms.Length)
         {
@@ -137,6 +138,18 @@ public class S7Message : IAccessor
         }
     }
 
+    void ReadParameterItems(Byte[] buf)
+    {
+        var ms = new MemoryStream(buf);
+        var reader = new Binary { Stream = ms, IsLittleEndian = false };
+
+        foreach (var pm in Parameters)
+        {
+            if (pm is IDataItems rr)
+                rr.ReadItems(reader);
+        }
+    }
+
     /// <summary>写入</summary>
     /// <param name="stream"></param>
     /// <param name="context"></param>
@@ -153,31 +166,21 @@ public class S7Message : IAccessor
         writer.WriteUInt16(Sequence);
 
         var ps = SaveParameters(Parameters);
-        //var dt = Data;
+        var dt = SaveParameterItems(Parameters);
         var plen = ps?.Length ?? 0;
-        //var dlen = dt?.Total ?? 0;
-        var dlen = 0;
+        var dlen = dt?.Length ?? 0;
+
+        writer.WriteUInt16((UInt16)plen);
+        writer.WriteUInt16((UInt16)dlen);
 
         if (Kind == S7Kinds.AckData)
         {
-            dlen = plen - 2;
-            plen = 2;
-            writer.WriteUInt16((UInt16)plen);
-            writer.WriteUInt16((UInt16)dlen);
-
             writer.WriteByte(ErrorClass);
             writer.WriteByte(ErrorCode);
-
-            if (ps != null && ps.Length > 0) writer.Write(ps, 0, ps.Length);
         }
-        else
-        {
-            writer.WriteUInt16((UInt16)plen);
-            writer.WriteUInt16((UInt16)dlen);
 
-            if (ps != null && ps.Length > 0) writer.Write(ps, 0, ps.Length);
-            //if (dt != null && dt.Total > 0) writer.Write(dt);
-        }
+        if (ps != null && ps.Length > 0) writer.Write(ps, 0, ps.Length);
+        if (dt != null && dt.Length > 0) writer.Write(dt, 0, dt.Length);
 
         return true;
     }
@@ -190,6 +193,20 @@ public class S7Message : IAccessor
         foreach (var pm in ps)
         {
             pm.Write(writer);
+        }
+
+        return writer.GetBytes();
+    }
+
+    Byte[]? SaveParameterItems(IList<S7Parameter> ps)
+    {
+        if (ps == null || ps.Count == 0) return null;
+
+        var writer = new Binary { IsLittleEndian = false };
+        foreach (var pm in ps)
+        {
+            if (pm is IDataItems rr)
+                rr.WriteItems(writer);
         }
 
         return writer.GetBytes();

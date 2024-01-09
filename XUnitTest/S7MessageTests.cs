@@ -90,7 +90,7 @@ public class S7MessageTests
 
         var msg = new S7Message();
 
-        var rs = msg.Read(new MemoryStream(hex), null);
+        var rs = msg.Read(hex);
         Assert.True(rs);
 
         Assert.Equal(0x32, msg.ProtocolId);
@@ -141,7 +141,7 @@ public class S7MessageTests
 
         var msg = new S7Message();
 
-        var rs = msg.Read(new MemoryStream(hex), null);
+        var rs = msg.Read(hex);
         Assert.True(rs);
 
         Assert.Equal(0x32, msg.ProtocolId);
@@ -190,7 +190,7 @@ public class S7MessageTests
 
         var msg = new S7Message();
 
-        var rs = msg.Read(new MemoryStream(hex), null);
+        var rs = msg.Read(hex);
         Assert.True(rs);
 
         Assert.Equal(0x32, msg.ProtocolId);
@@ -235,15 +235,15 @@ public class S7MessageTests
     public void WriteVarResponse()
     {
         var str = "32 03 00 00 00 01" +
-            "00 02 00 05 " +
+            "00 02 00 01 " +
             "00 00 " +
-            "04 01 " +
-            "ff 03 00 01 00";
+            "05 01 " +
+            "ff";
         var hex = str.ToHex();
 
         var msg = new S7Message();
 
-        var rs = msg.Read(new MemoryStream(hex), null);
+        var rs = msg.Read(hex);
         Assert.True(rs);
 
         Assert.Equal(0x32, msg.ProtocolId);
@@ -266,9 +266,9 @@ public class S7MessageTests
 
         var di = pm.Items[0];
         Assert.Equal(0xFF, di.Code);
-        Assert.Equal(VarType.Word, di.Type);
-        Assert.Single(di.Data);
-        Assert.Equal(0x00, di.Data[0]);
+        //Assert.Equal(VarType.Bit, di.Type);
+        Assert.Null(di.Data);
+        //Assert.Equal(0x00, di.Data[0]);
 
         //Assert.NotNull(msg.Data);
 

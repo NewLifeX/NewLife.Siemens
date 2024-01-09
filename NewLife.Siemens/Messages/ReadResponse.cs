@@ -1,12 +1,16 @@
-﻿using NewLife.Serialization;
+﻿using System.Drawing;
+using NewLife.Serialization;
 
 namespace NewLife.Siemens.Messages;
 
 /// <summary>读取变量响应</summary>
 /// <remarks></remarks>
-public class ReadResponse : S7Parameter
+public class ReadResponse : S7Parameter, IDataItems
 {
     #region 属性
+    /// <summary>项个数</summary>
+    public Byte ItemCount { get; set; }
+
     /// <summary>数据项</summary>
     public IList<DataItem> Items { get; set; } = [];
     #endregion
@@ -21,10 +25,17 @@ public class ReadResponse : S7Parameter
     /// <param name="reader"></param>
     protected override void OnRead(Binary reader)
     {
-        var count = reader.ReadByte();
+        ItemCount = reader.ReadByte();
 
+        // 数据在Data部分
+    }
+
+    /// <summary>读取数据项</summary>
+    /// <param name="reader"></param>
+    public void ReadItems(Binary reader)
+    {
         var list = new List<DataItem>();
-        for (var i = 0; i < count; i++)
+        for (var i = 0; i < ItemCount; i++)
         {
             var di = new DataItem();
             di.Read(reader);
@@ -38,10 +49,15 @@ public class ReadResponse : S7Parameter
     /// <param name="writer"></param>
     protected override void OnWrite(Binary writer)
     {
-        var count = Items?.Count ?? 0;
-        writer.WriteByte((Byte)count);
+        var count = ItemCount = (Byte)Items.Count;
+        writer.WriteByte(count);
+    }
 
-        for (var i = 0; i < count; i++)
+    /// <summary>写入数据项</summary>
+    /// <param name="writer"></param>
+    public void WriteItems(Binary writer)
+    {
+        for (var i = 0; i < ItemCount; i++)
         {
             Items[i].Writer(writer);
         }

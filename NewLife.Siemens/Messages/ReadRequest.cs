@@ -7,8 +7,8 @@ namespace NewLife.Siemens.Messages;
 public class ReadRequest : S7Parameter
 {
     #region 属性
-    ///// <summary>项个数</summary>
-    //public Byte ItemCount { get; set; }
+    /// <summary>项个数</summary>
+    public Byte ItemCount { get; set; }
 
     /// <summary>数据项</summary>
     public IList<RequestItem> Items { get; set; } = [];
@@ -24,7 +24,7 @@ public class ReadRequest : S7Parameter
     /// <param name="reader"></param>
     protected override void OnRead(Binary reader)
     {
-        var count = reader.ReadByte();
+        var count = ItemCount = reader.ReadByte();
 
         var list = new List<RequestItem>();
         for (var i = 0; i < count; i++)

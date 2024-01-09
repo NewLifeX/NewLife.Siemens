@@ -14,7 +14,7 @@ public class DataItem
     public VarType Type { get; set; }
 
     /// <summary>数据</summary>
-    public Byte[] Data { get; set; }
+    public Byte[]? Data { get; set; }
     #endregion
 
     #region 方法
@@ -22,7 +22,13 @@ public class DataItem
     /// <param name="reader"></param>
     public void Read(Binary reader)
     {
+        if (reader.EndOfStream()) return;
+
         Code = reader.ReadByte();
+
+        // WriteResponse中只有Code
+        if (reader.EndOfStream()) return;
+        
         Type = (VarType)reader.ReadByte();
 
         var len = reader.ReadUInt16();

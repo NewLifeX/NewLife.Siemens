@@ -4,7 +4,7 @@ namespace NewLife.Siemens.Messages;
 
 /// <summary>写入变量请求</summary>
 /// <remarks></remarks>
-public class WriteRequest : S7Parameter
+public class WriteRequest : S7Parameter, IDataItems
 {
     #region 属性
     /// <summary>请求项</summary>
@@ -35,34 +35,41 @@ public class WriteRequest : S7Parameter
             list.Add(di);
         }
         Items = list.ToArray();
+    }
 
-        if (!reader.EndOfStream())
+    /// <summary>读取数据项</summary>
+    /// <param name="reader"></param>
+    public void ReadItems(Binary reader)
+    {
+        var list = new List<DataItem>();
+        for (var i = 0; i < Items.Count; i++)
         {
-            var list2 = new List<DataItem>();
-            for (var i = 0; i < count; i++)
-            {
-                var di = new DataItem();
-                di.Read(reader);
+            var di = new DataItem();
+            di.Read(reader);
 
-                list2.Add(di);
-            }
-            DataItems = list2.ToArray();
+            list.Add(di);
         }
+        DataItems = list.ToArray();
     }
 
     /// <summary>写入</summary>
     /// <param name="writer"></param>
     protected override void OnWrite(Binary writer)
     {
-        var count = Items?.Count ?? 0;
+        var count = Items.Count;
         writer.WriteByte((Byte)count);
 
         for (var i = 0; i < count; i++)
         {
             Items[i].Writer(writer);
         }
+    }
 
-        for (var i = 0; i < count; i++)
+    /// <summary>写入数据项</summary>
+    /// <param name="writer"></param>
+    public void WriteItems(Binary writer)
+    {
+        for (var i = 0; i < Items.Count; i++)
         {
             DataItems[i].Writer(writer);
         }

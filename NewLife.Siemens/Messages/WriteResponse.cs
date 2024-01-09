@@ -4,14 +4,17 @@ namespace NewLife.Siemens.Messages;
 
 /// <summary>写入变量响应</summary>
 /// <remarks></remarks>
-public class WriteResponse : S7Parameter
+public class WriteResponse : S7Parameter, IDataItems
 {
     #region 属性
-    ///// <summary>项个数</summary>
-    //public Byte ItemCount { get; set; }
+    /// <summary>项个数</summary>
+    public Byte ItemCount { get; set; }
 
     /// <summary>数据项</summary>
     public IList<DataItem> Items { get; set; } = [];
+
+    ///// <summary>数据项</summary>
+    //public IList<DataItem> DataItems { get; set; } = [];
     #endregion
 
     #region 构造
@@ -24,30 +27,58 @@ public class WriteResponse : S7Parameter
     /// <param name="reader"></param>
     protected override void OnRead(Binary reader)
     {
-        var count = reader.ReadByte();
+        ItemCount = reader.ReadByte();
 
+        //var list = new List<DataItem>();
+        //for (var i = 0; i < count; i++)
+        //{
+        //    var di = new DataItem();
+        //    di.Read(reader);
+
+        //    list.Add(di);
+        //}
+
+        //Items = list;
+    }
+
+    /// <summary>读取数据项</summary>
+    /// <param name="reader"></param>
+    public void ReadItems(Binary reader)
+    {
         var list = new List<DataItem>();
-        for (var i = 0; i < count; i++)
+        for (var i = 0; i < ItemCount; i++)
         {
             var di = new DataItem();
             di.Read(reader);
 
             list.Add(di);
         }
-
-        Items = list;
+        Items = list.ToArray();
     }
 
     /// <summary>写入</summary>
     /// <param name="writer"></param>
     protected override void OnWrite(Binary writer)
     {
-        var count = Items?.Count ?? 0;
+        var count = ItemCount = (Byte)Items.Count;
         writer.WriteByte((Byte)count);
 
-        for (var i = 0; i < count; i++)
+        //for (var i = 0; i < count; i++)
+        //{
+        //    Items[i].Writer(writer);
+        //}
+    }
+
+    /// <summary>写入数据项</summary>
+    /// <param name="writer"></param>
+    public void WriteItems(Binary writer)
+    {
+        for (var i = 0; i < Items.Count; i++)
         {
-            Items[i].Writer(writer);
+            //Items[i].Writer(writer);
+
+            // 只写Code
+            writer.WriteByte(Items[i].Code);
         }
     }
     #endregion

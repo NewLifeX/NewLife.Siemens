@@ -8,14 +8,11 @@ namespace NewLife.Siemens.Protocols;
 /// <summary>编码器</summary>
 public class TPKTCodec : MessageCodec<TPKT>
 {
-    /// <summary>实例化编码器</summary>
-    public TPKTCodec() => UserPacket = true;
-
     /// <summary>编码</summary>
     /// <param name="context"></param>
     /// <param name="msg"></param>
     /// <returns></returns>
-    protected override Object Encode(IHandlerContext context, TPKT msg)
+    protected override Object? Encode(IHandlerContext context, TPKT msg)
     {
         if (msg is TPKT cmd) return cmd.ToPacket();
 
@@ -26,9 +23,10 @@ public class TPKTCodec : MessageCodec<TPKT>
     /// <param name="context"></param>
     /// <param name="pk"></param>
     /// <returns></returns>
-    protected override IList<TPKT> Decode(IHandlerContext context, Packet pk)
+    protected override IList<TPKT>? Decode(IHandlerContext context, Packet pk)
     {
-        var ss = context.Owner as IExtend;
+        if (context.Owner is not IExtend ss) return null;
+
         if (ss["Codec"] is not PacketCodec pc)
             ss["Codec"] = pc = new PacketCodec { GetLength = p => GetLength(p, 3, 1) - 4, Offset = 3 };
 
@@ -53,9 +51,9 @@ public class TPKTCodec : MessageCodec<TPKT>
     /// <param name="request"></param>
     /// <param name="response"></param>
     /// <returns></returns>
-    protected override Boolean IsMatch(Object request, Object response)
+    protected override Boolean IsMatch(Object? request, Object? response)
     {
-        if (request is not TPKT req || response is not TPKT res) return false;
+        if (request is not TPKT || response is not TPKT) return false;
 
         // 不支持链路复用，任意响应都是匹配的
 
