@@ -164,7 +164,7 @@ public class S7MessageTests
         Assert.Equal(pm, pm2);
 
         var di = pm.Items[0];
-        Assert.Equal(0xFF, di.Code);
+        Assert.Equal(ReadWriteErrorCode.Success, di.Code);
         Assert.Equal(VarType.DWord, di.Type);
         Assert.Single(di.Data);
         Assert.Equal(0x00, di.Data[0]);
@@ -219,7 +219,7 @@ public class S7MessageTests
         Assert.Equal(0x50u, ri.Address);
 
         var di = pm.DataItems[0];
-        Assert.Equal(0, di.Code);
+        Assert.Equal(ReadWriteErrorCode.Reserved, di.Code);
         Assert.Equal(VarType.DWord, di.Type);
         Assert.Single(di.Data);
         Assert.Equal(1, di.Data[0]);
@@ -265,7 +265,7 @@ public class S7MessageTests
         Assert.Equal(pm, pm2);
 
         var di = pm.Items[0];
-        Assert.Equal(0xFF, di.Code);
+        Assert.Equal(ReadWriteErrorCode.Success, di.Code);
         //Assert.Equal(VarType.Bit, di.Type);
         Assert.Null(di.Data);
         //Assert.Equal(0x00, di.Data[0]);

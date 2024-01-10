@@ -42,7 +42,7 @@ public class ReadRequest : S7Parameter
     /// <param name="writer"></param>
     protected override void OnWrite(Binary writer)
     {
-        var count = Items?.Count ?? 0;
+        var count = Items.Count;
         writer.WriteByte((Byte)count);
 
         for (var i = 0; i < count; i++)

@@ -110,7 +110,6 @@ public class COTP
 
     /// <summary>序列化写入数据</summary>
     /// <param name="stream"></param>
-    /// <param name="context"></param>
     /// <returns></returns>
     public Boolean Write(Stream stream)
     {

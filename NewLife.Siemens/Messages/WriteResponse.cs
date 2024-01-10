@@ -78,7 +78,7 @@ public class WriteResponse : S7Parameter, IDataItems
             //Items[i].Writer(writer);
 
             // 只写Code
-            writer.WriteByte(Items[i].Code);
+            writer.WriteByte((Byte)Items[i].Code);
         }
     }
     #endregion

@@ -1,6 +1,8 @@
-﻿using System.Net.Sockets;
+﻿using System;
+using System.Net.Sockets;
 using NewLife.Data;
 using NewLife.Log;
+using NewLife.Remoting;
 using NewLife.Siemens.Common;
 using NewLife.Siemens.Messages;
 using NewLife.Siemens.Models;
@@ -190,7 +192,7 @@ public partial class S7PLC : DisposeBase
         stream.WriteByte((Byte)amount);
     }
 
-    public async Task<S7Message> RequestAsync(S7Message request, CancellationToken cancellationToken = default)
+    public async Task<S7Message?> RequestAsync(S7Message request, CancellationToken cancellationToken = default)
     {
         XTrace.WriteLine("=> {0}", request);
         var data = request.ToCOTP().ToPacket(true).ReadBytes();
@@ -207,6 +209,25 @@ public partial class S7PLC : DisposeBase
         XTrace.WriteLine("<= {0}", msg);
 
         return msg;
+    }
+
+    /// <summary>发起Job请求</summary>
+    /// <param name="request"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public async Task<S7Parameter?> InvokeAsync(S7Parameter request, CancellationToken cancellationToken = default)
+    {
+        var msg = new S7Message
+        {
+            Kind = S7Kinds.Job,
+        };
+
+        msg.SetParameter(request);
+
+        var rs = await RequestAsync(msg, cancellationToken);
+        if (rs == null) return null;
+
+        return rs.Parameters?.FirstOrDefault();
     }
 
     /// <summary>异步请求</summary>
@@ -292,28 +313,20 @@ public partial class S7PLC : DisposeBase
             // 最大PDU大小
             var maxToRead = Math.Min(count, MaxPDUSize - 18);
 
-            var msg = new S7Message
-            {
-                Kind = S7Kinds.Job,
-            };
+            var request = BuildRead(dataType, db, startByteAdr + index, maxToRead);
 
-            var request = new ReadRequest();
-            msg.SetParameter(request);
-
-            var di = BuildRead(dataType, db, startByteAdr + index, maxToRead);
-            request.Items.Add(di);
-
-            var rs = RequestAsync(msg).Result;
-            if (rs == null) break;
-
-            var res = rs.GetParameter(S7Functions.ReadVar) as ReadResponse;
-            if (res == null) break;
+            // 发起请求
+            var rs = InvokeAsync(request).ConfigureAwait(false).GetAwaiter().GetResult();
+            if (rs is not ReadResponse res) break;
 
             if (res.Items != null)
             {
                 foreach (var item in res.Items)
                 {
-                    if (item.Code == 0xFF && item.Data != null)
+                    var code = res.Items[0].Code;
+                    if (code != ReadWriteErrorCode.Success) throw new ApiException((Int32)code, code + "");
+
+                    if (item.Data != null)
                         ms.Write(item.Data, 0, item.Data.Length);
                 }
             }
@@ -324,9 +337,9 @@ public partial class S7PLC : DisposeBase
         return ms.ToArray();
     }
 
-    private static RequestItem BuildRead(DataType dataType, Int32 db, Int32 startByteAdr, Int32 count = 1)
+    private static ReadRequest BuildRead(DataType dataType, Int32 db, Int32 startByteAdr, Int32 count = 1)
     {
-        var request = new RequestItem
+        var ri = new RequestItem
         {
             // S7ANY
             SyntaxId = 0x10,
@@ -339,52 +352,26 @@ public partial class S7PLC : DisposeBase
             Address = (UInt32)startByteAdr,
         };
 
-        request.Type = dataType switch
+        ri.Type = dataType switch
         {
             DataType.Timer => VarType.Timer,
             DataType.Counter => VarType.Counter,
             _ => VarType.Word,
         };
 
+        var request = new ReadRequest();
+        request.Items.Add(ri);
+
         return request;
-
-        ////single data req = 12
-        //stream.WriteByteArray([0x12, 0x0a, 0x10]);
-        //switch (dataType)
-        //{
-        //    case DataType.Timer:
-        //    case DataType.Counter:
-        //        stream.WriteByte((Byte)dataType);
-        //        break;
-        //    default:
-        //        stream.WriteByte(0x02);
-        //        break;
-        //}
-
-        //stream.WriteByteArray(ToByteArray((UInt16)(count)));
-        //stream.WriteByteArray(ToByteArray((UInt16)(db)));
-        //stream.WriteByte((Byte)dataType);
-        //var overflow = (Int32)(startByteAdr * 8 / 0xffffU); // handles words with address bigger than 8191
-        //stream.WriteByte((Byte)overflow);
-        //switch (dataType)
-        //{
-        //    case DataType.Timer:
-        //    case DataType.Counter:
-        //        stream.WriteByteArray(ToByteArray((UInt16)(startByteAdr)));
-        //        break;
-        //    default:
-        //        stream.WriteByteArray(ToByteArray((UInt16)((startByteAdr) * 8)));
-        //        break;
-        //}
     }
     #endregion
 
     #region 写入
     /// <summary>从指定DB开始，写入多个字节</summary>
-    /// <param name="dataType">Data type of the memory area, can be DB, Timer, Counter, Merker(Memory), Input, Output.</param>
-    /// <param name="db">Address of the memory area (if you want to read DB1, this is set to 1). This must be set also for other memory area types: counters, timers,etc.</param>
-    /// <param name="startByteAdr">Start byte address. If you want to write DB1.DBW200, this is 200.</param>
-    /// <param name="value">Bytes to write. If more than 200, multiple requests will be made.</param>
+    /// <param name="dataType"></param>
+    /// <param name="db"></param>
+    /// <param name="startByteAdr"></param>
+    /// <param name="value"></param>
     public void WriteBytes(DataType dataType, Int32 db, Int32 startByteAdr, Byte[] value)
     {
         var localIndex = 0;
@@ -394,11 +381,47 @@ public partial class S7PLC : DisposeBase
             //TODO: Figure out how to use MaxPDUSize here
             //Snap7 seems to choke on PDU sizes above 256 even if snap7
             //replies with bigger PDU size in connection setup.
-            var maxToWrite = Math.Min(count, MaxPDUSize - 28);//TODO tested only when the MaxPDUSize is 480
-            WriteBytesWithASingleRequest(dataType, db, startByteAdr + localIndex, value, localIndex, maxToWrite);
+            var maxToWrite = Math.Min(count, MaxPDUSize - 28);
+            //TODO tested only when the MaxPDUSize is 480
+            //WriteBytesWithASingleRequest(dataType, db, startByteAdr + localIndex, value, localIndex, maxToWrite);
+
+            var request = BuildWrite(dataType, db, startByteAdr + localIndex, value, localIndex, maxToWrite);
+
+            // 发起请求
+            var rs = InvokeAsync(request).ConfigureAwait(false).GetAwaiter().GetResult();
+            if (rs is not WriteResponse res) break;
+
+            if (res.Items != null && res.Items.Count > 0)
+            {
+                var code = res.Items[0].Code;
+                if (code != ReadWriteErrorCode.Success) throw new ApiException((Int32)code, code + "");
+            }
+
             count -= maxToWrite;
             localIndex += maxToWrite;
         }
+    }
+
+    private WriteRequest BuildWrite(DataType dataType, Int32 db, Int32 startByteAdr, Byte[] value, Int32 offset, Int32 count)
+    {
+        var request = new WriteRequest();
+        request.Items.Add(new RequestItem
+        {
+            SpecType = 0x12,
+            SyntaxId = 0x10,
+            Type = VarType.Byte,
+            Count = (UInt16)count,
+            DbNumber = (UInt16)db,
+            Area = dataType,
+            Address = (UInt32)startByteAdr
+        });
+        request.DataItems.Add(new DataItem
+        {
+            Type = VarType.DWord,
+            Data = value.ReadBytes(offset, count),
+        });
+
+        return request;
     }
 
     private void WriteBytesWithASingleRequest(DataType dataType, Int32 db, Int32 startByteAdr, Byte[] value, Int32 dataOffset, Int32 count)

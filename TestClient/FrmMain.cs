@@ -1,5 +1,4 @@
-﻿using NewLife;
-using NewLife.IoT.ThingModels;
+﻿using NewLife.IoT.ThingModels;
 using NewLife.Log;
 using NewLife.Serialization;
 using NewLife.Siemens.Drivers;
@@ -64,6 +63,7 @@ public partial class FrmMain : Form
             }
             else
             {
+                _driver.Close(_node);
                 _driver.Dispose();
                 _driver = null;
 

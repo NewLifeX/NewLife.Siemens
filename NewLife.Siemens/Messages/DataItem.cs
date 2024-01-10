@@ -1,5 +1,6 @@
 ﻿using NewLife.Serialization;
 using NewLife.Siemens.Models;
+using NewLife.Siemens.Protocols;
 
 namespace NewLife.Siemens.Messages;
 
@@ -8,7 +9,7 @@ public class DataItem
 {
     #region 属性
     /// <summary>错误码。0xFF表示成功，写入请求时置零</summary>
-    public Byte Code { get; set; }
+    public ReadWriteErrorCode Code { get; set; }
 
     /// <summary>变量类型</summary>
     public VarType Type { get; set; }
@@ -24,11 +25,11 @@ public class DataItem
     {
         if (reader.EndOfStream()) return;
 
-        Code = reader.ReadByte();
+        Code = (ReadWriteErrorCode)reader.ReadByte();
 
         // WriteResponse中只有Code
         if (reader.EndOfStream()) return;
-        
+
         Type = (VarType)reader.ReadByte();
 
         var len = reader.ReadUInt16();
@@ -39,7 +40,7 @@ public class DataItem
     /// <param name="writer"></param>
     public void Writer(Binary writer)
     {
-        writer.WriteByte(Code);
+        writer.WriteByte((Byte)Code);
         writer.WriteByte((Byte)Type);
 
         var len = Data?.Length ?? 0;

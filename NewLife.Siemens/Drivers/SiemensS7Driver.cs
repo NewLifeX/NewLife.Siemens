@@ -120,21 +120,21 @@ public class SiemensS7Driver : DriverBase
     /// <param name="node">节点对象，可存储站号等信息，仅驱动自己识别</param>
     /// <param name="points">点位集合</param>
     /// <returns></returns>
-    public override IDictionary<String, Object> Read(INode node, IPoint[] points)
+    public override IDictionary<String, Object?> Read(INode node, IPoint[] points)
     {
-        var dic = new Dictionary<String, Object>();
+        var dic = new Dictionary<String, Object?>();
 
         if (points == null || points.Length == 0) return dic;
+        if (_plc == null) throw new Exception("PLC未打开！");
 
         var spec = node.Device?.Specification;
         foreach (var point in points)
         {
             var addr = GetAddress(point);
-            if (addr.IsNullOrWhiteSpace())
-            {
-                dic[point.Name] = null;
-                continue;
-            }
+            if (addr.IsNullOrWhiteSpace()) continue;
+
+            var name = !point.Name.IsNullOrWhiteSpace() ? point.Name : point.Address;
+            if (name.IsNullOrEmpty()) continue;
 
             // 操作字节数组，不用设置bitNumber，但是解析需要带上
             if (addr.IndexOf('.') == -1) addr += ".0";
@@ -147,9 +147,9 @@ public class SiemensS7Driver : DriverBase
             // 借助物模型转换数据类型
             var v = spec?.DecodeByThingModel(data, point);
             if (v != null)
-                dic[point.Name] = v;
+                dic[name] = v;
             else
-                dic[point.Name] = data;
+                dic[name] = data;
         }
 
         return dic;
@@ -162,10 +162,10 @@ public class SiemensS7Driver : DriverBase
     /// <returns></returns>
     public virtual String GetAddress(IPoint point)
     {
-        if (point == null) throw new ArgumentException("点位信息不能为空！");
+        var addr = point.Address;
+        if (addr.IsNullOrEmpty()) throw new ArgumentException("点位信息不能为空！");
 
         // 去掉冒号后面的位域
-        var addr = point.Address;
         var p = addr.IndexOf(':');
         if (p > 0) addr = addr[..p];
 
@@ -178,10 +178,11 @@ public class SiemensS7Driver : DriverBase
     /// <param name="node">节点对象，可存储站号等信息，仅驱动自己识别</param>
     /// <param name="point">点位</param>
     /// <param name="value">数值</param>
-    public override Object Write(INode node, IPoint point, Object value)
+    public override Object? Write(INode node, IPoint point, Object? value)
     {
         var addr = GetAddress(point);
         if (addr.IsNullOrWhiteSpace()) return null;
+        if (_plc == null) throw new Exception("PLC未打开！");
 
         // 借助物模型转换数据类型
         var spec = node.Device?.Specification;
@@ -196,11 +197,13 @@ public class SiemensS7Driver : DriverBase
 
         var plcAddress = new PLCAddress(addr);
 
-        Byte[] bytes = null;
+        Byte[]? bytes = null;
         if (value is Byte[] v)
             bytes = v;
         else
         {
+            if (point.Type.IsNullOrEmpty()) throw new ArgumentNullException(nameof(point.Type));
+
             bytes = point.Type.ToLower() switch
             {
                 "boolean" or "bool" => BitConverter.GetBytes(value.ToBoolean()),
@@ -218,7 +221,7 @@ public class SiemensS7Driver : DriverBase
 
         _plc.WriteBytes(plcAddress.DataType, plcAddress.DbNumber, plcAddress.StartByte, bytes);
 
-        return null;
+        return "OK";
     }
     #endregion
 }
