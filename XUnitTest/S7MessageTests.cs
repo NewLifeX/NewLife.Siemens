@@ -177,6 +177,57 @@ public class S7MessageTests
     }
 
     [Fact]
+    public void ReadVarResponse2()
+    {
+        var str = "32 03 00 00 00 01" +
+            // plen + dlen
+            "00 02 00 06 " +
+            // error code
+            "00 00 " +
+            // 读取请求项
+            "04 01 " +
+            // 数据项
+            "ff 04 00 10 00 00";
+        var hex = str.ToHex();
+
+        var msg = new S7Message();
+
+        var rs = msg.Read(hex);
+        Assert.True(rs);
+
+        Assert.Equal(0x32, msg.ProtocolId);
+        Assert.Equal(S7Kinds.AckData, msg.Kind);
+        Assert.Equal(0x0000, msg.Reserved);
+        Assert.Equal(1, msg.Sequence);
+
+        Assert.Equal(0, msg.ErrorClass);
+        Assert.Equal(0, msg.ErrorCode);
+
+        Assert.Single(msg.Parameters);
+
+        var pm = msg.Parameters[0] as ReadResponse;
+        Assert.NotNull(pm);
+        Assert.Equal(S7Functions.ReadVar, pm.Code);
+        Assert.Single(pm.Items);
+
+        var pm2 = msg.GetParameter(S7Functions.ReadVar);
+        Assert.NotNull(pm2);
+        Assert.Equal(pm, pm2);
+
+        var di = pm.Items[0];
+        Assert.Equal(ReadWriteErrorCode.Success, di.Code);
+        Assert.Equal(VarType.DWord, di.Type);
+        Assert.Single(di.Data);
+        Assert.Equal(0x00, di.Data[0]);
+
+        //Assert.NotNull(msg.Data);
+
+        // 序列化
+        var buf = msg.GetBytes();
+        Assert.Equal(hex.ToHex(), buf.ToHex());
+    }
+
+    [Fact]
     public void WriteVar()
     {
         var str = "32 01 00 00 00 01 " +

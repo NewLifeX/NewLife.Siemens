@@ -38,7 +38,7 @@ public class DataItem
 
         Type = (VarType)reader.ReadByte();
 
-        var len = reader.ReadUInt16();
+        var len = reader.ReadUInt16() / 8;
         Data = reader.ReadBytes(len);
     }
 
@@ -50,7 +50,7 @@ public class DataItem
         writer.WriteByte((Byte)Type);
 
         var len = Data?.Length ?? 0;
-        writer.WriteUInt16((UInt16)len);
+        writer.WriteUInt16((UInt16)(len * 8));
 
         if (Data != null) writer.Write(Data, 0, Data.Length);
     }
