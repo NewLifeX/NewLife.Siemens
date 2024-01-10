@@ -1,8 +1,6 @@
 ﻿using System.Net.Sockets;
-using NewLife.Data;
 using NewLife.Log;
 using NewLife.Remoting;
-using NewLife.Siemens.Common;
 using NewLife.Siemens.Messages;
 using NewLife.Siemens.Models;
 
@@ -225,7 +223,7 @@ public partial class S7Client : DisposeBase, ILogFeature
         }
         catch (Exception exc)
         {
-            if (exc is TPDUInvalidException || exc is TPKTInvalidException)
+            if (exc is InvalidDataException)
             {
                 Close();
             }
@@ -249,7 +247,9 @@ public partial class S7Client : DisposeBase, ILogFeature
             // 最大PDU大小
             var maxToRead = Math.Min(count, MaxPDUSize - 18);
 
-            var request = BuildRead(address.DataType, address.DbNumber, address.VarType, address.StartByte + index, maxToRead);
+            var addr = (address.StartByte + index) * 8;
+            if (address.BitNumber > 0) addr += address.BitNumber;
+            var request = BuildRead(address.DataType, address.DbNumber, address.VarType, addr, maxToRead);
 
             // 发起请求
             var rs = InvokeAsync(request).ConfigureAwait(false).GetAwaiter().GetResult();
@@ -273,26 +273,18 @@ public partial class S7Client : DisposeBase, ILogFeature
         return ms.ToArray();
     }
 
-    private static ReadRequest BuildRead(DataType dataType, Int32 db, VarType varType, Int32 startByteAdr, Int32 count)
+    private static ReadRequest BuildRead(DataType dataType, Int32 db, VarType varType, Int32 address, Int32 count)
     {
         var ri = new RequestItem
         {
             // S7ANY
             SyntaxId = 0x10,
-            // BIT
-            Type = VarType.Byte,
+            TransportSize = (Byte)(varType == VarType.Bit ? 1 : 2),
             Count = (UInt16)count,
             DbNumber = (UInt16)db,
             Area = dataType,
 
-            Address = (UInt32)startByteAdr,
-        };
-
-        ri.Type = dataType switch
-        {
-            DataType.Timer => VarType.Timer,
-            DataType.Counter => VarType.Counter,
-            _ => VarType.Byte,
+            Address = (UInt32)address,
         };
 
         var request = new ReadRequest();
@@ -314,7 +306,9 @@ public partial class S7Client : DisposeBase, ILogFeature
         {
             var pdu = Math.Min(count, MaxPDUSize - 28);
 
-            var request = BuildWrite(address.DataType, address.DbNumber, address.VarType, address.StartByte + index, value, index, pdu);
+            var addr = (address.StartByte + index) * 8;
+            if (address.BitNumber > 0) addr += address.BitNumber;
+            var request = BuildWrite(address.DataType, address.DbNumber, address.VarType, addr, value, index, pdu);
 
             // 发起请求
             var rs = InvokeAsync(request).ConfigureAwait(false).GetAwaiter().GetResult();
@@ -338,7 +332,7 @@ public partial class S7Client : DisposeBase, ILogFeature
         {
             SpecType = 0x12,
             SyntaxId = 0x10,
-            Type = VarType.Byte,
+            TransportSize = (Byte)(varType == VarType.Bit ? 1 : 2),
             Count = (UInt16)count,
             DbNumber = (UInt16)db,
             Area = dataType,
@@ -346,7 +340,7 @@ public partial class S7Client : DisposeBase, ILogFeature
         });
         request.DataItems.Add(new DataItem
         {
-            Type = VarType.DWord,
+            TransportSize = (Byte)(varType == VarType.Bit ? 0x03 : 0x04),
             Data = value.ReadBytes(offset, count),
         });
 

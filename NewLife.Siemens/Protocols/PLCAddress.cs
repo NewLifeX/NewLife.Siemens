@@ -1,6 +1,4 @@
-﻿using System.Net;
-using NewLife.Siemens.Common;
-using NewLife.Siemens.Models;
+﻿using NewLife.Siemens.Models;
 
 namespace NewLife.Siemens.Protocols;
 
@@ -42,7 +40,6 @@ public class PLCAddress
     /// <param name="varType"></param>
     /// <param name="address"></param>
     /// <param name="bitNumber"></param>
-    /// <exception cref="InvalidAddressException"></exception>
     public static void Parse(String input, out DataType dataType, out Int32 dbNumber, out VarType varType, out Int32 address, out Int32 bitNumber)
     {
         bitNumber = -1;
@@ -53,11 +50,11 @@ public class PLCAddress
             case "DB":
                 var strings = input.Split(['.']);
                 if (strings.Length < 2)
-                    throw new InvalidAddressException("To few periods for DB address");
+                    throw new InvalidDataException("To few periods for DB address");
 
                 dataType = DataType.DataBlock;
                 dbNumber = Int32.Parse(strings[0][2..]);
-                address = GetAddress(strings[1][3..]);
+                address = Int32.Parse(strings[1][3..]);
 
                 var dbType = strings[1][..3];
                 switch (dbType)
@@ -74,18 +71,18 @@ public class PLCAddress
                     case "DBX":
                         bitNumber = Int32.Parse(strings[2]);
                         if (bitNumber > 7)
-                            throw new InvalidAddressException("Bit can only be 0-7");
+                            throw new InvalidDataException("Bit can only be 0-7");
                         varType = VarType.Bit;
                         return;
                     default:
-                        throw new InvalidAddressException();
+                        throw new InvalidDataException();
                 }
             case "IB":
             case "EB":
                 // Input byte
                 dataType = DataType.Input;
                 dbNumber = 0;
-                address = GetAddress(input[2..]);
+                address = Int32.Parse(input[2..]);
                 varType = VarType.Byte;
                 return;
             case "IW":
@@ -93,7 +90,7 @@ public class PLCAddress
                 // Input word
                 dataType = DataType.Input;
                 dbNumber = 0;
-                address = GetAddress(input[2..]);
+                address = Int32.Parse(input[2..]);
                 varType = VarType.Word;
                 return;
             case "ID":
@@ -101,7 +98,7 @@ public class PLCAddress
                 // Input double-word
                 dataType = DataType.Input;
                 dbNumber = 0;
-                address = GetAddress(input[2..]);
+                address = Int32.Parse(input[2..]);
                 varType = VarType.DWord;
                 return;
             case "QB":
@@ -110,7 +107,7 @@ public class PLCAddress
                 // Output byte
                 dataType = DataType.Output;
                 dbNumber = 0;
-                address = GetAddress(input[2..]);
+                address = Int32.Parse(input[2..]);
                 varType = VarType.Byte;
                 return;
             case "QW":
@@ -119,7 +116,7 @@ public class PLCAddress
                 // Output word
                 dataType = DataType.Output;
                 dbNumber = 0;
-                address = GetAddress(input[2..]);
+                address = Int32.Parse(input[2..]);
                 varType = VarType.Word;
                 return;
             case "QD":
@@ -128,28 +125,28 @@ public class PLCAddress
                 // Output double-word
                 dataType = DataType.Output;
                 dbNumber = 0;
-                address = GetAddress(input[2..]);
+                address = Int32.Parse(input[2..]);
                 varType = VarType.DWord;
                 return;
             case "MB":
                 // Memory byte
                 dataType = DataType.Memory;
                 dbNumber = 0;
-                address = GetAddress(input[2..]);
+                address = Int32.Parse(input[2..]);
                 varType = VarType.Byte;
                 return;
             case "MW":
                 // Memory word
                 dataType = DataType.Memory;
                 dbNumber = 0;
-                address = GetAddress(input[2..]);
+                address = Int32.Parse(input[2..]);
                 varType = VarType.Word;
                 return;
             case "MD":
                 // Memory double-word
                 dataType = DataType.Memory;
                 dbNumber = 0;
-                address = GetAddress(input[2..]);
+                address = Int32.Parse(input[2..]);
                 varType = VarType.DWord;
                 return;
             default:
@@ -177,7 +174,7 @@ public class PLCAddress
                         // Timer
                         dataType = DataType.Timer;
                         dbNumber = 0;
-                        address = GetAddress(input[1..]);
+                        address = Int32.Parse(input[1..]);
                         varType = VarType.Timer;
                         return;
                     case "Z":
@@ -185,32 +182,23 @@ public class PLCAddress
                         // Counter
                         dataType = DataType.Counter;
                         dbNumber = 0;
-                        address = GetAddress(input[1..]);
+                        address = Int32.Parse(input[1..]);
                         varType = VarType.Counter;
                         return;
                     default:
-                        throw new InvalidAddressException(String.Format("{0} is not a valid address", input[..1]));
+                        throw new InvalidDataException(String.Format("{0} is not a valid address", input[..1]));
                 }
 
                 var txt2 = input[1..];
                 if (txt2.IndexOf(".") == -1)
-                    throw new InvalidAddressException("To few periods for DB address");
+                    throw new InvalidDataException("To few periods for DB address");
 
-                address = GetAddress(txt2[..txt2.IndexOf(".")]);
+                address = Int32.Parse(txt2[..txt2.IndexOf(".")]);
                 bitNumber = Int32.Parse(txt2[(txt2.IndexOf(".") + 1)..]);
                 if (bitNumber > 7)
-                    throw new InvalidAddressException("Bit can only be 0-7");
+                    throw new InvalidDataException("Bit can only be 0-7");
 
                 return;
         }
-    }
-
-    static Int32 GetAddress(String value)
-    {
-        var addrs = value.SplitAsInt();
-        if (addrs.Length > 1)
-            return addrs[0] * 8 + addrs[1];
-        else
-            return addrs[0] * 8;
     }
 }

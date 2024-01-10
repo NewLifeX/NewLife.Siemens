@@ -14,8 +14,8 @@ public class RequestItem
     /// <summary>寻址模式。任意类型S7ANY用0x10</summary>
     public Byte SyntaxId { get; set; }
 
-    /// <summary>变量类型</summary>
-    public VarType Type { get; set; }
+    /// <summary>传输数据类型。按字为02，按位为01</summary>
+    public Byte TransportSize { get; set; }
 
     /// <summary>个数</summary>
     public UInt16 Count { get; set; }
@@ -33,7 +33,7 @@ public class RequestItem
     #region 构造函数
     /// <summary>已重载。</summary>
     /// <returns></returns>
-    public override String ToString() => $"{Type}({Area}:{DbNumber}:{Address}, {Count})";
+    public override String ToString() => $"{(TransportSize > 1 ? "BYTE" : "BIT")}({Area}:{DbNumber}:{Address}, {Count})";
     #endregion
 
     #region 方法
@@ -46,7 +46,7 @@ public class RequestItem
         var len = reader.ReadByte();
 
         SyntaxId = reader.ReadByte();
-        Type = (VarType)reader.ReadByte();
+        TransportSize = reader.ReadByte();
         Count = reader.ReadUInt16();
         DbNumber = reader.ReadUInt16();
         Area = (DataType)reader.ReadByte();
@@ -66,7 +66,7 @@ public class RequestItem
         var len = 1 + 1 + 2 + 2 + 1 + 3;
         writer.WriteByte((Byte)len);
         writer.WriteByte(SyntaxId);
-        writer.WriteByte((Byte)Type);
+        writer.WriteByte(TransportSize);
         writer.Write(Count);
         writer.Write(DbNumber);
         writer.WriteByte((Byte)Area);

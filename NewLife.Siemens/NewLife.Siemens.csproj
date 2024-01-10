@@ -38,15 +38,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Common\**" />
     <Compile Remove="Types\**" />
+    <EmbeddedResource Remove="Common\**" />
     <EmbeddedResource Remove="Types\**" />
+    <None Remove="Common\**" />
     <None Remove="Types\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="Common\Conversion.cs" />
-    <Compile Remove="Common\PLCHelpers.cs" />
-    <Compile Remove="Common\StreamExtensions.cs" />
+    <Compile Remove="Protocols\DataItemAddress.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -165,7 +165,7 @@ public class S7Session : NetSession<S7Server>
         var di = new DataItem
         {
             Code = ReadWriteErrorCode.Success,
-            Type = VarType.DWord,
+            TransportSize = 0x04,
             Data = num.GetBytes(false)
         };
 
@@ -184,24 +184,13 @@ public class S7Session : NetSession<S7Server>
         var ri = request.DataItems.FirstOrDefault();
         if (ri != null && ri.Data != null)
         {
-            Object? num;
-            if (ri.Data.Length == 2 && ri.Type is VarType.Word or VarType.Int or VarType.Bit or VarType.Byte or VarType.DWord or VarType.DInt)
-                num = ri.Data.ToUInt16(0, false);
-            else if (ri.Data.Length == 1 || ri.Type is VarType.Bit or VarType.Byte)
-                num = ri.Data[0];
-            else if (ri.Data.Length == 2 && ri.Type is VarType.Word or VarType.Int)
-                num = ri.Data.ToUInt16(0, false);
-            else if (ri.Data.Length == 4 && ri.Type is VarType.DWord or VarType.DInt)
-                num = ri.Data.ToUInt32(0, false);
-            else if (ri.Data.Length == 4 && ri.Type is VarType.Real)
-                num = Convert.ToSingle(ri.Data);
-            else if (ri.Data.Length == 4 && ri.Type is VarType.LReal)
-                num = Convert.ToDouble(ri.Data);
-            else if (ri.Type is VarType.String or VarType.S7String or VarType.S7WString)
-                num = ri.Data.ToStr();
-            else
-                num = ri.Data.ToHex();
-
+            Object num = ri.Data.Length switch
+            {
+                1 => ri.Data[0],
+                2 => ri.Data.ToUInt16(0, false),
+                4 => ri.Data.ToUInt32(0, false),
+                _ => ri.Data.ToHex(),
+            };
             WriteLog("数值：{0}", num);
         }
 

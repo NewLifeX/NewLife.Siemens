@@ -11,8 +11,8 @@ public class DataItem
     /// <summary>错误码。0xFF表示成功，写入请求时置零</summary>
     public ReadWriteErrorCode Code { get; set; }
 
-    /// <summary>变量类型</summary>
-    public VarType Type { get; set; }
+    /// <summary>传输数据类型。按字为04，按位为03</summary>
+    public Byte TransportSize { get; set; }
 
     /// <summary>数据</summary>
     public Byte[]? Data { get; set; }
@@ -21,7 +21,7 @@ public class DataItem
     #region 构造函数
     /// <summary>已重载。</summary>
     /// <returns></returns>
-    public override String ToString() => Type > 0 ? $"{Type}({Data.ToHex()})" : $"{Code}";
+    public override String ToString() => TransportSize > 0 ? $"{TransportSize}({Data.ToHex()})" : $"{Code}";
     #endregion
 
     #region 方法
@@ -36,9 +36,13 @@ public class DataItem
         // WriteResponse中只有Code
         if (reader.EndOfStream()) return;
 
-        Type = (VarType)reader.ReadByte();
+        var b = reader.ReadByte();
+        TransportSize = b;
 
-        var len = reader.ReadUInt16() / 8;
+        var len = reader.ReadUInt16();
+        // BIT=0x03 / Byte/Word/DWord=0x04
+        if (b == 0x04) len /= 8;
+
         Data = reader.ReadBytes(len);
     }
 
@@ -47,10 +51,15 @@ public class DataItem
     public void Writer(Binary writer)
     {
         writer.WriteByte((Byte)Code);
-        writer.WriteByte((Byte)Type);
+        writer.WriteByte((Byte)TransportSize);
 
         var len = Data?.Length ?? 0;
-        writer.WriteUInt16((UInt16)(len * 8));
+
+        // BIT=0x03 / Byte/Word/DWord=0x04
+        var b = (Byte)TransportSize;
+        if (b == 0x04) len *= 8;
+
+        writer.WriteUInt16((UInt16)len);
 
         if (Data != null) writer.Write(Data, 0, Data.Length);
     }

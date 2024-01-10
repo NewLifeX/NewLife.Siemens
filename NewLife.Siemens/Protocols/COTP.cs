@@ -1,6 +1,5 @@
 ﻿using NewLife.Data;
 using NewLife.Serialization;
-using NewLife.Siemens.Common;
 
 namespace NewLife.Siemens.Protocols;
 
@@ -260,10 +259,10 @@ public class COTP
     public static async Task<COTP> ReadAsync(Stream stream, CancellationToken cancellationToken)
     {
         var data = await TPKT.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
-        if (data.Length == 0) throw new TPDUInvalidException("No protocol data received");
+        if (data.Length == 0) throw new InvalidDataException("No protocol data received");
 
         var cotp = new COTP();
-        if (!cotp.Read(data)) throw new TPDUInvalidException("Invalid protocol data received");
+        if (!cotp.Read(data)) throw new InvalidDataException("Invalid protocol data received");
 
         return cotp;
     }

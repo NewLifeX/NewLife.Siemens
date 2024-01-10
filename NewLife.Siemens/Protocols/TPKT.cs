@@ -1,5 +1,4 @@
 ﻿using NewLife.Data;
-using NewLife.Siemens.Common;
 
 namespace NewLife.Siemens.Protocols;
 
@@ -86,7 +85,7 @@ public class TPKT
         // 读取4字节头部
         var buf = new Byte[4];
         var len = await stream.ReadAsync(buf, 0, 4, cancellationToken).ConfigureAwait(false);
-        if (len < 4) throw new TPKTInvalidException("TPKT is incomplete / invalid");
+        if (len < 4) throw new InvalidDataException("TPKT is incomplete / invalid");
 
         var tpkt = new TPKT();
         tpkt.ReadHeader(buf);
@@ -95,7 +94,7 @@ public class TPKT
         var data = new Byte[tpkt.Length - 4];
         len = await stream.ReadAsync(data, 0, data.Length, cancellationToken).ConfigureAwait(false);
         if (len < data.Length)
-            throw new TPKTInvalidException("TPKT payload incomplete / invalid");
+            throw new InvalidDataException("TPKT payload incomplete / invalid");
 
         return data;
     }

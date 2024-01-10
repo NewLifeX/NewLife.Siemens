@@ -112,7 +112,7 @@ public class S7MessageTests
         var di = pm.Items[0];
         Assert.Equal(0x12, di.SpecType);
         Assert.Equal(0x10, di.SyntaxId);
-        Assert.Equal(VarType.Byte, di.Type);
+        Assert.Equal(1, di.TransportSize);
         Assert.Equal(1, di.Count);
         Assert.Equal(1, di.DbNumber);
         Assert.Equal(DataType.DataBlock, di.Area);
@@ -165,7 +165,7 @@ public class S7MessageTests
 
         var di = pm.Items[0];
         Assert.Equal(ReadWriteErrorCode.Success, di.Code);
-        Assert.Equal(VarType.DWord, di.Type);
+        Assert.Equal(0x03, di.TransportSize);
         Assert.Single(di.Data);
         Assert.Equal(0x00, di.Data[0]);
 
@@ -216,8 +216,8 @@ public class S7MessageTests
 
         var di = pm.Items[0];
         Assert.Equal(ReadWriteErrorCode.Success, di.Code);
-        Assert.Equal(VarType.DWord, di.Type);
-        Assert.Single(di.Data);
+        Assert.Equal(0x04, di.TransportSize);
+        Assert.Equal(2, di.Data.Length);
         Assert.Equal(0x00, di.Data[0]);
 
         //Assert.NotNull(msg.Data);
@@ -263,7 +263,7 @@ public class S7MessageTests
         var ri = pm.Items[0];
         Assert.Equal(0x12, ri.SpecType);
         Assert.Equal(0x10, ri.SyntaxId);
-        Assert.Equal(VarType.Byte, ri.Type);
+        Assert.Equal(1, ri.TransportSize);
         Assert.Equal(1, ri.Count);
         Assert.Equal(1, ri.DbNumber);
         Assert.Equal(DataType.DataBlock, ri.Area);
@@ -271,7 +271,7 @@ public class S7MessageTests
 
         var di = pm.DataItems[0];
         Assert.Equal(ReadWriteErrorCode.Reserved, di.Code);
-        Assert.Equal(VarType.DWord, di.Type);
+        Assert.Equal(0x03, di.TransportSize);
         Assert.Single(di.Data);
         Assert.Equal(1, di.Data[0]);
 
