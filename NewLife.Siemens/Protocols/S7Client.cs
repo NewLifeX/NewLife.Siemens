@@ -346,7 +346,7 @@ public partial class S7Client : DisposeBase, ILogFeature
         });
         request.DataItems.Add(new DataItem
         {
-            Type = VarType.Byte,
+            Type = VarType.DWord,
             Data = value.ReadBytes(offset, count),
         });
 
