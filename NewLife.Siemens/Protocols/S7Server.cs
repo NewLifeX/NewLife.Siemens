@@ -150,7 +150,7 @@ public class S7Session : NetSession<S7Server>
     {
         if (request == null) return null;
 
-        XTrace.WriteLine("读取：{0}", request.ToJson());
+        WriteLog("读取：{0}", request.ToJson());
 
         var di = new DataItem
         {
@@ -169,7 +169,7 @@ public class S7Session : NetSession<S7Server>
     {
         if (request == null) return null;
 
-        XTrace.WriteLine("写入：{0}", request.ToJson());
+        WriteLog("写入：{0}", request.ToJson());
 
         var di = new DataItem
         {

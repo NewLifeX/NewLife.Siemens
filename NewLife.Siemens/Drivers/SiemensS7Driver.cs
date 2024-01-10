@@ -2,6 +2,7 @@
 using NewLife.IoT;
 using NewLife.IoT.Drivers;
 using NewLife.IoT.ThingModels;
+using NewLife.Log;
 using NewLife.Siemens.Models;
 using NewLife.Siemens.Protocols;
 
@@ -89,6 +90,7 @@ public class SiemensS7Driver : DriverBase
                     {
                         Timeout = 5000,
                     };
+                    if (Log != null && Log.Level <= LogLevel.Debug) _plc.Log = Log;
 
                     _plc.OpenAsync().GetAwaiter().GetResult();
                 }

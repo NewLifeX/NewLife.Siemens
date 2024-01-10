@@ -18,6 +18,10 @@ public class ReadResponse : S7Parameter, IDataItems
     #region 构造
     /// <summary>实例化</summary>
     public ReadResponse() => Code = S7Functions.ReadVar;
+
+    /// <summary>已重载。</summary>
+    /// <returns></returns>
+    public override String ToString() => $"[{Code}]{Items.FirstOrDefault()}";
     #endregion
 
     #region 方法

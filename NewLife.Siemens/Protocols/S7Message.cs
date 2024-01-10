@@ -36,23 +36,23 @@ public class S7Message : IAccessor
     #region 构造
     /// <summary>友好显示</summary>
     /// <returns></returns>
-    public override String ToString() => $"[{Kind}]<{Parameters?.Count}> ({ErrorClass:X2}-{ErrorCode:X2})";
+    public override String ToString() => $"[{Kind}]<{Sequence}>[{Parameters.Count}] {Parameters.FirstOrDefault()}";
     #endregion
 
     #region 读写
     /// <summary>读取</summary>
     /// <param name="pk"></param>
     /// <returns></returns>
-    public Boolean Read(Packet pk) => Read(null, pk);
+    public Boolean Read(Packet pk) => Read(pk.GetStream(), pk);
 
     /// <summary>读取</summary>
     /// <param name="stream"></param>
     /// <param name="context"></param>
     /// <returns></returns>
-    public Boolean Read(Stream stream, Object context)
+    public Boolean Read(Stream stream, Object? context)
     {
-        var pk = context as Packet;
-        stream ??= pk?.GetStream();
+        //var pk = context as Packet;
+        //stream ??= pk?.GetStream();
         var reader = new Binary { Stream = stream, IsLittleEndian = false };
 
         ProtocolId = reader.ReadByte();
@@ -154,10 +154,10 @@ public class S7Message : IAccessor
     /// <param name="stream"></param>
     /// <param name="context"></param>
     /// <returns></returns>
-    public Boolean Write(Stream stream, Object context)
+    public Boolean Write(Stream stream, Object? context)
     {
-        var pk = context as Packet;
-        stream ??= pk?.GetStream();
+        //var pk = context as Packet;
+        //stream ??= pk?.GetStream();
         var writer = new Binary { Stream = stream, IsLittleEndian = false };
 
         writer.WriteByte(ProtocolId);
@@ -227,7 +227,7 @@ public class S7Message : IAccessor
     /// <summary>获取参数</summary>
     /// <param name="code"></param>
     /// <returns></returns>
-    public S7Parameter GetParameter(S7Functions code) => Parameters?.FirstOrDefault(e => e.Code == code);
+    public S7Parameter? GetParameter(S7Functions code) => Parameters?.FirstOrDefault(e => e.Code == code);
 
     /// <summary>设置参数</summary>
     /// <param name="parameter"></param>

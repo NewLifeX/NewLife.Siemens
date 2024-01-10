@@ -291,6 +291,6 @@ public class COTP
 
     /// <summary>已重载</summary>
     /// <returns></returns>
-    public override String ToString() => $"[{Type}] Data[{Data?.Total}]";
+    public override String ToString() => Type == PduType.Data ? $"[{Type}] Data[{Data?.Total}]" : $"[{Type}]";
     #endregion
 }

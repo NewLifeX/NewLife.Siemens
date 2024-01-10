@@ -11,6 +11,12 @@ public class S7Parameter
     public S7Functions Code { get; set; }
     #endregion
 
+    #region 构造
+    /// <summary>已重载。</summary>
+    /// <returns></returns>
+    public override String ToString() => $"[{Code}]";
+    #endregion
+
     #region 方法
     /// <summary>读取</summary>
     /// <param name="pk"></param>

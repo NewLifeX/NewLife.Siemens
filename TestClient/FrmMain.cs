@@ -93,8 +93,6 @@ public partial class FrmMain : Form
             Length = length //data.Length
         };
 
-        //var data = BitConverter.GetBytes(value);
-
         try
         {
             XTrace.WriteLine($"写入点位：{pointAdd}, 类型：{type}, 长度：{length}，值：{value}");
@@ -129,8 +127,6 @@ public partial class FrmMain : Form
 
             // 读取
             var dic = _driver.Read(_node, new[] { point });
-            //var data1 = dic[point.Name] as Byte[];
-            //var res = data1.Swap(true, false).ToInt();
 
             XTrace.WriteLine(dic.ToJson(true));
         }

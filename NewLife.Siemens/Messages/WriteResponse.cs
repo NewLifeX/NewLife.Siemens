@@ -20,6 +20,10 @@ public class WriteResponse : S7Parameter, IDataItems
     #region 构造
     /// <summary>实例化</summary>
     public WriteResponse() => Code = S7Functions.WriteVar;
+
+    /// <summary>已重载。</summary>
+    /// <returns></returns>
+    public override String ToString() => $"[{Code}]{Items.FirstOrDefault()}";
     #endregion
 
     #region 方法
