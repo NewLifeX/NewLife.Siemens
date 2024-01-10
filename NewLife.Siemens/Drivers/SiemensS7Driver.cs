@@ -192,10 +192,13 @@ public class SiemensS7Driver : DriverBase
 
         // 借助物模型转换数据类型
         var spec = node.Device?.Specification;
-        if (spec != null && value != null && value is not Byte[])
+        if (value != null && value is not Byte[])
         {
             // 普通数值转为字节数组
-            value = spec.EncodeByThingModel(value, point);
+            if (spec != null)
+                value = spec.EncodeByThingModel(value, point);
+            else
+                value = point.GetBytes(value)?.Swap(true, true);
         }
 
         // 操作字节数组，不用设置bitNumber，但是解析需要带上

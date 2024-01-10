@@ -1,4 +1,5 @@
-﻿using NewLife.Log;
+﻿using System;
+using NewLife.Log;
 using NewLife.Net;
 using NewLife.Security;
 using NewLife.Serialization;
@@ -179,6 +180,28 @@ public class S7Session : NetSession<S7Server>
         if (request == null) return null;
 
         WriteLog("写入：{0}", request.ToJson());
+
+        var ri = request.DataItems.FirstOrDefault();
+        if (ri != null && ri.Data != null)
+        {
+            Object? num;
+            if (ri.Data.Length == 1 || ri.Type is VarType.Bit or VarType.Byte)
+                num = ri.Data[0];
+            else if (ri.Data.Length == 2 && ri.Type is VarType.Word or VarType.Int or VarType.DWord or VarType.DInt)
+                num = ri.Data.ToUInt16(0, false);
+            else if (ri.Data.Length == 4 && ri.Type is VarType.DWord or VarType.DInt)
+                num = ri.Data.ToUInt32(0, false);
+            else if (ri.Data.Length == 4 && ri.Type is VarType.Real)
+                num = Convert.ToSingle(ri.Data);
+            else if (ri.Data.Length == 4 && ri.Type is VarType.LReal)
+                num = Convert.ToDouble(ri.Data);
+            else if (ri.Type is VarType.String or VarType.S7String or VarType.S7WString)
+                num = ri.Data.ToStr();
+            else
+                num = ri.Data.ToHex();
+
+            WriteLog("数值：{0}", num);
+        }
 
         var di = new DataItem
         {
