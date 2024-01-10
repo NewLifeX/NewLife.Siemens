@@ -198,7 +198,7 @@ public partial class S7PLC : DisposeBase
         var data = request.ToCOTP().ToPacket(true).ReadBytes();
         XTrace.WriteLine("=> {0}", data.ToHex("-", 4));
 
-        var rs = await RequestAsync(_stream, data, 0, data.Length, cancellationToken);
+        var rs = await RequestAsync(_stream, data, 0, data.Length, cancellationToken).ConfigureAwait(false);
         if (rs == null) return null;
 
         var msg = new S7Message();
@@ -222,7 +222,7 @@ public partial class S7PLC : DisposeBase
 
         msg.SetParameter(request);
 
-        var rs = await RequestAsync(msg, cancellationToken);
+        var rs = await RequestAsync(msg, cancellationToken).ConfigureAwait(false);
         if (rs == null) return null;
 
         return rs.Parameters?.FirstOrDefault();
@@ -264,7 +264,7 @@ public partial class S7PLC : DisposeBase
     /// <param name="length"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    private async Task<Packet> RequestAsync(Stream stream, Byte[] request, Int32 offset, Int32 length,
+    private async Task<Packet?> RequestAsync(Stream stream, Byte[] request, Int32 offset, Int32 length,
     CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
