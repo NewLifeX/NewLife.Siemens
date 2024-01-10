@@ -1,4 +1,9 @@
-﻿using NewLife.Net;
+﻿using NewLife.Log;
+using NewLife.Net;
+using NewLife.Security;
+using NewLife.Serialization;
+using NewLife.Siemens.Messages;
+using NewLife.Siemens.Models;
 
 namespace NewLife.Siemens.Protocols;
 
@@ -90,6 +95,8 @@ public class S7Session : NetSession<S7Server>
 
     void OnData(COTP cotp)
     {
+        if (cotp.Data == null) return;
+
         var msg = new S7Message();
         if (!msg.Read(cotp.Data)) return;
 
@@ -103,6 +110,28 @@ public class S7Session : NetSession<S7Server>
                         Sequence = msg.Sequence,
                     };
 
+                    var pm = msg.Parameters.FirstOrDefault();
+                    switch (pm.Code)
+                    {
+                        case S7Functions.ReadVar:
+                            var pm2 = OnRead(pm as ReadRequest);
+                            if (pm2 != null)
+                                rs.Parameters.Add(pm2);
+                            break;
+                        case S7Functions.WriteVar:
+                            var pm3 = OnWrite(pm as WriteRequest);
+                            if (pm3 != null)
+                                rs.Parameters.Add(pm3);
+                            break;
+                        case S7Functions.Setup:
+                        default:
+                            foreach (var item in msg.Parameters)
+                            {
+                                rs.Parameters.Add(item);
+                            }
+                            break;
+                    }
+
                     Send(rs.ToCOTP().ToPacket(true));
                 }
                 break;
@@ -115,5 +144,41 @@ public class S7Session : NetSession<S7Server>
             default:
                 break;
         }
+    }
+
+    ReadResponse? OnRead(ReadRequest? request)
+    {
+        if (request == null) return null;
+
+        XTrace.WriteLine("读取：{0}", request.ToJson());
+
+        var di = new DataItem
+        {
+            Code = ReadWriteErrorCode.Success,
+            Type = VarType.DWord,
+            Data = Rand.Next().GetBytes(false)
+        };
+
+        var rs = new ReadResponse();
+        rs.Items.Add(di);
+
+        return rs;
+    }
+
+    WriteResponse? OnWrite(WriteRequest? request)
+    {
+        if (request == null) return null;
+
+        XTrace.WriteLine("写入：{0}", request.ToJson());
+
+        var di = new DataItem
+        {
+            Code = ReadWriteErrorCode.Success,
+        };
+
+        var rs = new WriteResponse();
+        rs.Items.Add(di);
+
+        return rs;
     }
 }

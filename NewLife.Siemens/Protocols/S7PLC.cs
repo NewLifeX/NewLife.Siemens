@@ -198,13 +198,11 @@ public partial class S7PLC : DisposeBase
         var data = request.ToCOTP().ToPacket(true).ReadBytes();
         XTrace.WriteLine("=> {0}", data.ToHex("-", 4));
 
-        var cotp = await RequestAsync(_stream, data, 0, data.Length, cancellationToken);
-        if (cotp == null) return null;
-
-        XTrace.WriteLine("<= {0}", cotp);
+        var rs = await RequestAsync(_stream, data, 0, data.Length, cancellationToken);
+        if (rs == null) return null;
 
         var msg = new S7Message();
-        if (!msg.Read(cotp.Data)) return null;
+        if (!msg.Read(rs)) return null;
 
         XTrace.WriteLine("<= {0}", msg);
 
