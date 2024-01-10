@@ -18,6 +18,12 @@ public class DataItem
     public Byte[]? Data { get; set; }
     #endregion
 
+    #region 构造函数
+    /// <summary>已重载。</summary>
+    /// <returns></returns>
+    public override String ToString() => Type > 0 ? $"{Type}({Data.ToHex()})" : $"{Code}";
+    #endregion
+
     #region 方法
     /// <summary>读取</summary>
     /// <param name="reader"></param>

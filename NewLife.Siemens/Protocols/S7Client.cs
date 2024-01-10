@@ -9,7 +9,7 @@ using NewLife.Siemens.Models;
 namespace NewLife.Siemens.Protocols;
 
 /// <summary>S7驱动</summary>
-public partial class S7PLC : DisposeBase, ILogFeature
+public partial class S7Client : DisposeBase, ILogFeature
 {
     #region 属性
     /// <summary>IP地址</summary>
@@ -45,7 +45,7 @@ public partial class S7PLC : DisposeBase, ILogFeature
     /// <param name="port"></param>
     /// <param name="rack"></param>
     /// <param name="slot"></param>
-    public S7PLC(CpuType cpu, String ip, Int32 port, Int16 rack = 0, Int16 slot = 0)
+    public S7Client(CpuType cpu, String ip, Int32 port, Int16 rack = 0, Int16 slot = 0)
     {
         IP = ip;
         if (port > 0) Port = port;

@@ -43,7 +43,7 @@ public class S7PLCTests
     [Fact]
     public async void S7200SmartTest()
     {
-        var s7 = new S7PLC(CpuType.S7200, "127.0.0.1", 102);
+        var s7 = new S7Client(CpuType.S7200, "127.0.0.1", 102);
 
         await s7.OpenAsync();
     }

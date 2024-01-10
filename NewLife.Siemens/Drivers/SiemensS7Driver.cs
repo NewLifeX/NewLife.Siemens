@@ -14,7 +14,7 @@ namespace NewLife.Siemens.Drivers;
 public class SiemensS7Driver : DriverBase
 {
     #region 属性
-    private S7PLC? _plc;
+    private S7Client? _plc;
 
     /// <summary>
     /// 打开通道数量
@@ -86,7 +86,7 @@ public class SiemensS7Driver : DriverBase
                     var ip = address[..p];
                     var port = address[(p + 1)..].ToInt();
 
-                    _plc = new S7PLC(pm.CpuType, ip, port, rack, slot)
+                    _plc = new S7Client(pm.CpuType, ip, port, rack, slot)
                     {
                         Timeout = 5000,
                     };
@@ -144,7 +144,7 @@ public class SiemensS7Driver : DriverBase
             var plcAddress = new PLCAddress(addr);
             if (point.Length == 0) point.Length = 2;
 
-            var data = _plc.ReadBytes(plcAddress.DataType, plcAddress.DbNumber, plcAddress.StartByte, (UInt16)point.Length);
+            var data = _plc.ReadBytes(plcAddress.DataType, plcAddress.DbNumber, plcAddress.StartByte, 1);
 
             // 借助物模型转换数据类型
             var v = spec?.DecodeByThingModel(data, point);

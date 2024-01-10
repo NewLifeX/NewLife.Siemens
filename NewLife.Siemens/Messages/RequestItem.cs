@@ -30,6 +30,12 @@ public class RequestItem
     public UInt32 Address { get; set; }
     #endregion
 
+    #region 构造函数
+    /// <summary>已重载。</summary>
+    /// <returns></returns>
+    public override String ToString() => $"{Type}({Area}:{DbNumber}:{Address}, {Count})";
+    #endregion
+
     #region 方法
     /// <summary>读取</summary>
     /// <param name="reader"></param>
