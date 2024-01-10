@@ -12,12 +12,14 @@ namespace NewLife.Siemens.Drivers;
 [DisplayName("西门子PLC")]
 public class SiemensS7Driver : DriverBase
 {
-    private S7PLC _plc;
+    #region 属性
+    private S7PLC? _plc;
 
     /// <summary>
     /// 打开通道数量
     /// </summary>
     private Int32 _nodes;
+    #endregion
 
     #region 构造
     /// <summary>
@@ -51,9 +53,9 @@ public class SiemensS7Driver : DriverBase
     /// <param name="device">通道</param>
     /// <param name="parameter">参数</param>
     /// <returns></returns>
-    public override INode Open(IDevice device, IDriverParameter parameter)
+    public override INode Open(IDevice device, IDriverParameter? parameter)
     {
-        var pm = parameter as SiemensParameter;
+        if (parameter is not SiemensParameter pm) throw new ArgumentNullException(nameof(parameter));
 
         var address = pm.Address;
         if (address.IsNullOrEmpty()) throw new ArgumentException("参数中未指定地址address");
