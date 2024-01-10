@@ -20,6 +20,8 @@ public partial class FrmMain : Form
     private void FrmMain_Load(object sender, EventArgs e)
     {
         rtb_content.UseWinFormControl();
+
+        XTrace.Log.Level = LogLevel.All;
     }
 
     private void button1_Click(object sender, EventArgs e)
@@ -83,7 +85,7 @@ public partial class FrmMain : Form
         var length = tb_length.Text.ToInt();
         var type = tb_type.Text;
 
-        var point = new Pointx
+        var point = new PointModel
         {
             Name = "污泥泵停止时间",
             Address = pointAdd, // "M100",
@@ -91,41 +93,29 @@ public partial class FrmMain : Form
             Length = length //data.Length
         };
 
-        var data = BitConverter.GetBytes(value);
+        //var data = BitConverter.GetBytes(value);
 
         try
         {
-            _driver.Write(_node, point, value);
+            XTrace.WriteLine($"写入点位：{pointAdd}, 类型：{type}, 长度：{length}，值：{value}");
 
-            this.Invoke(() =>
-            {
-                rtb_content.Append($"点位：{pointAdd},值：{value},长度：{length}");
-                rtb_content.Append("\r\n");
-                rtb_content.Append("写入完成");
-                rtb_content.Append("\r\n");
-            });
+            var rs = _driver.Write(_node, point, value);
+
+            XTrace.WriteLine(rs.ToJson(true));
         }
         catch (Exception ex)
         {
-            this.Invoke(() =>
-            {
-                rtb_content.Append($"点位：{pointAdd},值：{value},长度：{length}");
-                rtb_content.Append("\r\n");
-                rtb_content.Append("写入失败");
-                rtb_content.Append("\r\n");
-                rtb_content.Append(ex + "");
-            });
+            XTrace.WriteException(ex);
         }
     }
 
     private void btn_read_Click(object sender, EventArgs e)
     {
         var pointAdd = tb_pointAddress.Text;
-        var value = tb_value.Text.ToInt();
         var length = tb_length.Text.ToInt();
         var type = tb_type.Text;
 
-        var point = new Pointx
+        var point = new PointModel
         {
             Name = "污泥泵停止时间",
             Address = pointAdd, // "M100",
@@ -135,35 +125,18 @@ public partial class FrmMain : Form
 
         try
         {
+            XTrace.WriteLine($"读取点位：{pointAdd}, 类型：{type}, 长度：{length}");
+
             // 读取
             var dic = _driver.Read(_node, new[] { point });
-            var data1 = dic[point.Name] as Byte[];
-            var res = data1.Swap(true, false).ToInt();
+            //var data1 = dic[point.Name] as Byte[];
+            //var res = data1.Swap(true, false).ToInt();
 
-            this.Invoke(() =>
-            {
-                rtb_content.Append($"点位：{pointAdd},值：{value},长度：{length}");
-                rtb_content.Append($"读取值：{res}");
-                rtb_content.Append("\r\n");
-            });
+            XTrace.WriteLine(dic.ToJson(true));
         }
         catch (Exception ex)
         {
-            this.Invoke(() =>
-            {
-                rtb_content.Append($"点位：{pointAdd},值：{value},长度：{length}");
-                rtb_content.Append("读取失败");
-                rtb_content.Append("\r\n");
-                rtb_content.Append(ex + "");
-            });
+            XTrace.WriteException(ex);
         }
     }
-}
-
-public class Pointx : IPoint
-{
-    public String Name { get; set; }
-    public String Address { get; set; }
-    public String Type { get; set; }
-    public Int32 Length { get; set; }
 }

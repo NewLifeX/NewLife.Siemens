@@ -132,6 +132,7 @@
             tb_value.Name = "tb_value";
             tb_value.Size = new Size(151, 27);
             tb_value.TabIndex = 8;
+            tb_value.Text = "5";
             // 
             // label3
             // 
@@ -191,6 +192,7 @@
             tb_type.Name = "tb_type";
             tb_type.Size = new Size(172, 27);
             tb_type.TabIndex = 14;
+            tb_type.Text = "int";
             // 
             // tb_length
             // 
@@ -199,6 +201,7 @@
             tb_length.Name = "tb_length";
             tb_length.Size = new Size(151, 27);
             tb_length.TabIndex = 15;
+            tb_length.Text = "2";
             // 
             // FrmMain
             // 
