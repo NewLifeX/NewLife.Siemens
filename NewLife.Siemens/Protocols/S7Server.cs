@@ -185,9 +185,11 @@ public class S7Session : NetSession<S7Server>
         if (ri != null && ri.Data != null)
         {
             Object? num;
-            if (ri.Data.Length == 1 || ri.Type is VarType.Bit or VarType.Byte)
+            if (ri.Data.Length == 2 && ri.Type is VarType.Word or VarType.Int or VarType.Bit or VarType.Byte or VarType.DWord or VarType.DInt)
+                num = ri.Data.ToUInt16(0, false);
+            else if (ri.Data.Length == 1 || ri.Type is VarType.Bit or VarType.Byte)
                 num = ri.Data[0];
-            else if (ri.Data.Length == 2 && ri.Type is VarType.Word or VarType.Int or VarType.DWord or VarType.DInt)
+            else if (ri.Data.Length == 2 && ri.Type is VarType.Word or VarType.Int)
                 num = ri.Data.ToUInt16(0, false);
             else if (ri.Data.Length == 4 && ri.Type is VarType.DWord or VarType.DInt)
                 num = ri.Data.ToUInt32(0, false);

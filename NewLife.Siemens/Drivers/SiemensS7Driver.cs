@@ -142,9 +142,8 @@ public class SiemensS7Driver : DriverBase
             if (addr.IndexOf('.') == -1) addr += ".0";
 
             var plcAddress = new PLCAddress(addr);
-            if (point.Length == 0) point.Length = 2;
 
-            var data = _plc.ReadBytes(plcAddress, 1);
+            var data = _plc.ReadBytes(plcAddress, point.GetLength());
 
             // 借助物模型转换数据类型
             if (point.GetNetType() != null)

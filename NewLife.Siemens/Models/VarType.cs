@@ -4,7 +4,7 @@
 public enum VarType : Byte
 {
     /// <summary>位。布尔型</summary>
-    Bit,
+    Bit = 1,
 
     /// <summary>字节类型</summary>
     Byte,

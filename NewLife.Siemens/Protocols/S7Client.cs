@@ -280,7 +280,7 @@ public partial class S7Client : DisposeBase, ILogFeature
             // S7ANY
             SyntaxId = 0x10,
             // BIT
-            Type = varType,
+            Type = VarType.Byte,
             Count = (UInt16)count,
             DbNumber = (UInt16)db,
             Area = dataType,
@@ -292,7 +292,7 @@ public partial class S7Client : DisposeBase, ILogFeature
         {
             DataType.Timer => VarType.Timer,
             DataType.Counter => VarType.Counter,
-            _ => varType,
+            _ => VarType.Byte,
         };
 
         var request = new ReadRequest();
@@ -338,7 +338,7 @@ public partial class S7Client : DisposeBase, ILogFeature
         {
             SpecType = 0x12,
             SyntaxId = 0x10,
-            Type = varType,
+            Type = VarType.Byte,
             Count = (UInt16)count,
             DbNumber = (UInt16)db,
             Area = dataType,
@@ -346,7 +346,7 @@ public partial class S7Client : DisposeBase, ILogFeature
         });
         request.DataItems.Add(new DataItem
         {
-            Type = varType,
+            Type = VarType.Byte,
             Data = value.ReadBytes(offset, count),
         });
 
