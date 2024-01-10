@@ -144,12 +144,16 @@ public class SiemensS7Driver : DriverBase
             var plcAddress = new PLCAddress(addr);
             if (point.Length == 0) point.Length = 2;
 
-            var data = _plc.ReadBytes(plcAddress.DataType, plcAddress.DbNumber, plcAddress.StartByte, 1);
+            var data = _plc.ReadBytes(plcAddress, 1);
 
             // 借助物模型转换数据类型
-            var v = spec?.DecodeByThingModel(data, point);
-            if (v != null)
-                dic[name] = v;
+            if (point.GetNetType() != null)
+            {
+                if (spec != null)
+                    dic[name] = spec.DecodeByThingModel(data, point);
+                else
+                    dic[name] = point.Convert(data.Swap(true, true));
+            }
             else
                 dic[name] = data;
         }
@@ -188,7 +192,7 @@ public class SiemensS7Driver : DriverBase
 
         // 借助物模型转换数据类型
         var spec = node.Device?.Specification;
-        if (spec != null && value is not Byte[])
+        if (spec != null && value != null && value is not Byte[])
         {
             // 普通数值转为字节数组
             value = spec.EncodeByThingModel(value, point);
@@ -221,7 +225,7 @@ public class SiemensS7Driver : DriverBase
             };
         }
 
-        _plc.WriteBytes(plcAddress.DataType, plcAddress.DbNumber, plcAddress.StartByte, bytes);
+        _plc.WriteBytes(plcAddress, bytes);
 
         return "OK";
     }

@@ -237,12 +237,10 @@ public partial class S7Client : DisposeBase, ILogFeature
 
     #region 读取
     /// <summary>读取多个字节</summary>
-    /// <param name="dataType"></param>
-    /// <param name="db"></param>
-    /// <param name="startByteAdr"></param>
+    /// <param name="address"></param>
     /// <param name="count"></param>
     /// <returns></returns>
-    public Byte[] ReadBytes(DataType dataType, Int32 db, Int32 startByteAdr, Int32 count)
+    public Byte[] ReadBytes(PLCAddress address, Int32 count)
     {
         var ms = new MemoryStream();
         var index = 0;
@@ -251,7 +249,7 @@ public partial class S7Client : DisposeBase, ILogFeature
             // 最大PDU大小
             var maxToRead = Math.Min(count, MaxPDUSize - 18);
 
-            var request = BuildRead(dataType, db, startByteAdr + index, maxToRead);
+            var request = BuildRead(address.DataType, address.DbNumber, address.VarType, address.StartByte + index, maxToRead);
 
             // 发起请求
             var rs = InvokeAsync(request).ConfigureAwait(false).GetAwaiter().GetResult();
@@ -275,15 +273,15 @@ public partial class S7Client : DisposeBase, ILogFeature
         return ms.ToArray();
     }
 
-    private static ReadRequest BuildRead(DataType dataType, Int32 db, Int32 startByteAdr, Int32 count = 1)
+    private static ReadRequest BuildRead(DataType dataType, Int32 db, VarType varType, Int32 startByteAdr, Int32 count)
     {
         var ri = new RequestItem
         {
             // S7ANY
             SyntaxId = 0x10,
             // BIT
-            Type = VarType.Bit,
-            Count = 1,
+            Type = varType,
+            Count = (UInt16)count,
             DbNumber = (UInt16)db,
             Area = dataType,
 
@@ -294,7 +292,7 @@ public partial class S7Client : DisposeBase, ILogFeature
         {
             DataType.Timer => VarType.Timer,
             DataType.Counter => VarType.Counter,
-            _ => VarType.Word,
+            _ => varType,
         };
 
         var request = new ReadRequest();
@@ -306,11 +304,9 @@ public partial class S7Client : DisposeBase, ILogFeature
 
     #region 写入
     /// <summary>从指定DB开始，写入多个字节</summary>
-    /// <param name="dataType"></param>
-    /// <param name="db"></param>
     /// <param name="address"></param>
     /// <param name="value"></param>
-    public void WriteBytes(DataType dataType, Int32 db, Int32 address, Byte[] value)
+    public void WriteBytes(PLCAddress address, Byte[] value)
     {
         var index = 0;
         var count = value.Length;
@@ -318,7 +314,7 @@ public partial class S7Client : DisposeBase, ILogFeature
         {
             var pdu = Math.Min(count, MaxPDUSize - 28);
 
-            var request = BuildWrite(dataType, db, address + index, value, index, pdu);
+            var request = BuildWrite(address.DataType, address.DbNumber, address.VarType, address.StartByte + index, value, index, pdu);
 
             // 发起请求
             var rs = InvokeAsync(request).ConfigureAwait(false).GetAwaiter().GetResult();
@@ -335,14 +331,14 @@ public partial class S7Client : DisposeBase, ILogFeature
         }
     }
 
-    private WriteRequest BuildWrite(DataType dataType, Int32 db, Int32 address, Byte[] value, Int32 offset, Int32 count)
+    private WriteRequest BuildWrite(DataType dataType, Int32 db, VarType varType, Int32 address, Byte[] value, Int32 offset, Int32 count)
     {
         var request = new WriteRequest();
         request.Items.Add(new RequestItem
         {
             SpecType = 0x12,
             SyntaxId = 0x10,
-            Type = VarType.Byte,
+            Type = varType,
             Count = (UInt16)count,
             DbNumber = (UInt16)db,
             Area = dataType,
@@ -350,7 +346,7 @@ public partial class S7Client : DisposeBase, ILogFeature
         });
         request.DataItems.Add(new DataItem
         {
-            Type = VarType.DWord,
+            Type = varType,
             Data = value.ReadBytes(offset, count),
         });
 

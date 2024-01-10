@@ -4,19 +4,25 @@ using NewLife.Siemens.Models;
 namespace NewLife.Siemens.Protocols;
 
 /// <summary>PLC地址</summary>
-internal class PLCAddress
+public class PLCAddress
 {
     /// <summary>数据类型</summary>
     public DataType DataType { get; set; }
 
+    /// <summary>数据块</summary>
     public Int32 DbNumber { get; set; }
 
+    /// <summary>开始字节</summary>
     public Int32 StartByte { get; set; }
 
+    /// <summary>位数字</summary>
     public Int32 BitNumber { get; set; }
 
+    /// <summary>变量类型</summary>
     public VarType VarType { get; set; }
 
+    /// <summary>使用字符串实例化PLC地址</summary>
+    /// <param name="address"></param>
     public PLCAddress(String address)
     {
         Parse(address, out var dataType, out var dbNumber, out var varType, out var startByte, out var bitNumber);
@@ -28,6 +34,14 @@ internal class PLCAddress
         VarType = varType;
     }
 
+    /// <summary>分析</summary>
+    /// <param name="input"></param>
+    /// <param name="dataType"></param>
+    /// <param name="dbNumber"></param>
+    /// <param name="varType"></param>
+    /// <param name="address"></param>
+    /// <param name="bitNumber"></param>
+    /// <exception cref="InvalidAddressException"></exception>
     public static void Parse(String input, out DataType dataType, out Int32 dbNumber, out VarType varType, out Int32 address, out Int32 bitNumber)
     {
         bitNumber = -1;

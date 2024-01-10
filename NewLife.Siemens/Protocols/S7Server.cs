@@ -25,6 +25,7 @@ public class S7Session : NetSession<S7Server>
 {
     private Boolean _logined;
 
+    /// <summary>客户端连接时</summary>
     protected override void OnConnected()
     {
         WriteLog("S7连接：{0}", Remote);
@@ -32,14 +33,19 @@ public class S7Session : NetSession<S7Server>
         base.OnConnected();
     }
 
-    protected override void OnDisconnected()
+    /// <summary>客户端断开连接时</summary>
+    /// <param name="reason"></param>
+    protected override void OnDisconnected(String reason)
     {
-        WriteLog("S7断开：{0}", Remote);
+        WriteLog("S7断开：{0} {1}", Remote, reason);
 
-        base.OnDisconnected();
+        base.OnDisconnected(reason);
     }
 
-    protected override void OnError(Object sender, ExceptionEventArgs e)
+    /// <summary>报错时</summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
+    protected override void OnError(Object? sender, ExceptionEventArgs e)
     {
         WriteLog("S7错误：{0}", e.Exception.Message);
 
@@ -152,11 +158,14 @@ public class S7Session : NetSession<S7Server>
 
         WriteLog("读取：{0}", request.ToJson());
 
+        var num = Rand.Next(0, 10000);
+        WriteLog("数值：{0}", num);
+
         var di = new DataItem
         {
             Code = ReadWriteErrorCode.Success,
             Type = VarType.DWord,
-            Data = Rand.Next().GetBytes(false)
+            Data = num.GetBytes(false)
         };
 
         var rs = new ReadResponse();
