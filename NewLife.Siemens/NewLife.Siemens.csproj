@@ -4,7 +4,7 @@
     <AssemblyTitle>西门子PLC协议</AssemblyTitle>
     <Description>西门子PLC协议</Description>
     <Company>新生命开发团队</Company>
-    <Copyright>©2002-2024 新生命开发团队</Copyright>
+    <Copyright>©2002-2025 新生命开发团队</Copyright>
     <VersionPrefix>1.1</VersionPrefix>
     <VersionSuffix>$([System.DateTime]::Now.ToString(`yyyy.MMdd`))</VersionSuffix>
     <Version>$(VersionPrefix).$(VersionSuffix)</Version>
