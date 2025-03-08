@@ -51,32 +51,43 @@ public class PLCAddress
                 var strings = input.Split(['.']);
                 if (strings.Length < 2)
                     throw new InvalidDataException("To few periods for DB address");
-
-                dataType = DataType.DataBlock;
-                dbNumber = Int32.Parse(strings[0][2..]);
-                address = Int32.Parse(strings[1][3..]);
-
-                var dbType = strings[1][..3];
-                switch (dbType)
+                //数据块字节
+                if (strings.Length == 2)
                 {
-                    case "DBB":
-                        varType = VarType.Byte;
-                        return;
-                    case "DBW":
-                        varType = VarType.Word;
-                        return;
-                    case "DBD":
-                        varType = VarType.DWord;
-                        return;
-                    case "DBX":
-                        bitNumber = Int32.Parse(strings[2]);
-                        if (bitNumber > 7)
-                            throw new InvalidDataException("Bit can only be 0-7");
-                        varType = VarType.Bit;
-                        return;
-                    default:
-                        throw new InvalidDataException();
+                    dataType = DataType.DataBlock;
+                    dbNumber = Int32.Parse(strings[0][2..]);
+                    address = Int32.Parse(strings[1][3..]);
+
+                    var dbType = strings[1][..3];
+                    switch (dbType)
+                    {
+                        case "DBB":
+                            varType = VarType.Byte;
+                            return;
+                        case "DBW":
+                            varType = VarType.Word;
+                            return;
+                        case "DBD":
+                            varType = VarType.DWord;
+                            return;
+                        case "DBX":
+                            bitNumber = Int32.Parse(strings[2]);
+                            if (bitNumber > 7)
+                                throw new InvalidDataException("Bit can only be 0-7");
+                            varType = VarType.Bit;
+                            return;
+                        default:
+                            throw new InvalidDataException();
+                    }
                 }
+                else //字符串处理
+                {
+                    dataType = DataType.DataBlock;
+                    dbNumber = Int32.Parse(strings[0][2..]);
+                    address = Int32.Parse(strings[1][6..]);
+                    varType = VarType.String;
+                }
+                break;
             case "IB":
             case "EB":
                 // Input byte

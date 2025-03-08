@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.Text;
 using NewLife.IoT;
 using NewLife.IoT.Drivers;
 using NewLife.IoT.ThingModels;
@@ -148,10 +149,20 @@ public class SiemensS7Driver : DriverBase
             // 借助物模型转换数据类型
             if (point.GetNetType() != null)
             {
-                if (spec != null)
-                    dic[name] = spec.DecodeByThingModel(data, point);
+                //类型string的时候直接返回ToHex
+                if (point.GetNetType() == typeof(string))
+                {
+                    //默认去除返回的3C1E开始的通讯分隔符
+                    dic[name] = data.ToStr(Encoding.UTF8, 2);
+                }
                 else
-                    dic[name] = point.Convert(data.Swap(true, true));
+                {
+                    if (spec != null)
+                        dic[name] = spec.DecodeByThingModel(data, point);
+                    else
+                        dic[name] = point.Convert(data.Swap(true, true));
+
+                }
             }
             else
                 dic[name] = data;
