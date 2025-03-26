@@ -52,12 +52,13 @@ public class PLCAddress
                 if (strings.Length < 2)
                     throw new InvalidDataException("To few periods for DB address");
                 //数据块字节
-                if (strings.Length == 2)
-                {
+               
                     dataType = DataType.DataBlock;
                     dbNumber = Int32.Parse(strings[0][2..]);
+                if (strings[1].ToLower().Contains("string"))
+                    address = Int32.Parse(strings[1][6..]);
+                else
                     address = Int32.Parse(strings[1][3..]);
-
                     var dbType = strings[1][..3];
                     switch (dbType)
                     {
@@ -76,17 +77,13 @@ public class PLCAddress
                                 throw new InvalidDataException("Bit can only be 0-7");
                             varType = VarType.Bit;
                             return;
+                        case "STR":
+                            varType = VarType.String;
+                            bitNumber = Int32.Parse(strings[2]);
+                        return;
                         default:
                             throw new InvalidDataException();
                     }
-                }
-                else //字符串处理
-                {
-                    dataType = DataType.DataBlock;
-                    dbNumber = Int32.Parse(strings[0][2..]);
-                    address = Int32.Parse(strings[1][6..]);
-                    varType = VarType.String;
-                }
                 break;
             case "IB":
             case "EB":

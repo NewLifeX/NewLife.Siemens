@@ -27,7 +27,6 @@ public class PLCAddressTests
     public void Test2()
     {
         var addr = new PLCAddress("DB1.DBX5.0");
-
         Assert.Equal(DataType.DataBlock, addr.DataType);
         Assert.Equal(1, addr.DbNumber);
         Assert.Equal(5, addr.StartByte);
@@ -38,12 +37,11 @@ public class PLCAddressTests
     [Fact]
     public void Test3()
     {
-        var addr = new PLCAddress("DB1.DBX5.1");
-
+        var addr = new PLCAddress("DB1.STRING34.20");
         Assert.Equal(DataType.DataBlock, addr.DataType);
         Assert.Equal(1, addr.DbNumber);
-        Assert.Equal(5, addr.StartByte);
-        Assert.Equal(VarType.Bit, addr.VarType);
-        Assert.Equal(1, addr.BitNumber);
+        Assert.Equal(34, addr.StartByte);
+        Assert.Equal(VarType.String, addr.VarType);
+        Assert.Equal(20, addr.BitNumber);
     }
 }
