@@ -22,7 +22,7 @@ public class TPKT
     public UInt16 Length { get; set; }
 
     /// <summary>数据</summary>
-    public Packet? Data { get; set; }
+    public IPacket? Data { get; set; }
     #endregion
 
     #region 读写
@@ -49,7 +49,7 @@ public class TPKT
 
     /// <summary>解析头部以及负载数据</summary>
     /// <param name="pk"></param>
-    public TPKT Read(Packet pk)
+    public TPKT Read(IPacket pk)
     {
         var buf = pk.ReadBytes(0, 4);
         ReadHeader(buf);
@@ -61,7 +61,7 @@ public class TPKT
 
     /// <summary>序列化消息，包括头部和负载数据</summary>
     /// <returns></returns>
-    public Packet ToPacket()
+    public IPacket ToPacket()
     {
         // 根据数据长度计算总长度
         Length = (UInt16)(4 + Data?.Total ?? 0);
@@ -69,10 +69,11 @@ public class TPKT
         var buf = new Byte[4];
         WriteHeader(buf);
 
-        var pk = new Packet(buf);
-        if (Data != null) pk.Append(Data);
+        return new ArrayPacket(buf) { Next = Data };
+        //var pk = new Packet(buf);
+        //if (Data != null) pk.Append(Data);
 
-        return pk;
+        //return pk;
     }
     #endregion
 
@@ -80,7 +81,7 @@ public class TPKT
     /// <param name="stream"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Byte[]> ReadAsync(Stream stream, CancellationToken cancellationToken)
+    public static async Task<IOwnerPacket> ReadAsync(Stream stream, CancellationToken cancellationToken)
     {
         // 读取4字节头部
         var buf = new Byte[4];
@@ -91,8 +92,8 @@ public class TPKT
         tpkt.ReadHeader(buf);
 
         // 根据长度读取数据
-        var data = new Byte[tpkt.Length - 4];
-        len = await stream.ReadAsync(data, 0, data.Length, cancellationToken).ConfigureAwait(false);
+        var data = new OwnerPacket(tpkt.Length - 4);
+        len = await stream.ReadAsync(data.Buffer, 0, data.Length, cancellationToken).ConfigureAwait(false);
         if (len < data.Length)
             throw new InvalidDataException("TPKT payload incomplete / invalid");
 

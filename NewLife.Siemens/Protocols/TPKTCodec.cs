@@ -23,12 +23,12 @@ public class TPKTCodec : MessageCodec<TPKT>
     /// <param name="context"></param>
     /// <param name="pk"></param>
     /// <returns></returns>
-    protected override IList<TPKT>? Decode(IHandlerContext context, Packet pk)
+    protected override IList<TPKT>? Decode(IHandlerContext context, IPacket pk)
     {
         if (context.Owner is not IExtend ss) return null;
 
         if (ss["Codec"] is not PacketCodec pc)
-            ss["Codec"] = pc = new PacketCodec { GetLength = p => GetLength(p, 3, 1) - 4, Offset = 3 };
+            ss["Codec"] = pc = new PacketCodec { GetLength = p => GetLength(p, 3, 1) - 4 };
 
         var pks = pc.Parse(pk);
         var list = pks.Select(e => new TPKT().Read(e)).ToList();

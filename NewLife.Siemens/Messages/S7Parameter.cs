@@ -21,7 +21,7 @@ public class S7Parameter
     /// <summary>读取</summary>
     /// <param name="pk"></param>
     /// <returns></returns>
-    public Boolean Read(Packet pk) => Read(new Binary { Stream = pk.GetStream(), IsLittleEndian = false });
+    public Boolean Read(IPacket pk) => Read(new Binary { Stream = pk.GetStream(), IsLittleEndian = false });
 
     /// <summary>读取</summary>
     /// <param name="reader"></param>

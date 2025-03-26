@@ -1,4 +1,5 @@
-﻿using NewLife.Data;
+﻿using NewLife.Buffers;
+using NewLife.Data;
 using NewLife.Serialization;
 
 namespace NewLife.Siemens.Protocols;
@@ -39,21 +40,16 @@ public class COTP
     public Boolean LastDataUnit { get; set; }
 
     /// <summary>数据。仅存在于DT包</summary>
-    public Packet? Data { get; set; }
+    public IPacket? Data { get; set; }
     #endregion
 
     #region 读写
     /// <summary>解析数据</summary>
     /// <param name="data"></param>
     /// <returns></returns>
-    public Boolean Read(Packet data) => Read(data.GetStream());
-
-    /// <summary>读取解析数据</summary>
-    /// <param name="stream"></param>
-    /// <returns></returns>
-    public Boolean Read(Stream stream)
+    public Boolean Read(IPacket data)
     {
-        var reader = new Binary { Stream = stream, IsLittleEndian = false };
+        var reader = new SpanReader(data) { IsLittleEndian = false };
 
         // 头部长度。当前字节之后就是头部，然后是数据。CR/CC一般为17字节，DT一般为2字节
         Length = reader.ReadByte();
@@ -68,7 +64,7 @@ public class COTP
                     Number = flags & 0x7F;
                     LastDataUnit = (flags & 0x80) > 0;
 
-                    Data = stream.ReadBytes(-1);
+                    Data = reader.ReadPacket(-1);
                 }
                 break;
             case PduType.ConnectionRequest:
@@ -78,7 +74,7 @@ public class COTP
                     Destination = reader.ReadUInt16();
                     Source = reader.ReadUInt16();
                     Option = reader.ReadByte();
-                    Parameters = ReadParameters(reader);
+                    Parameters = ReadParameters(ref reader);
                 }
                 break;
         }
@@ -86,20 +82,20 @@ public class COTP
         return true;
     }
 
-    IList<COTPParameter> ReadParameters(Binary reader)
+    IList<COTPParameter> ReadParameters(ref SpanReader reader)
     {
         var list = new List<COTPParameter>();
-        while (reader.CheckRemain(1 + 1))
+        while (reader.FreeCapacity >= 1 + 1)
         {
             var tlv = new COTPParameter((COTPParameterKinds)reader.ReadByte(), reader.ReadByte(), null);
 
-            var buf = reader.ReadBytes(tlv.Length);
+            //var buf = reader.ReadBytes(tlv.Length);
             tlv.Value = tlv.Length switch
             {
-                1 => buf[0],
-                2 => buf.ToUInt16(0, false),
-                4 => buf.ToUInt32(0, false),
-                _ => buf,
+                1 => reader.ReadByte(),
+                2 => reader.ReadUInt16(),
+                4 => reader.ReadUInt32(),
+                _ => reader.ReadBytes(tlv.Length).ToArray(),
             };
             list.Add(tlv);
         }
@@ -189,7 +185,7 @@ public class COTP
             else if (item.Value is UInt32 u32)
                 writer.Write(u32);
             else if (item.Value is Byte[] buf)
-                writer.Write(buf);
+                writer.Write((ReadOnlySpan<Byte>)buf);
             else
                 throw new NotSupportedException();
         }
@@ -198,7 +194,7 @@ public class COTP
     /// <summary>序列化消息</summary>
     /// <param name="withTPKT">是否带TPKT头</param>
     /// <returns></returns>
-    public Packet ToPacket(Boolean withTPKT = true)
+    public IPacket ToPacket(Boolean withTPKT = true)
     {
         var ms = new MemoryStream();
         Write(ms);
@@ -258,7 +254,7 @@ public class COTP
     /// <returns></returns>
     public static async Task<COTP> ReadAsync(Stream stream, CancellationToken cancellationToken)
     {
-        var data = await TPKT.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
+        using var data = await TPKT.ReadAsync(stream, cancellationToken).ConfigureAwait(false);
         if (data.Length == 0) throw new InvalidDataException("No protocol data received");
 
         var cotp = new COTP();
@@ -271,9 +267,9 @@ public class COTP
     /// <param name="stream">网络流</param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Packet?> ReadAllAsync(Stream stream, CancellationToken cancellationToken)
+    public static async Task<IPacket?> ReadAllAsync(Stream stream, CancellationToken cancellationToken)
     {
-        Packet? rs = null;
+        IPacket? rs = null;
         while (true)
         {
             var cotp = await ReadAsync(stream, cancellationToken).ConfigureAwait(false);

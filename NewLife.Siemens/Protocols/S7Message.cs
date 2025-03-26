@@ -41,9 +41,12 @@ public class S7Message : IAccessor
 
     #region 读写
     /// <summary>读取</summary>
+    public Boolean Read(Byte[] data) => Read(new MemoryStream(data), null);
+
+    /// <summary>读取</summary>
     /// <param name="pk"></param>
     /// <returns></returns>
-    public Boolean Read(Packet pk) => Read(pk.GetStream(), pk);
+    public Boolean Read(IPacket pk) => Read(pk.GetStream(), pk);
 
     /// <summary>读取</summary>
     /// <param name="stream"></param>
@@ -270,7 +273,7 @@ public class S7Message : IAccessor
         {
             Type = PduType.Data,
             LastDataUnit = true,
-            Data = GetBytes()
+            Data = (ArrayPacket)GetBytes()
         };
     }
     #endregion

@@ -119,7 +119,7 @@ public class COTPTests
         Assert.Equal(18, cotp.Data.Total);
 
         var msg = new S7Message();
-        var rs2 = msg.Read(cotp.Data.ReadBytes());
+        var rs2 = msg.Read(cotp.Data);
         Assert.True(rs2);
 
         Assert.Equal(0x32, msg.ProtocolId);

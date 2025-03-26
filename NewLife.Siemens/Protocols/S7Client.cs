@@ -1,4 +1,5 @@
 ﻿using System.Net.Sockets;
+using NewLife.Data;
 using NewLife.Log;
 using NewLife.Remoting;
 using NewLife.Siemens.Messages;
