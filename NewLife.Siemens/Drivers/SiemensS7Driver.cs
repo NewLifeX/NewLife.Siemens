@@ -158,7 +158,7 @@ public class SiemensS7Driver : DriverBase
                 else
                 {
                     if (spec != null)
-                        dic[name] = spec.DecodeByThingModel(data, point);
+                        dic[name] = spec.Decode(data, point);
                     else
                         dic[name] = point.Convert(data.Swap(true, true));
 
@@ -206,7 +206,7 @@ public class SiemensS7Driver : DriverBase
         {
             // 普通数值转为字节数组
             if (spec != null)
-                value = spec.EncodeByThingModel(value, point);
+                value = spec.Encode(value, point);
             else
                 value = point.GetBytes(value)?.Swap(true, true);
         }
