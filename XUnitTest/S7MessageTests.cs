@@ -327,4 +327,136 @@ public class S7MessageTests
         var buf = msg.GetBytes();
         Assert.Equal(hex.ToHex(), buf.ToHex());
     }
+
+    #region SetParameter
+    [Fact]
+    public void SetParameter_AddNew()
+    {
+        var msg = new S7Message { Kind = S7Kinds.Job };
+        Assert.Empty(msg.Parameters);
+
+        var setup = new SetupMessage
+        {
+            MaxAmqCaller = 1,
+            MaxAmqCallee = 1,
+            PduLength = 480
+        };
+        msg.SetParameter(setup);
+
+        Assert.Single(msg.Parameters);
+        Assert.Same(setup, msg.Parameters[0]);
+    }
+
+    [Fact]
+    public void SetParameter_ReplaceExisting()
+    {
+        var msg = new S7Message { Kind = S7Kinds.Job };
+        msg.SetParameter(new SetupMessage
+        {
+            MaxAmqCaller = 1,
+            MaxAmqCallee = 1,
+            PduLength = 240
+        });
+
+        var newSetup = new SetupMessage
+        {
+            MaxAmqCaller = 8,
+            MaxAmqCallee = 8,
+            PduLength = 960
+        };
+        msg.SetParameter(newSetup);
+
+        Assert.Single(msg.Parameters);
+        var pm = msg.Parameters[0] as SetupMessage;
+        Assert.NotNull(pm);
+        Assert.Equal(960, pm.PduLength);
+    }
+
+    [Fact]
+    public void GetParameter_NotFound_ReturnsNull()
+    {
+        var msg = new S7Message { Kind = S7Kinds.Job };
+        Assert.Null(msg.GetParameter(S7Functions.ReadVar));
+    }
+    #endregion
+
+    #region Setup convenience method
+    [Fact]
+    public void Setup_ConvenienceMethod()
+    {
+        var msg = new S7Message { Kind = S7Kinds.Job, Sequence = 42 };
+        msg.Setup(3, 960);
+
+        Assert.Single(msg.Parameters);
+        var pm = msg.Parameters[0] as SetupMessage;
+        Assert.NotNull(pm);
+        Assert.Equal(S7Functions.Setup, pm.Code);
+        Assert.Equal(3, pm.MaxAmqCaller);
+        Assert.Equal(3, pm.MaxAmqCallee);
+        Assert.Equal(960, pm.PduLength);
+    }
+    #endregion
+
+    #region ToCOTP
+    [Fact]
+    public void ToCOTP_CreatesDataFrame()
+    {
+        var msg = new S7Message
+        {
+            Kind = S7Kinds.Job,
+            Sequence = 1
+        };
+        msg.Setup(1, 480);
+
+        var cotp = msg.ToCOTP();
+        Assert.Equal(PduType.Data, cotp.Type);
+        Assert.True(cotp.LastDataUnit);
+        Assert.NotNull(cotp.Data);
+        Assert.True(cotp.Data.Total > 0);
+    }
+
+    [Fact]
+    public void ToCOTP_RoundtripThroughCOTP()
+    {
+        var msg = new S7Message
+        {
+            Kind = S7Kinds.Job,
+            Sequence = 100
+        };
+        msg.Setup(2, 480);
+
+        var cotp = msg.ToCOTP();
+        var pk = cotp.ToPacket(false);
+
+        var cotp2 = new COTP();
+        cotp2.Read(pk);
+
+        var msg2 = new S7Message();
+        msg2.Read(cotp2.Data);
+
+        Assert.Equal(S7Kinds.Job, msg2.Kind);
+        Assert.Equal(100, msg2.Sequence);
+        Assert.Single(msg2.Parameters);
+        var pm = msg2.Parameters[0] as SetupMessage;
+        Assert.NotNull(pm);
+        Assert.Equal(2, pm.MaxAmqCaller);
+    }
+    #endregion
+
+    #region ToString
+    [Fact]
+    public void ToString_ContainsKindAndSequence()
+    {
+        var msg = new S7Message
+        {
+            Kind = S7Kinds.Job,
+            Sequence = 5
+        };
+        msg.Setup(1, 480);
+
+        var str = msg.ToString();
+        Assert.Contains("Job", str);
+        Assert.Contains("5", str);
+    }
+    #endregion
 }
