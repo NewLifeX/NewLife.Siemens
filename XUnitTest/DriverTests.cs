@@ -1,6 +1,7 @@
 ﻿using System;
 using NewLife.Siemens.Drivers;
 using NewLife.Siemens.Models;
+using NewLife.Siemens.Protocols;
 using Xunit;
 
 namespace XUnitTest;
@@ -89,6 +90,46 @@ public class DriverTests
         var driver = new SiemensS7Driver();
         var point = new TestPoint { Address = "" };
         Assert.Throws<ArgumentException>(() => driver.GetAddress(point));
+    }
+    #endregion
+
+    #region S7Client
+    [Fact]
+    public void S7Client_Constructor_SetsProperties()
+    {
+        using var client = new S7Client(CpuType.S71200, "192.168.1.1", 102, 1, 2);
+        Assert.Equal(CpuType.S71200, client.CPU);
+        Assert.Equal("192.168.1.1", client.IP);
+        Assert.Equal(102, client.Port);
+        Assert.Equal(1, client.Rack);
+        Assert.Equal(2, client.Slot);
+        Assert.Equal(5000, client.Timeout);
+        Assert.Equal(1024, client.MaxPDUSize);
+    }
+
+    [Fact]
+    public void S7Client_Constructor_DefaultRackSlot()
+    {
+        using var client = new S7Client(CpuType.S7200Smart, "10.0.0.1", 102);
+        Assert.Equal(CpuType.S7200Smart, client.CPU);
+        Assert.Equal(0, client.Rack);
+        Assert.Equal(0, client.Slot);
+    }
+
+    [Fact]
+    public void S7Client_Constructor_ZeroPort_KeepsDefault()
+    {
+        using var client = new S7Client(CpuType.S7300, "10.0.0.1", 0);
+        Assert.Equal(102, client.Port);
+    }
+
+    [Fact]
+    public void S7Client_Close_DoesNotThrow()
+    {
+        using var client = new S7Client(CpuType.S7300, "10.0.0.1", 102);
+        client.Close();
+        // Calling close again should not throw
+        client.Close();
     }
     #endregion
 }
