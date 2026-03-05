@@ -64,7 +64,9 @@ public class COTP
                     Number = flags & 0x7F;
                     LastDataUnit = (flags & 0x80) > 0;
 
-                    Data = reader.ReadPacket(-1);
+                    var remaining = reader.FreeCapacity;
+                    if (remaining > 0)
+                        Data = reader.ReadPacket(remaining);
                 }
                 break;
             case PduType.ConnectionRequest:
