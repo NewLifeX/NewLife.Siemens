@@ -23,7 +23,7 @@ public class TPKTCodec : MessageCodec<TPKT>
     /// <param name="context"></param>
     /// <param name="pk"></param>
     /// <returns></returns>
-    protected override IList<TPKT>? Decode(IHandlerContext context, IPacket pk)
+    protected override IEnumerable<TPKT>? Decode(IHandlerContext context, IPacket pk)
     {
         if (context.Owner is not IExtend ss) return null;
 
