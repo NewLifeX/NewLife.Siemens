@@ -19,6 +19,22 @@ Nuget：NewLife.Siemens
 
 本库同时作为 [NewLife.IoT](https://github.com/NewLifeX/NewLife.IoT) 标准驱动，可无缝集成到 IoTEdge 工业物联网网关，实现配置化点位采集，无需编写额外代码。
 
+## 功能实现状态
+
+| 功能模块 | 状态 | 说明 |
+|---------|------|------|
+| 连接管理（TPKT/COTP/S7 三层握手） | ✅ 已完成 | 含断线自动重连、KeepAlive |
+| 字节级读写（ReadBytes/WriteBytes） | ✅ 已完成 | 超 PDU 自动分段 |
+| PLC 地址解析（DB/I/Q/M/T/C/STRING） | ✅ 已完成 | 全格式字符串解析 |
+| 数据类型模型（VarType/DataType/CpuType） | ✅ 已完成 | 全系列 PLC 封装 |
+| NewLife.IoT 驱动集成（SiemensS7Driver） | ✅ 已完成 | 支持 IoTEdge 插件化加载 |
+| 错误处理体系（ErrorCode/ApiException） | ✅ 已完成 | 分类异常，异常后自动重连 |
+| S7Server PLC 模拟器 | ⚠️ 部分实现 | 握手已通，DB内存存储待完善 |
+| 类型化读写 API（Read〃T〃/Write） | ⬜ 待开发 | 自动字节序转换 |
+| 批量多变量读写（ReadMultipleVars） | ⬜ 待开发 | 单次 PDU 打包多个变量 |
+| SZL 诊断读取（CPU 状态、模块信息） | ⬜ 待开发 | 设备健康状态查询 |
+| PLC 时钟读写 | ⬜ 待开发 | 同步 NTP 时间 |
+
 ## 主要特点
 
 - **完整协议栈**：TPKT / COTP / S7 三层协议完整实现，含 CR/CC 握手与 PDU 大小协商
