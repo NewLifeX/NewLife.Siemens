@@ -198,6 +198,7 @@ public class SiemensS7Driver : DriverBase
     {
         var addr = GetAddress(point);
         if (addr.IsNullOrWhiteSpace()) return null;
+        if (value == null) return null;
         if (_plc == null) throw new Exception("PLC未打开！");
 
         // 借助物模型转换数据类型

@@ -152,6 +152,127 @@ public class S7ServerMemoryTests
         Assert.Equal(0xF5, mem[2]);
         Assert.Equal(0xC3, mem[3]);
     }
+
+    [Fact]
+    public void SetValue_Double_BigEndian()
+    {
+        var server = new S7Server();
+        server.SetValue("DB1.DBD0", 1.23456789012345);
+
+        var mem = server.GetMemory(DataType.DataBlock, 1);
+        // 1.23456789012345 的 IEEE 754 双精度大端字节 = 3F F3 C0 CA 42 8C 59 FB
+        var raw = BitConverter.GetBytes(1.23456789012345);
+        Array.Reverse(raw); // 大端
+        for (var i = 0; i < 8; i++)
+            Assert.Equal(raw[i], mem[i]);
+    }
+    #endregion
+
+    #region SetValue Timer / Counter 区域
+
+    [Fact]
+    public void SetValue_Timer_T2_StoresAtCorrectOffset()
+    {
+        var server = new S7Server();
+        // PLCAddress("T2").StartByte = 2 → timer[2..3]
+        server.SetValue("T2", new Byte[] { 0x01, 0xF4 }); // 500
+
+        var mem = server.GetMemory(DataType.Timer);
+        Assert.Equal(0x01, mem[2]);
+        Assert.Equal(0xF4, mem[3]);
+        // 相邻区域不受影响
+        Assert.Equal(0x00, mem[0]);
+        Assert.Equal(0x00, mem[4]);
+    }
+
+    [Fact]
+    public void SetValue_Counter_Z3_StoresAtCorrectOffset()
+    {
+        var server = new S7Server();
+        // PLCAddress("Z3").StartByte = 3 → counter[3..4]
+        server.SetValue("Z3", new Byte[] { 0x00, 0xC8 }); // 200
+
+        var mem = server.GetMemory(DataType.Counter);
+        Assert.Equal(0x00, mem[3]);
+        Assert.Equal(0xC8, mem[4]);
+        // 相邻区域不受影响
+        Assert.Equal(0x00, mem[2]);
+        Assert.Equal(0x00, mem[5]);
+    }
+
+    [Fact]
+    public void SetValue_Timer_T0_StoresAtOffset0()
+    {
+        var server = new S7Server();
+        server.SetValue("T0", new Byte[] { 0xFF, 0xFE });
+
+        var mem = server.GetMemory(DataType.Timer);
+        Assert.Equal(0xFF, mem[0]);
+        Assert.Equal(0xFE, mem[1]);
+    }
+
+    #endregion
+
+    #region SetValue 位操作扩展
+
+    [Fact]
+    public void SetValue_TwoBitsInSameByte_BothPreserved()
+    {
+        var server = new S7Server();
+        var mem = server.GetMemory(DataType.DataBlock, 1);
+        mem[5] = 0x00;
+
+        // 先设 bit 1，再设 bit 5，两者均保留
+        server.SetValue("DB1.DBX5.1", new Byte[] { 1 }); // 0b00000010
+        server.SetValue("DB1.DBX5.5", new Byte[] { 1 }); // 0b00100000
+
+        Assert.Equal(0x22, mem[5]); // 0b00100010
+    }
+
+    [Fact]
+    public void SetValue_ClearOneBit_OtherBitsPreserved()
+    {
+        var server = new S7Server();
+        var mem = server.GetMemory(DataType.DataBlock, 1);
+        mem[6] = 0xFF; // 全部置位
+
+        // 清除 bit 3
+        server.SetValue("DB1.DBX6.3", new Byte[] { 0 });
+
+        Assert.Equal(0xF7, mem[6]); // 0xFF & ~0x08 = 0xF7
+    }
+
+    [Fact]
+    public void SetValue_Memory_BitSet_And_Cleared()
+    {
+        var server = new S7Server();
+        var mem = server.GetMemory(DataType.Memory);
+        mem[10] = 0x00;
+
+        server.SetValue("M10.6", new Byte[] { 1 }); // bit6 = 0b01000000
+        Assert.Equal(0x40, mem[10]);
+
+        server.SetValue("M10.6", new Byte[] { 0 }); // 清除
+        Assert.Equal(0x00, mem[10]);
+    }
+
+    #endregion
+
+    #region SetValue 边界
+
+    [Fact]
+    public void SetValue_OverflowBytes_Truncated()
+    {
+        var server = new S7Server();
+        // 写从 offset 65534 写 4 字节，应只写 2 字节（截断到内存末尾）
+        server.SetValue("DB1.DBB65534", new Byte[] { 0x11, 0x22, 0x33, 0x44 });
+
+        var mem = server.GetMemory(DataType.DataBlock, 1);
+        Assert.Equal(0x11, mem[65534]);
+        Assert.Equal(0x22, mem[65535]);
+        // 不崩溃即通过；超出部分静默忽略
+    }
+
     #endregion
 
     #region SetValue 位操作

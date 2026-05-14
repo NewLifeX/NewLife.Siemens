@@ -85,6 +85,14 @@ public class S7HighLevelTests
         strBytes[5] = (Byte)'l'; strBytes[6] = (Byte)'o';
         server.SetValue("DB2.DBB0", strBytes);  // write raw bytes
 
+        // DB5：ReadArray 测试数据（Int16 × 4，Single × 2）
+        server.SetValue("DB5.DBW0", (Int16)100);
+        server.SetValue("DB5.DBW2", (Int16)200);
+        server.SetValue("DB5.DBW4", (Int16)300);
+        server.SetValue("DB5.DBW6", (Int16)400);
+        server.SetValue("DB5.DBD20", 1.5f);
+        server.SetValue("DB5.DBD24", 2.5f);
+
         server.Start();
         _server = server;
 
@@ -415,6 +423,113 @@ public class S7HighLevelTests
     }
     #endregion
 
+    #region ReadArray<T> 有服务端
+    [TestOrder(70)]
+    [Fact]
+    public void HL_ReadArray_Int16_FromServer()
+    {
+        Assert.NotNull(_client);
+        var arr = _client!.ReadArray<Int16>("DB5.DBW0", 4);
+        Assert.Equal(4, arr.Length);
+        Assert.Equal((Int16)100, arr[0]);
+        Assert.Equal((Int16)200, arr[1]);
+        Assert.Equal((Int16)300, arr[2]);
+        Assert.Equal((Int16)400, arr[3]);
+    }
+
+    [TestOrder(71)]
+    [Fact]
+    public void HL_ReadArray_Single_FromServer()
+    {
+        Assert.NotNull(_client);
+        var arr = _client!.ReadArray<Single>("DB5.DBD20", 2);
+        Assert.Equal(2, arr.Length);
+        Assert.Equal(1.5f, arr[0], 4);
+        Assert.Equal(2.5f, arr[1], 4);
+    }
+
+    [TestOrder(72)]
+    [Fact]
+    public void HL_Write_And_ReadArray_Int16_Roundtrip()
+    {
+        Assert.NotNull(_client);
+        // 写入 3 个 Int16 到 DB5.DBW100
+        _client!.Write("DB5.DBW100", (Int16)(-1));
+        _client.Write("DB5.DBW102", (Int16)32767);
+        _client.Write("DB5.DBW104", (Int16)(-32768));
+        var arr = _client.ReadArray<Int16>("DB5.DBW100", 3);
+        Assert.Equal((Int16)(-1), arr[0]);
+        Assert.Equal((Int16)32767, arr[1]);
+        Assert.Equal((Int16)(-32768), arr[2]);
+    }
+
+    [TestOrder(73)]
+    [Fact]
+    public void HL_ReadArray_Count1_SameAsRead()
+    {
+        Assert.NotNull(_client);
+        var arr = _client!.ReadArray<Int16>("DB5.DBW0", 1);
+        var single = _client.Read<Int16>("DB5.DBW0");
+        Assert.Single(arr);
+        Assert.Equal(single, arr[0]);
+    }
+    #endregion
+
+    #region WriteString / ReadString 有服务端
+    [TestOrder(75)]
+    [Fact]
+    public void HL_ReadString_Preset()
+    {
+        Assert.NotNull(_client);
+        var val = _client!.ReadString("DB2.STRING0.20");
+        Assert.Equal("Hello", val);
+    }
+
+    [TestOrder(76)]
+    [Fact]
+    public void HL_WriteString_And_ReadBack()
+    {
+        Assert.NotNull(_client);
+        _client!.WriteString("DB2.STRING0.20", "NewLife");
+        var val = _client.ReadString("DB2.STRING0.20");
+        Assert.Equal("NewLife", val);
+    }
+
+    [TestOrder(77)]
+    [Fact]
+    public void HL_WriteString_Empty_And_ReadBack()
+    {
+        Assert.NotNull(_client);
+        _client!.WriteString("DB2.STRING50.10", "");
+        var val = _client.ReadString("DB2.STRING50.10");
+        Assert.Equal("", val);
+    }
+
+    [TestOrder(78)]
+    [Fact]
+    public void HL_WriteString_MaxLength_ThenTruncate()
+    {
+        Assert.NotNull(_client);
+        // 先写满，再写短字符串，确认读回是短字符串
+        _client!.WriteString("DB2.STRING80.10", "ABCDEFGHIJ");
+        _client.WriteString("DB2.STRING80.10", "AB");
+        var val = _client.ReadString("DB2.STRING80.10");
+        Assert.Equal("AB", val);
+    }
+
+    [TestOrder(79)]
+    [Fact]
+    public void HL_Write_Object_String_And_ReadString()
+    {
+        Assert.NotNull(_client);
+        // Write(address, Object) 中 value 为 String → 经 ConvertToBytes → EncodeS7String(254)
+        // ReadString 应能正确解码还原
+        _client!.Write("DB2.STRING120.30", "ObjectWrite");
+        var result = _client.ReadString("DB2.STRING120.30");
+        Assert.Equal("ObjectWrite", result);
+    }
+    #endregion
+
     #region 纯逻辑测试（无网络）
     [Fact]
     public void HL_ReadArray_ZeroCount_Returns_Empty()
@@ -431,6 +546,14 @@ public class S7HighLevelTests
     {
         // DateTimeLong 不在 switch 中，应抛出 NotSupportedException
         Assert.Throws<NotSupportedException>(() => S7Client.GetVarTypeByteSize(VarType.DateTimeLong));
+    }
+
+    [Fact]
+    public void HL_Write_Unsupported_Type_Throws()
+    {
+        // DateTime 不在 ConvertToBytes switch 中 → 在发网络请求前即抛出 NotSupportedException
+        using var client = new S7Client(CpuType.S7200, "127.0.0.1", 19998);
+        Assert.Throws<NotSupportedException>(() => client.Write("DB1.DBW0", DateTime.Now));
     }
     #endregion
 }

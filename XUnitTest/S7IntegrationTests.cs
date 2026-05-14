@@ -46,8 +46,39 @@ public class S7IntegrationTests
         // DB1.DBD140 = 2.718281828459045 (Double/LReal)
         server.SetValue("DB1.DBD140", 2.718281828459045);
 
+        // ── DB3：数组测试用数据 ──────────────────────────────────────
+        // DB3.DBW0~8  = [10, 20, 30, 40, 50]（5个 Int16，大端）
+        server.SetValue("DB3.DBW0", (Int16)10);
+        server.SetValue("DB3.DBW2", (Int16)20);
+        server.SetValue("DB3.DBW4", (Int16)30);
+        server.SetValue("DB3.DBW6", (Int16)40);
+        server.SetValue("DB3.DBW8", (Int16)50);
+        // DB3.DBD20~28 = [1.1f, 2.2f, 3.3f]（3个 Single，大端）
+        server.SetValue("DB3.DBD20", 1.1f);
+        server.SetValue("DB3.DBD24", 2.2f);
+        server.SetValue("DB3.DBD28", 3.3f);
+
+        // ── DB4：S7 STRING 测试用数据 ─────────────────────────────────
+        // DB4.STRING0.20 = "Hello"（max=20, actual=5）
+        var strBytes4 = new Byte[22];
+        strBytes4[0] = 20;          // max len
+        strBytes4[1] = 5;           // actual len
+        strBytes4[2] = (Byte)'H'; strBytes4[3] = (Byte)'e'; strBytes4[4] = (Byte)'l';
+        strBytes4[5] = (Byte)'l';   strBytes4[6] = (Byte)'o';
+        server.SetValue("DB4.DBB0", strBytes4);
+
         // ── Memory 区域 ───────────────────────────────────────────────
         server.SetValue("MB0", new Byte[] { 0xCA, 0xFE }); // MW0 = 0xCAFE
+        // MW10 = 12345（Int16 大端：0x30 0x39）
+        server.SetValue("MB10", new Byte[] { 0x30, 0x39 });
+        // Input IB5 = 0xAB（供 Input 区读取测试）
+        server.SetValue("IB5", new Byte[] { 0xAB });
+        // Output QB5 = 0xCD（供 Output 区读取测试）
+        server.SetValue("QB5", new Byte[] { 0xCD });
+        // Timer T2 = 500（0x01F4 大端）
+        server.SetValue("T2", new Byte[] { 0x01, 0xF4 });
+        // Counter Z3 = 200（0x00C8 大端）
+        server.SetValue("Z3", new Byte[] { 0x00, 0xC8 });
 
         server.Start();
         _server = server;
@@ -504,6 +535,242 @@ public class S7IntegrationTests
         Assert.Equal((Int16)8888, read[1].Value);
     }
     #endregion
+
+    #region 08 — 数组读取（ReadArray<T>）
+    [TestOrder(35)]
+    [Fact]
+    public void E2E_ReadArray_Int16_Preset()
+    {
+        Assert.NotNull(_client);
+        var arr = _client!.ReadArray<Int16>("DB3.DBW0", 5);
+        Assert.Equal(5, arr.Length);
+        Assert.Equal((Int16)10, arr[0]);
+        Assert.Equal((Int16)20, arr[1]);
+        Assert.Equal((Int16)30, arr[2]);
+        Assert.Equal((Int16)40, arr[3]);
+        Assert.Equal((Int16)50, arr[4]);
+    }
+
+    [TestOrder(36)]
+    [Fact]
+    public void E2E_ReadArray_Single_Preset()
+    {
+        Assert.NotNull(_client);
+        var arr = _client!.ReadArray<Single>("DB3.DBD20", 3);
+        Assert.Equal(3, arr.Length);
+        Assert.Equal(1.1f, arr[0], 4);
+        Assert.Equal(2.2f, arr[1], 4);
+        Assert.Equal(3.3f, arr[2], 4);
+    }
+
+    [TestOrder(37)]
+    [Fact]
+    public void E2E_WriteArray_And_ReadArray_Roundtrip()
+    {
+        Assert.NotNull(_client);
+        // 写入 4 个 Int16
+        for (var i = 0; i < 4; i++)
+        {
+            _client!.Write($"DB3.DBW{100 + i * 2}", (Int16)(i * 100 + 1));
+        }
+        var arr = _client!.ReadArray<Int16>("DB3.DBW100", 4);
+        Assert.Equal((Int16)1, arr[0]);
+        Assert.Equal((Int16)101, arr[1]);
+        Assert.Equal((Int16)201, arr[2]);
+        Assert.Equal((Int16)301, arr[3]);
+    }
+    #endregion
+
+    #region 09 — 字符串读写（WriteString / ReadString）
+    [TestOrder(38)]
+    [Fact]
+    public void E2E_ReadString_Preset()
+    {
+        Assert.NotNull(_client);
+        var val = _client!.ReadString("DB4.STRING0.20");
+        Assert.Equal("Hello", val);
+    }
+
+    [TestOrder(39)]
+    [Fact]
+    public void E2E_WriteString_And_ReadString_Roundtrip()
+    {
+        Assert.NotNull(_client);
+        _client!.WriteString("DB4.STRING0.20", "World");
+        var val = _client.ReadString("DB4.STRING0.20");
+        Assert.Equal("World", val);
+    }
+
+    [TestOrder(40)]
+    [Fact]
+    public void E2E_WriteString_Empty_And_Read()
+    {
+        Assert.NotNull(_client);
+        _client!.WriteString("DB4.STRING100.10", "");
+        var val = _client.ReadString("DB4.STRING100.10");
+        Assert.Equal("", val);
+    }
+
+    [TestOrder(41)]
+    [Fact]
+    public void E2E_WriteString_ChineseISO_And_Read()
+    {
+        Assert.NotNull(_client);
+        // S7 STRING 使用 ISO-8859-1，中文需用 ASCII 子集验证
+        _client!.WriteString("DB4.STRING200.30", "ABCDE");
+        var val = _client.ReadString("DB4.STRING200.30");
+        Assert.Equal("ABCDE", val);
+    }
+    #endregion
+
+    #region 10 — 非 DB 区域（Memory / Input / Output）
+    [TestOrder(42)]
+    [Fact]
+    public void E2E_Read_Memory_MW()
+    {
+        Assert.NotNull(_client);
+        var addr = new PLCAddress("MB10");
+        var data = _client!.ReadBytes(addr, 2);
+        Assert.Equal(2, data.Length);
+        // 12345 = 0x3039 大端
+        Assert.Equal(0x30, data[0]);
+        Assert.Equal(0x39, data[1]);
+    }
+
+    [TestOrder(43)]
+    [Fact]
+    public void E2E_Write_Memory_And_Read()
+    {
+        Assert.NotNull(_client);
+        var addr = new PLCAddress("MB50");
+        _client!.WriteBytes(addr, new Byte[] { 0xDE, 0xAD });
+        var data = _client.ReadBytes(new PLCAddress("MB50"), 2);
+        Assert.Equal(new Byte[] { 0xDE, 0xAD }, data);
+    }
+
+    [TestOrder(44)]
+    [Fact]
+    public void E2E_Read_Input_IB()
+    {
+        Assert.NotNull(_client);
+        var addr = new PLCAddress("IB5");
+        var data = _client!.ReadBytes(addr, 1);
+        Assert.Single(data);
+        Assert.Equal(0xAB, data[0]);
+    }
+
+    [TestOrder(45)]
+    [Fact]
+    public void E2E_Read_Output_QB_And_Write()
+    {
+        Assert.NotNull(_client);
+        // 读取预置值
+        var data = _client!.ReadBytes(new PLCAddress("QB5"), 1);
+        Assert.Equal(0xCD, data[0]);
+        // 写入新值
+        _client.WriteBytes(new PLCAddress("QB5"), new Byte[] { 0xEF });
+        var data2 = _client.ReadBytes(new PLCAddress("QB5"), 1);
+        Assert.Equal(0xEF, data2[0]);
+    }
+    #endregion
+
+    #region 11 — HighLevel API 扩展（Read<T> / Write 其余区域）
+    [TestOrder(46)]
+    [Fact]
+    public void E2E_HighLevel_Write_UInt16_And_Read()
+    {
+        Assert.NotNull(_client);
+        _client!.Write("DB1.DBW300", (UInt16)65000);
+        var val = _client.Read<UInt16>("DB1.DBW300");
+        Assert.Equal((UInt16)65000, val);
+    }
+
+    [TestOrder(47)]
+    [Fact]
+    public void E2E_HighLevel_Write_Byte_And_Read()
+    {
+        Assert.NotNull(_client);
+        _client!.Write("MB200", (Byte)0x77);
+        var val = _client.Read<Byte>("MB200");
+        Assert.Equal((Byte)0x77, val);
+    }
+
+    [TestOrder(48)]
+    [Fact]
+    public void E2E_HighLevel_Write_Negative_Int32_And_Read()
+    {
+        Assert.NotNull(_client);
+        _client!.Write("DB1.DBD310", -1234567);
+        var val = _client.Read<Int32>("DB1.DBD310");
+        Assert.Equal(-1234567, val);
+    }
+
+    [TestOrder(49)]
+    [Fact]
+    public void E2E_HighLevel_ReadArray_Bool()
+    {
+        Assert.NotNull(_client);
+        // 先确保 DB1.DBX400.0~7 全部清零
+        _client!.Write("DB1.DBX400.1", true);
+        _client.Write("DB1.DBX400.3", true);
+        // 逐位读回
+        Assert.True(_client.Read<Boolean>("DB1.DBX400.1"));
+        Assert.True(_client.Read<Boolean>("DB1.DBX400.3"));
+        Assert.False(_client.Read<Boolean>("DB1.DBX400.0"));
+        Assert.False(_client.Read<Boolean>("DB1.DBX400.2"));
+    }
+    #endregion
+
+    #region 08 — Timer / Counter 区域读写
+
+    [TestOrder(50)]
+    [Fact]
+    public void E2E_Read_Timer_T2_Preset()
+    {
+        Assert.NotNull(_client);
+        // T2 在 E2E_StartServer 中已预置为 500（0x01F4 大端）
+        var val = _client!.Read<UInt16>("T2");
+        Assert.Equal((UInt16)500, val);
+    }
+
+    [TestOrder(51)]
+    [Fact]
+    public void E2E_Read_Counter_Z3_Preset()
+    {
+        Assert.NotNull(_client);
+        // Z3 在 E2E_StartServer 中已预置为 200（0x00C8 大端）
+        var val = _client!.Read<UInt16>("Z3");
+        Assert.Equal((UInt16)200, val);
+    }
+
+    [TestOrder(52)]
+    [Fact]
+    public void E2E_Write_Timer_T5_And_Read()
+    {
+        Assert.NotNull(_client);
+        // 写 T5 = 1234（0x04D2 大端）
+        var addr = new PLCAddress("T5");
+        _client!.WriteBytes(addr, new Byte[] { 0x04, 0xD2 });
+
+        var val = _client.Read<UInt16>("T5");
+        Assert.Equal((UInt16)1234, val);
+    }
+
+    [TestOrder(53)]
+    [Fact]
+    public void E2E_Write_Counter_Z5_And_Read()
+    {
+        Assert.NotNull(_client);
+        // 写 Z5 = 56（0x0038 大端）
+        var addr = new PLCAddress("Z5");
+        _client!.WriteBytes(addr, new Byte[] { 0x00, 0x38 });
+
+        var val = _client.Read<UInt16>("Z5");
+        Assert.Equal((UInt16)56, val);
+    }
+
+    #endregion
+
     #region 09 — 干净断开
     [TestOrder(95)]
     [Fact]
