@@ -29,11 +29,11 @@ Nuget：NewLife.Siemens
 | 数据类型模型（VarType/DataType/CpuType） | ✅ 已完成 | 全系列 PLC 封装 |
 | NewLife.IoT 驱动集成（SiemensS7Driver） | ✅ 已完成 | 支持 IoTEdge 插件化加载 |
 | 错误处理体系（ErrorCode/ApiException） | ✅ 已完成 | 分类异常，异常后自动重连 |
-| S7Server PLC 模拟器 | ⚠️ 部分实现 | 握手已通，DB内存存储待完善 |
-| 类型化读写 API（Read〃T〃/Write） | ⬜ 待开发 | 自动字节序转换 |
-| 批量多变量读写（ReadMultipleVars） | ⬜ 待开发 | 单次 PDU 打包多个变量 |
-| SZL 诊断读取（CPU 状态、模块信息） | ⬜ 待开发 | 设备健康状态查询 |
-| PLC 时钟读写 | ⬜ 待开发 | 同步 NTP 时间 |
+| S7Server PLC 模拟器 | ✅ 已完成 | 含全区域内存存储，支持读写往返 |
+| 类型化读写 API（Read\<T\>/Write） | ✅ 已完成 | 自动字节序转换，支持数组与字符串 |
+| 批量多变量读写（ReadMultipleVars） | ✅ 已完成 | 单次 PDU 打包多个变量，自动分批 |
+| SZL 诊断读取（CPU 状态、模块信息） | ✅ 已完成 | ReadSzlAsync / ReadCpuInfoAsync |
+| PLC 时钟读写 | ✅ 已完成 | ReadClockAsync / WriteClockAsync |
 
 ## 主要特点
 
@@ -153,6 +153,66 @@ var points = new IPoint[]
 
 var result = driver.Read(node, points);
 Console.WriteLine($"温度={result["温度"]}, 压力={result["压力"]}");
+```
+
+### 类型化读写 API
+
+```csharp
+// 泛型读取（自动大端→小端转换）
+var temp = client.Read<Int16>("DB1.DBW0");          // 读 INT
+var pressure = client.Read<Single>("DB1.DBD4");     // 读 REAL
+var flag = client.Read<Boolean>("M0.0");            // 读 BOOL 位
+
+// 读字符串（STRING 含2字节头）
+var name = client.ReadString("DB1.STRING0.60");
+
+// 泛型写入
+client.Write("DB1.DBW0", (Int16)150);
+client.Write("M0.0", true);
+
+// 读取数组（连续变量）
+var temps = client.ReadArray<Int16>("DB1.DBW0", 10);  // 读10个 INT
+```
+
+### 批量多变量读写
+
+```csharp
+using NewLife.Siemens.Messages;
+
+// 构造多个变量描述
+var items = new List<DataItem>
+{
+    DataItem.FromAddress("DB1.DBW0",  VarType.Int),
+    DataItem.FromAddress("DB1.DBD4",  VarType.Real),
+    DataItem.FromAddress("M0.0",      VarType.Bit),
+};
+
+// 一次 PDU 批量读取（超限自动拆分）
+client.ReadMultipleVars(items);
+Console.WriteLine($"温度={items[0].Value}, 压力={items[1].Value}, 运行={items[2].Value}");
+
+// 批量写入
+items[0].Value = (Int16)200;
+client.Write(items.ToArray());
+```
+
+### SZL 诊断读取与时钟读写
+
+```csharp
+// 读取 CPU 信息
+var info = await client.ReadCpuInfoAsync();
+Console.WriteLine($"型号={info.ArticleNumber}, 序列号={info.SerialNumber}");
+
+// 读取 CPU 运行状态（Run / Stop / Halt）
+var status = await client.ReadCpuStatusAsync();
+Console.WriteLine($"CPU状态={status}");
+
+// 读取 PLC 时钟
+var plcTime = await client.ReadClockAsync();
+Console.WriteLine($"PLC时间={plcTime:yyyy-MM-dd HH:mm:ss}");
+
+// 同步 PLC 时钟为当前系统时间
+await client.WriteClockAsync(DateTime.Now);
 ```
 
 ---
