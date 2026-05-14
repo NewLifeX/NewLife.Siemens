@@ -98,6 +98,38 @@ public class S7Server : NetServer<S7Session>
     }
     #endregion
 
+    #region 时钟与SZL模拟
+    /// <summary>模拟的PLC时钟。null时使用系统时间</summary>
+    public DateTime? SimulatedClock { get; set; }
+
+    /// <summary>模拟SZL数据字典（Key=szlId左移16位或szlIndex，Value=原始SZL记录字节）</summary>
+    private readonly Dictionary<UInt32, Byte[]> _szlData = [];
+
+    /// <summary>设置SZL模拟数据</summary>
+    /// <param name="szlId">SZL标识符</param>
+    /// <param name="szlIndex">SZL索引</param>
+    /// <param name="data">SZL原始数据字节</param>
+    public void SetSzlData(UInt16 szlId, UInt16 szlIndex, Byte[] data)
+    {
+        var key = (UInt32)((szlId << 16) | szlIndex);
+        _szlData[key] = data;
+    }
+
+    internal Byte[] GetSzlData(UInt16 szlId, UInt16 szlIndex)
+    {
+        var key = (UInt32)((szlId << 16) | szlIndex);
+        if (_szlData.TryGetValue(key, out var data)) return data;
+
+        // 未预置时返回空SZL头（8字节：szlId+szlIndex+recLen+recCount）
+        var empty = new Byte[8];
+        empty[0] = (Byte)(szlId >> 8);
+        empty[1] = (Byte)(szlId & 0xFF);
+        empty[2] = (Byte)(szlIndex >> 8);
+        empty[3] = (Byte)(szlIndex & 0xFF);
+        return empty;
+    }
+    #endregion
+
     #region 构造
     /// <summary>实例化</summary>
     public S7Server()
@@ -236,6 +268,23 @@ public class S7Session : NetSession<S7Server>
             case S7Kinds.AckData:
                 break;
             case S7Kinds.UserData:
+                {
+                    var rs = new S7Message
+                    {
+                        Kind = S7Kinds.UserData,
+                        Sequence = msg.Sequence,
+                    };
+
+                    var udp = msg.Parameters.OfType<UserDataParameter>().FirstOrDefault();
+                    if (udp != null)
+                    {
+                        var rsp = OnUserData(udp);
+                        if (rsp != null)
+                            rs.Parameters.Add(rsp);
+                    }
+
+                    Send(rs.ToCOTP().ToPacket(true));
+                }
                 break;
             default:
                 break;
@@ -336,5 +385,68 @@ public class S7Session : NetSession<S7Server>
         }
 
         return rs;
+    }
+
+    UserDataParameter? OnUserData(UserDataParameter request)
+    {
+        // Function=0x12 → 时钟功能组
+        if (request.Function == 0x12)
+        {
+            if (request.SubFunction == 0x04) // 读时钟
+            {
+                WriteLog("读取PLC时钟");
+                var now = Host.SimulatedClock ?? DateTime.Now;
+                return new UserDataParameter
+                {
+                    ExtraByte = 0x01,
+                    Function = 0x82,    // 时钟响应
+                    SubFunction = 0x04,
+                    ReturnCode = 0xFF,
+                    TransportSize = 0x09,
+                    Data = S7DateTimeHelper.Encode(now),
+                };
+            }
+            if (request.SubFunction == 0x02) // 写时钟
+            {
+                if (request.Data?.Length >= 8)
+                {
+                    var dt = S7DateTimeHelper.Decode(request.Data);
+                    Host.SimulatedClock = dt;
+                    WriteLog("写入PLC时钟：{0}", dt);
+                }
+                return new UserDataParameter
+                {
+                    ExtraByte = 0x01,
+                    Function = 0x82,
+                    SubFunction = 0x02,
+                    ReturnCode = 0xFF,
+                    TransportSize = 0x09,
+                    Data = [],
+                };
+            }
+        }
+        // Function=0x11 → SZL功能组
+        else if (request.Function == 0x11)
+        {
+            if (request.SubFunction == 0x0E && request.Data?.Length >= 4) // 读SZL记录
+            {
+                var szlId = (UInt16)((request.Data[0] << 8) | request.Data[1]);
+                var szlIdx = (UInt16)((request.Data[2] << 8) | request.Data[3]);
+                WriteLog("读取SZL：ID=0x{0:X4} Index=0x{1:X4}", szlId, szlIdx);
+
+                var szlData = Host.GetSzlData(szlId, szlIdx);
+                return new UserDataParameter
+                {
+                    ExtraByte = 0x01,
+                    Function = 0x81,    // SZL响应
+                    SubFunction = 0x0E,
+                    ReturnCode = 0xFF,
+                    TransportSize = 0x09,
+                    Data = szlData,
+                };
+            }
+        }
+
+        return null;
     }
 }

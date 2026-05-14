@@ -96,6 +96,15 @@ public class S7Message : IAccessor
         var ms = new MemoryStream(buf);
         var reader = new Binary { Stream = ms, IsLittleEndian = false };
 
+        // UserData消息（Kind=0x07）的参数块首字节为0x00，格式与Job不同，单独处理
+        if (Kind == S7Kinds.UserData)
+        {
+            var udp = new UserDataParameter();
+            if (udp.Read(reader))
+                Parameters.Add(udp);
+            return;
+        }
+
         while (ms.Position < ms.Length)
         {
             var kind = (S7Functions)reader.ReadByte();
