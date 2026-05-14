@@ -88,6 +88,14 @@ public class S7Server : NetServer<S7Session>
         Array.Reverse(buf);
         SetValue(address, buf);
     }
+
+    /// <summary>通过地址字符串写入 Double 值（大端序，对应 S7 LReal）</summary>
+    public void SetValue(String address, Double value)
+    {
+        var buf = BitConverter.GetBytes(value);
+        Array.Reverse(buf);
+        SetValue(address, buf);
+    }
     #endregion
 
     #region 构造

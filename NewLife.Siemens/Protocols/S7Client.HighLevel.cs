@@ -16,7 +16,7 @@ public partial class S7Client
     public T Read<T>(String address) where T : struct
     {
         var addr = new PLCAddress(address);
-        var byteCount = GetVarTypeByteSize(addr.VarType);
+        var byteCount = GetByteSizeForDotNetType(typeof(T)) ?? GetVarTypeByteSize(addr.VarType);
         var data = ReadBytes(addr, byteCount);
         return ConvertToValue<T>(data, addr);
     }
@@ -36,7 +36,7 @@ public partial class S7Client
             return DecodeS7String(raw);
         }
 
-        var size = GetVarTypeByteSize(addr.VarType);
+        var size = GetByteSizeForDotNetType(targetType) ?? GetVarTypeByteSize(addr.VarType);
         var data = ReadBytes(addr, size);
 
         if (targetType == typeof(Boolean)) return ConvertToValue<Boolean>(data, addr);
@@ -131,19 +131,26 @@ public partial class S7Client
         _ => throw new NotSupportedException($"不支持的 VarType：{varType}"),
     };
 
+    /// <summary>按 .NET 类型推导字节数；未知类型返回 null</summary>
+    private static Int32? GetByteSizeForDotNetType(Type t)
+    {
+        if (t == typeof(Boolean) || t == typeof(Byte)) return 1;
+        if (t == typeof(Int16) || t == typeof(UInt16)) return 2;
+        if (t == typeof(Int32) || t == typeof(UInt32) || t == typeof(Single)) return 4;
+        if (t == typeof(Int64) || t == typeof(UInt64) || t == typeof(Double)) return 8;
+        return null;
+    }
+
     private static T ConvertToValue<T>(Byte[] data, PLCAddress addr) where T : struct
     {
         if (typeof(T) == typeof(Boolean))
         {
+            if (addr.VarType == VarType.Bit)
+                // BIT 传输：服务端已提取单位值（0 或 1），直接判断
+                return (T)(Object)(data.Length > 0 && data[0] != 0);
             if (addr.BitNumber >= 0 && data.Length >= 1)
-            {
-                // 对位地址（如 M0.0），ReadBytes 返回的是原始字节，需提取对应位
-                // 若 BitNumber=-1 表示直接按位传输（BIT TransportSize）
-                if (addr.VarType == VarType.Bit && addr.BitNumber < 0)
-                    return (T)(Object)(data[0] != 0);
-                var bitVal = (data[0] >> addr.BitNumber) & 1;
-                return (T)(Object)(bitVal != 0);
-            }
+                // BYTE 传输，需从字节提取对应位
+                return (T)(Object)(((data[0] >> addr.BitNumber) & 1) != 0);
             return (T)(Object)(data.Length > 0 && data[0] != 0);
         }
 

@@ -34,6 +34,12 @@ public class S7BatchTests
         // Memory 区域
         server.SetValue("MB0", new Byte[] { 0x11 });
         server.SetValue("MB1", new Byte[] { 0x22 });
+        // DB10 DInt预置
+        server.SetValue("DB10.DBD20", 100000);          // DInt = 100000
+        // DB10 DWord预置（UInt32 = 3000000000 big-endian: B2 D0 5E 00）
+        server.SetValue("DB10.DBD24", new Byte[] { 0xB2, 0xD0, 0x5E, 0x00 });
+        // DB10 LReal预置
+        server.SetValue("DB10.DBD28", 3.14159265358979);
 
         server.Start();
         _server = server;
@@ -140,7 +146,7 @@ public class S7BatchTests
         for (var i = 0; i < 25; i++)
             items.Add(DataItem.Create(DataType.DataBlock, VarType.Int, 10, i * 2));
 
-        // 前三个有值，其余为0
+        // 前三个有预置值
         _client!.ReadMultipleVars(items);
 
         Assert.Equal(25, items.Count);
@@ -148,6 +154,46 @@ public class S7BatchTests
         Assert.Equal((Int16)100, items[0].Value);
         Assert.Equal((Int16)200, items[1].Value);
         Assert.Equal((Int16)300, items[2].Value);
+    }
+
+    [TestOrder(15)]
+    [Fact]
+    public void ReadMultipleVars_DInt()
+    {
+        Assert.NotNull(_client);
+        var items = new List<DataItem>
+        {
+            DataItem.Create(DataType.DataBlock, VarType.DInt, 10, 20),
+        };
+        _client!.ReadMultipleVars(items);
+        Assert.Equal(100000, items[0].Value);
+    }
+
+    [TestOrder(16)]
+    [Fact]
+    public void ReadMultipleVars_DWord()
+    {
+        Assert.NotNull(_client);
+        var items = new List<DataItem>
+        {
+            DataItem.Create(DataType.DataBlock, VarType.DWord, 10, 24),
+        };
+        _client!.ReadMultipleVars(items);
+        Assert.Equal((UInt32)3000000000, items[0].Value);
+    }
+
+    [TestOrder(17)]
+    [Fact]
+    public void ReadMultipleVars_LReal()
+    {
+        Assert.NotNull(_client);
+        var items = new List<DataItem>
+        {
+            DataItem.Create(DataType.DataBlock, VarType.LReal, 10, 28),
+        };
+        _client!.ReadMultipleVars(items);
+        Assert.NotNull(items[0].Value);
+        Assert.Equal(3.14159265358979, (Double)items[0].Value!, precision: 10);
     }
     #endregion
 
@@ -220,6 +266,115 @@ public class S7BatchTests
         Assert.NotNull(_client);
         _client!.WriteMultipleVars(new List<DataItem>());
         // 无异常即通过
+    }
+
+    [TestOrder(23)]
+    [Fact]
+    public void WriteMultipleVars_DInt_And_Read()
+    {
+        Assert.NotNull(_client);
+        var write = new List<DataItem>
+        {
+            DataItem.Create(DataType.DataBlock, VarType.DInt, 10, 40),
+        };
+        write[0].Value = -2000000;
+        _client!.WriteMultipleVars(write);
+
+        var read = new List<DataItem> { DataItem.Create(DataType.DataBlock, VarType.DInt, 10, 40) };
+        _client.ReadMultipleVars(read);
+        Assert.Equal(-2000000, read[0].Value);
+    }
+
+    [TestOrder(24)]
+    [Fact]
+    public void WriteMultipleVars_DWord_And_Read()
+    {
+        Assert.NotNull(_client);
+        var write = new List<DataItem>
+        {
+            DataItem.Create(DataType.DataBlock, VarType.DWord, 10, 44),
+        };
+        write[0].Value = (UInt32)4000000000;
+        _client!.WriteMultipleVars(write);
+
+        var read = new List<DataItem> { DataItem.Create(DataType.DataBlock, VarType.DWord, 10, 44) };
+        _client.ReadMultipleVars(read);
+        Assert.Equal((UInt32)4000000000, read[0].Value);
+    }
+
+    [TestOrder(25)]
+    [Fact]
+    public void WriteMultipleVars_LReal_And_Read()
+    {
+        Assert.NotNull(_client);
+        var write = new List<DataItem>
+        {
+            DataItem.Create(DataType.DataBlock, VarType.LReal, 10, 48),
+        };
+        write[0].Value = 2.718281828459045;
+        _client!.WriteMultipleVars(write);
+
+        var read = new List<DataItem> { DataItem.Create(DataType.DataBlock, VarType.LReal, 10, 48) };
+        _client.ReadMultipleVars(read);
+        Assert.NotNull(read[0].Value);
+        Assert.Equal(2.718281828459045, (Double)read[0].Value!, precision: 12);
+    }
+
+    [TestOrder(26)]
+    [Fact]
+    public void WriteMultipleVars_LargeBatch_AutoSplits()
+    {
+        Assert.NotNull(_client);
+
+        // 25 个 Int16 写入到 DB10 offset 100 开始
+        var write = new List<DataItem>();
+        for (var i = 0; i < 25; i++)
+        {
+            var item = DataItem.Create(DataType.DataBlock, VarType.Int, 10, 100 + i * 2);
+            item.Value = (Int16)(100 + i);
+            write.Add(item);
+        }
+        _client!.WriteMultipleVars(write); // 不应抛出异常
+
+        // 回读验证最后 5 个（第二批次的第一个）
+        var read = new List<DataItem>
+        {
+            DataItem.Create(DataType.DataBlock, VarType.Int, 10, 140),  // item[20] = 120
+        };
+        _client.ReadMultipleVars(read);
+        Assert.Equal((Int16)120, read[0].Value);
+    }
+
+    [TestOrder(27)]
+    [Fact]
+    public void ReadMultipleVarsAsync_Works()
+    {
+        Assert.NotNull(_client);
+        var items = new List<DataItem>
+        {
+            DataItem.Create(DataType.DataBlock, VarType.Int, 10, 0),
+            DataItem.Create(DataType.DataBlock, VarType.Int, 10, 2),
+        };
+        _client!.ReadMultipleVarsAsync(items).GetAwaiter().GetResult();
+        Assert.Equal((Int16)100, items[0].Value);
+        Assert.Equal((Int16)200, items[1].Value);
+    }
+
+    [TestOrder(28)]
+    [Fact]
+    public void WriteMultipleVarsAsync_Works()
+    {
+        Assert.NotNull(_client);
+        var write = new List<DataItem>
+        {
+            DataItem.Create(DataType.DataBlock, VarType.Int, 10, 200),
+        };
+        write[0].Value = (Int16)7777;
+        _client!.WriteMultipleVarsAsync(write).GetAwaiter().GetResult();
+
+        var read = new List<DataItem> { DataItem.Create(DataType.DataBlock, VarType.Int, 10, 200) };
+        _client.ReadMultipleVars(read);
+        Assert.Equal((Int16)7777, read[0].Value);
     }
     #endregion
 

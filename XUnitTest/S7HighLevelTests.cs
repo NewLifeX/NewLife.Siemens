@@ -71,6 +71,12 @@ public class S7HighLevelTests
         // Set DB1.DBX30.2 = false (already zero)
         // Memory area: MB10=0x55
         server.SetValue("MB10", new Byte[] { 0x55 });
+        // DB1.DBD70 = Double/LReal ≈ 1.23456789012345
+        server.SetValue("DB1.DBD70", 1.23456789012345);
+        // DB1.DBD80 = UInt32/DWord = 3000000000 (big-endian: B2 D0 5E 00)
+        server.SetValue("DB1.DBD80", new Byte[] { 0xB2, 0xD0, 0x5E, 0x00 });
+        // DB1.DBD84 = Int32/DInt = 100000
+        server.SetValue("DB1.DBD84", 100000);
         // String in DB2.STRING0.20
         var strBytes = new Byte[22];
         strBytes[0] = 20;       // max length
@@ -132,6 +138,52 @@ public class S7HighLevelTests
         var val = _client!.Read<Byte>("MB10");
         Assert.Equal(0x55, val);
     }
+
+    [TestOrder(24)]
+    [Fact]
+    public void HL_Read_Bool_True()
+    {
+        Assert.NotNull(_client);
+        var val = _client!.Read<Boolean>("DB1.DBX30.0");
+        Assert.True(val);
+    }
+
+    [TestOrder(25)]
+    [Fact]
+    public void HL_Read_Bool_False()
+    {
+        Assert.NotNull(_client);
+        // DBX30.2 未置位，应为 false
+        var val = _client!.Read<Boolean>("DB1.DBX30.2");
+        Assert.False(val);
+    }
+
+    [TestOrder(26)]
+    [Fact]
+    public void HL_Read_UInt32_DWord()
+    {
+        Assert.NotNull(_client);
+        var val = _client!.Read<UInt32>("DB1.DBD80");
+        Assert.Equal(3000000000u, val);
+    }
+
+    [TestOrder(27)]
+    [Fact]
+    public void HL_Read_Double_LReal()
+    {
+        Assert.NotNull(_client);
+        var val = _client!.Read<Double>("DB1.DBD70");
+        Assert.Equal(1.23456789012345, val, precision: 10);
+    }
+
+    [TestOrder(28)]
+    [Fact]
+    public void HL_Read_Int32_DInt()
+    {
+        Assert.NotNull(_client);
+        var val = _client!.Read<Int32>("DB1.DBD84");
+        Assert.Equal(100000, val);
+    }
     #endregion
 
     #region Write + Read 泛型回环
@@ -173,6 +225,58 @@ public class S7HighLevelTests
         _client!.Write("DB1.DBW8", (UInt16)60000);
         var val = _client.Read<UInt16>("DB1.DBW8");
         Assert.Equal((UInt16)60000, val);
+    }
+
+    [TestOrder(34)]
+    [Fact]
+    public void HL_Write_Bool_True_And_Read_Back()
+    {
+        Assert.NotNull(_client);
+        _client!.Write("DB1.DBX100.4", true);
+        var val = _client.Read<Boolean>("DB1.DBX100.4");
+        Assert.True(val);
+    }
+
+    [TestOrder(35)]
+    [Fact]
+    public void HL_Write_Bool_False_And_Read_Back()
+    {
+        Assert.NotNull(_client);
+        // 先置位再清零
+        _client!.Write("DB1.DBX100.5", true);
+        _client.Write("DB1.DBX100.5", false);
+        var val = _client.Read<Boolean>("DB1.DBX100.5");
+        Assert.False(val);
+    }
+
+    [TestOrder(36)]
+    [Fact]
+    public void HL_Write_UInt32_And_Read_Back()
+    {
+        Assert.NotNull(_client);
+        _client!.Write("DB1.DBD90", (UInt32)4000000000);
+        var val = _client.Read<UInt32>("DB1.DBD90");
+        Assert.Equal(4000000000u, val);
+    }
+
+    [TestOrder(37)]
+    [Fact]
+    public void HL_Write_Double_And_Read_Back()
+    {
+        Assert.NotNull(_client);
+        _client!.Write("DB1.DBD100", 2.718281828459045);
+        var val = _client.Read<Double>("DB1.DBD100");
+        Assert.Equal(2.718281828459045, val, precision: 12);
+    }
+
+    [TestOrder(38)]
+    [Fact]
+    public void HL_Write_Int32_And_Read_Back()
+    {
+        Assert.NotNull(_client);
+        _client!.Write("DB1.DBD110", -999999);
+        var val = _client.Read<Int32>("DB1.DBD110");
+        Assert.Equal(-999999, val);
     }
     #endregion
 
@@ -260,6 +364,73 @@ public class S7HighLevelTests
         var val = _client!.Read("DB1.DBD10", typeof(Single));
         Assert.IsType<Single>(val);
         Assert.Equal(3.14f, (Single)val!, precision: 4);
+    }
+
+    [TestOrder(62)]
+    [Fact]
+    public void HL_Read_Type_Bool()
+    {
+        Assert.NotNull(_client);
+        var val = _client!.Read("DB1.DBX30.0", typeof(Boolean));
+        Assert.IsType<Boolean>(val);
+        Assert.True((Boolean)val!);
+    }
+
+    [TestOrder(63)]
+    [Fact]
+    public void HL_Read_Type_UInt32()
+    {
+        Assert.NotNull(_client);
+        var val = _client!.Read("DB1.DBD80", typeof(UInt32));
+        Assert.IsType<UInt32>(val);
+        Assert.Equal(3000000000u, (UInt32)val!);
+    }
+
+    [TestOrder(64)]
+    [Fact]
+    public void HL_Read_Type_Double()
+    {
+        Assert.NotNull(_client);
+        var val = _client!.Read("DB1.DBD70", typeof(Double));
+        Assert.IsType<Double>(val);
+        Assert.Equal(1.23456789012345, (Double)val!, precision: 10);
+    }
+
+    [TestOrder(65)]
+    [Fact]
+    public void HL_Read_Type_String()
+    {
+        Assert.NotNull(_client);
+        var val = _client!.Read("DB2.STRING0.20", typeof(String));
+        Assert.IsType<String>(val);
+        Assert.Equal("Hello", (String)val!);
+    }
+
+    [TestOrder(66)]
+    [Fact]
+    public void HL_Read_Type_Unsupported_Throws()
+    {
+        Assert.NotNull(_client);
+        Assert.Throws<NotSupportedException>(() => _client!.Read("DB1.DBW0", typeof(Decimal)));
+    }
+    #endregion
+
+    #region 纯逻辑测试（无网络）
+    [Fact]
+    public void HL_ReadArray_ZeroCount_Returns_Empty()
+    {
+        // 不需要网络，直接 new 一个不连接的 client
+        using var client = new S7Client(CpuType.S7200, "127.0.0.1", 19998);
+        var arr = client.ReadArray<Int16>("DB1.DBW0", 0);
+        Assert.NotNull(arr);
+        Assert.Empty(arr);
+    }
+
+    [Fact]
+    public void HL_GetVarTypeByteSize_DateTimeLong_Unsupported()
+    {
+        // DateTimeLong 不在 switch 中，应抛出 NotSupportedException
+        Assert.Throws<NotSupportedException>(() => S7Client.GetVarTypeByteSize(VarType.DateTimeLong));
     }
     #endregion
 }
