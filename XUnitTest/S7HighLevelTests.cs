@@ -65,7 +65,7 @@ public class S7HighLevelTests
         server.SetValue("DB1.DBW0", (Int16)1000);
         server.SetValue("DB1.DBW2", (Int16)(-500));
         server.SetValue("DB1.DBD10", 3.14f);
-        server.SetValue("DB1.DBD20", 1.23456789);  // treated as Int32(big-endian repr)
+        server.SetValue("DB1.DBD20", (Single)1.234567f);  // LReal 不支持，用 Single 模拟
         // Set DB1.DBX30.0 = true
         server.SetValue("DB1.DBX30.0", new Byte[] { 1 });
         // Set DB1.DBX30.2 = false (already zero)

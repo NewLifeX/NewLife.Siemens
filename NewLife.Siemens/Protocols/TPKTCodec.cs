@@ -28,7 +28,7 @@ public class TPKTCodec : MessageCodec<TPKT>
         if (context.Owner is not IExtend ss) return null;
 
         if (ss["Codec"] is not PacketCodec pc)
-            ss["Codec"] = pc = new PacketCodec { GetLength = p => GetLength(p, 3, 1) - 4 };
+            ss["Codec"] = pc = new PacketCodec { GetLength = p => GetLength(p, 2, -2) - 4 };
 
         var pks = pc.Parse(pk);
         var list = pks.Select(e => new TPKT().Read(e)).ToList();

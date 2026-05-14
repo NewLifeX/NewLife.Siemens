@@ -1,4 +1,6 @@
 ﻿using NewLife.Serialization;
+using NewLife.Siemens.Models;
+using NewLife.Siemens.Protocols;
 
 namespace NewLife.Siemens.Messages;
 
@@ -53,8 +55,9 @@ public class WriteResponse : S7Parameter, IDataItems
         for (var i = 0; i < ItemCount; i++)
         {
             var di = new DataItem();
-            di.Read(reader);
-
+            // WriteResponse 每项只有 1 字节错误码
+            if (!reader.EndOfStream())
+                di.Code = (ReadWriteErrorCode)reader.ReadByte();
             list.Add(di);
         }
         Items = list.ToArray();

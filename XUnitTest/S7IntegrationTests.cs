@@ -292,7 +292,7 @@ public class S7IntegrationTests
     public void E2E_StopServer()
     {
         Assert.NotNull(_server);
-        _server!.Stop();
+        _server!.Stop("test done");
         _server = null;
     }
     #endregion

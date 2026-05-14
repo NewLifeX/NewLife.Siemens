@@ -212,7 +212,7 @@ public class S7ServerMemoryTests
     {
         var item = new DataItem();
 
-        Assert.Equal(ReadWriteErrorCode.NoError, item.Code);
+        Assert.Equal(ReadWriteErrorCode.Reserved, item.Code);
         Assert.Equal(0, item.TransportSize);
         Assert.Null(item.Data);
         Assert.Equal(-1, item.BitAdr);

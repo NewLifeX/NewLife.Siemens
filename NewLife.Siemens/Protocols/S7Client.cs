@@ -249,7 +249,8 @@ public partial class S7Client : DisposeBase, ILogFeature
             var maxToRead = Math.Min(count, MaxPDUSize - 18);
 
             var addr = (address.StartByte + index) * 8;
-            if (address.BitNumber > 0) addr += address.BitNumber;
+            // BitNumber 仅在 VarType.Bit 时表示位偏移；String/其他类型的 BitNumber 含义不同，不能加到地址上
+            if (address.VarType == VarType.Bit) addr += address.BitNumber;
             var request = BuildRead(address.DataType, address.DbNumber, address.VarType, addr, maxToRead);
 
             // 发起请求
@@ -308,7 +309,7 @@ public partial class S7Client : DisposeBase, ILogFeature
             var pdu = Math.Min(count, MaxPDUSize - 28);
 
             var addr = (address.StartByte + index) * 8;
-            if (address.BitNumber > 0) addr += address.BitNumber;
+            if (address.VarType == VarType.Bit) addr += address.BitNumber;
             var request = BuildWrite(address.DataType, address.DbNumber, address.VarType, addr, value, index, pdu);
 
             // 发起请求
