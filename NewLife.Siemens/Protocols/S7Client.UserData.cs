@@ -2,9 +2,91 @@ using NewLife.Siemens.Messages;
 
 namespace NewLife.Siemens.Protocols;
 
-/// <summary>S7客户端 — UserData扩展功能（时钟读写、SZL诊断）</summary>
+/// <summary>S7客户端 — UserData扩展功能（时钟读写、SZL诊断、PLC控制）</summary>
 public partial class S7Client
 {
+    #region PLC 启停控制
+    /// <summary>停止 PLC（STOP 状态）</summary>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <remarks>
+    /// 发送 PlcStop (0x29) Job 请求，携带 "P_PROGRAM" 服务名。
+    /// 需提前设置 <see cref="AllowPlcControl"/> = true；否则抛出 InvalidOperationException。
+    /// 仅在受控维护场景使用，停机将立即中断 PLC 程序执行。
+    /// </remarks>
+    public async Task PlcStopAsync(CancellationToken cancellationToken = default)
+    {
+        if (!AllowPlcControl)
+            throw new InvalidOperationException("PLC 控制指令被禁止：请先设置 AllowPlcControl = true");
+
+        WriteLog("发送 PlcStop 指令");
+
+        var msg = new S7Message { Kind = S7Kinds.Job };
+        msg.SetParameter(new PlcControlParameter { Code = S7Functions.PlcStop });
+
+        var rs = await RequestAsync(msg, cancellationToken).ConfigureAwait(false);
+        if (rs == null)
+            throw new InvalidOperationException("PlcStop：PLC 无响应");
+        if (rs.ErrorClass != 0 || rs.ErrorCode != 0)
+            throw new InvalidOperationException($"PlcStop 失败：ErrorClass=0x{rs.ErrorClass:X2} ErrorCode=0x{rs.ErrorCode:X2}");
+    }
+
+    /// <summary>热重启 PLC（保留数据区，恢复 RUN 状态）</summary>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <remarks>
+    /// 发送 PlcStart (0x28) Job 请求，模式字节 0xFD（热重启）。
+    /// 需提前设置 <see cref="AllowPlcControl"/> = true。
+    /// PLC 需处于 STOP 状态，否则部分型号会返回错误。
+    /// </remarks>
+    public async Task PlcHotRestartAsync(CancellationToken cancellationToken = default)
+    {
+        if (!AllowPlcControl)
+            throw new InvalidOperationException("PLC 控制指令被禁止：请先设置 AllowPlcControl = true");
+
+        WriteLog("发送 PlcHotRestart 指令");
+
+        var msg = new S7Message { Kind = S7Kinds.Job };
+        msg.SetParameter(new PlcControlParameter
+        {
+            Code = S7Functions.PlcStart,
+            Mode = PlcControlMode.HotRestart,
+        });
+
+        var rs = await RequestAsync(msg, cancellationToken).ConfigureAwait(false);
+        if (rs == null)
+            throw new InvalidOperationException("PlcHotRestart：PLC 无响应");
+        if (rs.ErrorClass != 0 || rs.ErrorCode != 0)
+            throw new InvalidOperationException($"PlcHotRestart 失败：ErrorClass=0x{rs.ErrorClass:X2} ErrorCode=0x{rs.ErrorCode:X2}");
+    }
+
+    /// <summary>冷启动 PLC（清除数据区，重新初始化后进入 RUN）</summary>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <remarks>
+    /// 发送 PlcStart (0x28) Job 请求，模式字节 0xFF（冷启动）。
+    /// 需提前设置 <see cref="AllowPlcControl"/> = true。
+    /// 冷启动会清除所有 DB 实例数据（非保持型），谨慎使用。
+    /// </remarks>
+    public async Task PlcColdStartAsync(CancellationToken cancellationToken = default)
+    {
+        if (!AllowPlcControl)
+            throw new InvalidOperationException("PLC 控制指令被禁止：请先设置 AllowPlcControl = true");
+
+        WriteLog("发送 PlcColdStart 指令");
+
+        var msg = new S7Message { Kind = S7Kinds.Job };
+        msg.SetParameter(new PlcControlParameter
+        {
+            Code = S7Functions.PlcStart,
+            Mode = PlcControlMode.ColdRestart,
+        });
+
+        var rs = await RequestAsync(msg, cancellationToken).ConfigureAwait(false);
+        if (rs == null)
+            throw new InvalidOperationException("PlcColdStart：PLC 无响应");
+        if (rs.ErrorClass != 0 || rs.ErrorCode != 0)
+            throw new InvalidOperationException($"PlcColdStart 失败：ErrorClass=0x{rs.ErrorClass:X2} ErrorCode=0x{rs.ErrorCode:X2}");
+    }
+    #endregion
+
     #region 时钟读写
     /// <summary>读取PLC内部时钟（异步）</summary>
     /// <param name="cancellationToken">取消令牌</param>

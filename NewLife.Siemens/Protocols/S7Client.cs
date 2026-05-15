@@ -32,6 +32,13 @@ public partial class S7Client : DisposeBase, ILogFeature
     /// <summary>最大PDU大小</summary>
     public Int32 MaxPDUSize { get; private set; } = 1024;
 
+    /// <summary>是否允许执行PLC控制指令（启动/停机）。默认 false 以防止误触发。</summary>
+    /// <remarks>
+    /// 启停操作将直接影响生产线运行，使用前请确认安全措施已就位。
+    /// 须显式设置为 true 后，PlcStopAsync / PlcHotRestartAsync / PlcColdStartAsync 才可执行。
+    /// </remarks>
+    public Boolean AllowPlcControl { get; set; }
+
     private TcpClient? _client;
     private NetworkStream? _stream;
     private Int32 _sequence;

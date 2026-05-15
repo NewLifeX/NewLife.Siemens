@@ -144,8 +144,16 @@ public class S7Message : IAccessor
                             Parameters.Add(rv);
                     }
                     break;
+                case S7Functions.PlcStart:
+                case S7Functions.PlcStop:
+                    var pcp = new PlcControlParameter();
+                    if (pcp.Read(reader))
+                        Parameters.Add(pcp);
+                    break;
                 default:
-                    throw new NotSupportedException($"不支持的S7参数类型[{kind}]");
+                    // 未知功能码（含块传输协议）：跳过剩余字节，避免抛出异常
+                    ms.Seek(0, SeekOrigin.End);
+                    break;
             }
         }
     }

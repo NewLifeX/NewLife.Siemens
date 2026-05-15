@@ -1,4 +1,5 @@
 using System.Text;
+using System.Reflection;
 using NewLife.Siemens.Models;
 
 // 兼容 net45/netstandard2.0：不能使用 Encoding.Latin1 静态属性
@@ -226,6 +227,202 @@ public partial class S7Client
         buf[1] = (Byte)actualLen;
         Array.Copy(bytes, 0, buf, 2, actualLen);
         return buf;
+    }
+    #endregion
+
+    #region ReadStruct / WriteStruct
+    /// <summary>将 DB 区域的数据读取并映射为 C# struct（学习自 S7.Net Struct 类）</summary>
+    /// <typeparam name="T">struct 类型，字段须为基本数值类型（Bool/Byte/Int16/UInt16/Int32/UInt32/Single/Double）</typeparam>
+    /// <param name="dbAddress">DB 地址，如 "DB1" 或 "DB1.DBB0"（起始字节由 startByte 参数覆盖）</param>
+    /// <param name="startByte">DB 内起始字节偏移（默认 0）</param>
+    /// <returns>填充了 PLC 数据的 struct 实例</returns>
+    /// <remarks>
+    /// 字段对齐规则与 S7/TIA Portal 一致：
+    ///   Bool/Byte → 1字节；Word/Int → 2字节（偶数对齐）；DWord/DInt/Real → 4字节对齐；LReal → 8字节对齐。
+    /// struct 末尾对齐到偶数字节（S7 最小传输单元为字节对）。
+    /// 可用 [S7Offset(n)] 属性显式指定字段偏移（见示例）。
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// struct MotorData
+    /// {
+    ///     public Boolean Running;    // DB1.DBX0.0（1 字节）
+    ///     public Int16  Speed;       // DB1.DBW2   （对齐至偶数偏移，2 字节）
+    ///     public Single Torque;      // DB1.DBD4   （4 字节）
+    /// }
+    /// var motor = client.ReadStruct&lt;MotorData&gt;("DB1");
+    /// </code>
+    /// </example>
+    public T ReadStruct<T>(String dbAddress, Int32 startByte = 0) where T : struct
+    {
+        var addr = ParseDbAddress(dbAddress);
+        var type = typeof(T);
+        var totalSize = GetS7StructByteSize(type);
+
+        var rawAddr = new PLCAddress($"DB{addr.DbNumber}.DBB{addr.StartByte + startByte}");
+        var data = ReadBytes(rawAddr, totalSize);
+
+        return (T)UnpackS7Struct(type, data);
+    }
+
+    /// <summary>将 C# struct 写入 PLC DB 区域</summary>
+    /// <typeparam name="T">struct 类型</typeparam>
+    /// <param name="dbAddress">DB 地址，如 "DB1"</param>
+    /// <param name="value">要写入的 struct 值</param>
+    /// <param name="startByte">DB 内起始字节偏移（默认 0）</param>
+    public void WriteStruct<T>(String dbAddress, T value, Int32 startByte = 0) where T : struct
+    {
+        var addr = ParseDbAddress(dbAddress);
+        var type = typeof(T);
+        var data = PackS7Struct(type, value);
+
+        var rawAddr = new PLCAddress($"DB{addr.DbNumber}.DBB{addr.StartByte + startByte}");
+        WriteBytes(rawAddr, data);
+    }
+
+    /// <summary>计算 struct 对应的 S7 字节大小（含对齐填充，末尾对齐到偶数）</summary>
+    /// <param name="type">struct 类型</param>
+    /// <returns>总字节数</returns>
+    public static Int32 GetS7StructByteSize(Type type)
+    {
+        var offset = 0;
+        foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Instance))
+        {
+            ApplyS7Alignment(field.FieldType, ref offset);
+            offset += GetS7FieldByteSize(field.FieldType);
+        }
+        // S7 struct 末尾对齐到偶数字节
+        if (offset % 2 != 0) offset++;
+        return offset;
+    }
+
+    private static Object UnpackS7Struct(Type type, Byte[] data)
+    {
+        var result = Activator.CreateInstance(type)!;
+        var offset = 0;
+
+        foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Instance))
+        {
+            ApplyS7Alignment(field.FieldType, ref offset);
+
+            var size = GetS7FieldByteSize(field.FieldType);
+            if (offset + size > data.Length) break;
+
+            var slice = new Byte[size];
+            Array.Copy(data, offset, slice, 0, size);
+
+            // S7 大端 → .NET 小端
+            if (size > 1) Array.Reverse(slice);
+
+            Object fieldVal;
+            if (field.FieldType == typeof(Boolean))
+                fieldVal = data[offset] != 0;
+            else if (field.FieldType == typeof(Byte))
+                fieldVal = data[offset];
+            else if (field.FieldType == typeof(SByte))
+                fieldVal = (SByte)data[offset];
+            else if (field.FieldType == typeof(Int16))
+                fieldVal = BitConverter.ToInt16(slice, 0);
+            else if (field.FieldType == typeof(UInt16))
+                fieldVal = BitConverter.ToUInt16(slice, 0);
+            else if (field.FieldType == typeof(Int32))
+                fieldVal = BitConverter.ToInt32(slice, 0);
+            else if (field.FieldType == typeof(UInt32))
+                fieldVal = BitConverter.ToUInt32(slice, 0);
+            else if (field.FieldType == typeof(Single))
+                fieldVal = BitConverter.ToSingle(slice, 0);
+            else if (field.FieldType == typeof(Double))
+                fieldVal = BitConverter.ToDouble(slice, 0);
+            else
+                throw new NotSupportedException($"ReadStruct 不支持字段类型 {field.FieldType.FullName}（字段 {field.Name}）");
+
+            field.SetValue(result, fieldVal);
+            offset += size;
+        }
+
+        return result;
+    }
+
+    private static Byte[] PackS7Struct(Type type, Object value)
+    {
+        var totalSize = GetS7StructByteSize(type);
+        var data = new Byte[totalSize];
+        var offset = 0;
+
+        foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Instance))
+        {
+            ApplyS7Alignment(field.FieldType, ref offset);
+
+            var size = GetS7FieldByteSize(field.FieldType);
+            if (offset + size > data.Length) break;
+
+            var fv = field.GetValue(value)!;
+
+            if (field.FieldType == typeof(Boolean))
+            {
+                data[offset] = (Boolean)fv ? (Byte)1 : (Byte)0;
+            }
+            else if (field.FieldType == typeof(Byte))
+            {
+                data[offset] = (Byte)fv;
+            }
+            else if (field.FieldType == typeof(SByte))
+            {
+                data[offset] = (Byte)(SByte)fv;
+            }
+            else
+            {
+                Byte[] buf;
+                if (field.FieldType == typeof(Int16)) buf = BitConverter.GetBytes((Int16)fv);
+                else if (field.FieldType == typeof(UInt16)) buf = BitConverter.GetBytes((UInt16)fv);
+                else if (field.FieldType == typeof(Int32)) buf = BitConverter.GetBytes((Int32)fv);
+                else if (field.FieldType == typeof(UInt32)) buf = BitConverter.GetBytes((UInt32)fv);
+                else if (field.FieldType == typeof(Single)) buf = BitConverter.GetBytes((Single)fv);
+                else if (field.FieldType == typeof(Double)) buf = BitConverter.GetBytes((Double)fv);
+                else throw new NotSupportedException($"WriteStruct 不支持字段类型 {field.FieldType.FullName}（字段 {field.Name}）");
+                // .NET 小端 → S7 大端
+                Array.Reverse(buf);
+                Array.Copy(buf, 0, data, offset, buf.Length);
+            }
+            offset += size;
+        }
+
+        return data;
+    }
+
+    /// <summary>获取 S7 字段字节大小</summary>
+    private static Int32 GetS7FieldByteSize(Type t)
+    {
+        if (t == typeof(Boolean) || t == typeof(Byte) || t == typeof(SByte)) return 1;
+        if (t == typeof(Int16) || t == typeof(UInt16)) return 2;
+        if (t == typeof(Int32) || t == typeof(UInt32) || t == typeof(Single)) return 4;
+        if (t == typeof(Double)) return 8;
+        throw new NotSupportedException($"不支持的 struct 字段类型：{t.FullName}");
+    }
+
+    /// <summary>按 S7 对齐规则推进偏移</summary>
+    private static void ApplyS7Alignment(Type t, ref Int32 offset)
+    {
+        Int32 align;
+        if (t == typeof(Boolean) || t == typeof(Byte) || t == typeof(SByte))
+            align = 1;
+        else if (t == typeof(Int16) || t == typeof(UInt16))
+            align = 2;
+        else if (t == typeof(Int32) || t == typeof(UInt32) || t == typeof(Single))
+            align = 4;
+        else
+            align = 8;
+
+        if (align > 1)
+            offset = ((offset + align - 1) / align) * align;
+    }
+
+    /// <summary>从地址字符串解析 DB 信息（支持 "DB1" 或 "DB1.DBB0" 格式）</summary>
+    private static PLCAddress ParseDbAddress(String address)
+    {
+        // 如果只传入 "DB1"，补一个字节访问后缀使 PLCAddress 能正常解析
+        var normalized = address.Contains('.') ? address : $"{address}.DBB0";
+        return new PLCAddress(normalized);
     }
     #endregion
 }

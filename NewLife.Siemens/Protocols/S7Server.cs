@@ -102,6 +102,9 @@ public class S7Server : NetServer<S7Session>
     /// <summary>模拟的PLC时钟。null时使用系统时间</summary>
     public DateTime? SimulatedClock { get; set; }
 
+    /// <summary>模拟的 CPU 运行状态（初始为 Run）</summary>
+    public S7CpuStatus CpuStatus { get; internal set; } = S7CpuStatus.Run;
+
     /// <summary>模拟SZL数据字典（Key=szlId左移16位或szlIndex，Value=原始SZL记录字节）</summary>
     private readonly Dictionary<UInt32, Byte[]> _szlData = [];
 
@@ -250,6 +253,16 @@ public class S7Session : NetSession<S7Server>
                             var pm3 = OnWrite(pm as WriteRequest);
                             if (pm3 != null)
                                 rs.Parameters.Add(pm3);
+                            break;
+                        case S7Functions.PlcStop:
+                            WriteLog("PlcStop 收到，状态 -> Stop");
+                            Host.CpuStatus = S7CpuStatus.Stop;
+                            // 返回空 AckData（ErrorClass=0 ErrorCode=0）
+                            break;
+                        case S7Functions.PlcStart:
+                            var pcp = pm as PlcControlParameter;
+                            WriteLog("PlcStart 收到 Mode={0}，状态 -> Run", pcp?.Mode);
+                            Host.CpuStatus = S7CpuStatus.Run;
                             break;
                         case S7Functions.Setup:
                         default:
