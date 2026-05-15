@@ -108,6 +108,9 @@ public class S7Server : NetServer<S7Session>
     /// <summary>模拟SZL数据字典（Key=szlId左移16位或szlIndex，Value=原始SZL记录字节）</summary>
     private readonly Dictionary<UInt32, Byte[]> _szlData = [];
 
+    /// <summary>程序块存储（Key=blockType<<16|blockNumber，Value=MC7字节流）</summary>
+    private readonly Dictionary<UInt32, Byte[]> _blocks = [];
+
     /// <summary>设置SZL模拟数据</summary>
     /// <param name="szlId">SZL标识符</param>
     /// <param name="szlIndex">SZL索引</param>
@@ -118,8 +121,47 @@ public class S7Server : NetServer<S7Session>
         _szlData[key] = data;
     }
 
+    /// <summary>向服务器预置程序块（用于上传测试）</summary>
+    /// <param name="blockType">块类型</param>
+    /// <param name="blockNumber">块编号</param>
+    /// <param name="data">MC7 字节流</param>
+    public void SetBlock(S7BlockType blockType, Int32 blockNumber, Byte[] data)
+    {
+        var key = (UInt32)(((Byte)blockType << 16) | (UInt16)blockNumber);
+        lock (_blocks) _blocks[key] = data;
+    }
+
+    /// <summary>读取服务器中存储的程序块（下载后验证用）</summary>
+    /// <param name="blockType">块类型</param>
+    /// <param name="blockNumber">块编号</param>
+    public Byte[]? GetBlock(S7BlockType blockType, Int32 blockNumber)
+    {
+        var key = (UInt32)(((Byte)blockType << 16) | (UInt16)blockNumber);
+        lock (_blocks) return _blocks.TryGetValue(key, out var d) ? d : null;
+    }
+
     internal Byte[] GetSzlData(UInt16 szlId, UInt16 szlIndex)
     {
+        // SZL 0x0174：CPU 运行状态，动态生成，反映 CpuStatus 当前值
+        if (szlId == 0x0174)
+        {
+            var raw = new Byte[10];
+            raw[0] = 0x01; raw[1] = 0x74; // szlId
+            raw[2] = (Byte)(szlIndex >> 8); raw[3] = (Byte)(szlIndex & 0xFF);
+            raw[8] = CpuStatus switch
+            {
+                S7CpuStatus.Stop => 0x01,
+                S7CpuStatus.Halt => 0x02,
+                S7CpuStatus.Run  => 0x03,
+                _                => 0x00,
+            };
+            return raw;
+        }
+
+        // SZL 0x0022：程序块列表，动态生成
+        if (szlId == 0x0022)
+            return BuildSzl0022(szlIndex);
+
         var key = (UInt32)((szlId << 16) | szlIndex);
         if (_szlData.TryGetValue(key, out var data)) return data;
 
@@ -130,6 +172,63 @@ public class S7Server : NetServer<S7Session>
         empty[2] = (Byte)(szlIndex >> 8);
         empty[3] = (Byte)(szlIndex & 0xFF);
         return empty;
+    }
+
+    /// <summary>构建 SZL 0x0022 块列表响应（每条记录4字节：blockNum_hi + blockNum_lo + flags + lang）</summary>
+    private Byte[] BuildSzl0022(UInt16 szlIndex)
+    {
+        // 块类型通过 szlIndex 高字节推断：0x0A00=DB, 0x0800=OB, 0x0C00=FB, 0x0E00=FC, 0x0B00=SFB, 0x0D00=SFC
+        var blockType = (szlIndex >> 8) switch
+        {
+            0x08 => S7BlockType.OB,
+            0x0A => S7BlockType.DB,
+            0x0B => S7BlockType.SDB,
+            0x0C => S7BlockType.FB,
+            0x0D => S7BlockType.SFC,
+            0x0E => S7BlockType.FC,
+            _    => S7BlockType.DB,
+        };
+
+        // 从 _blocks 查指定类型的块编号，DB 类型还包含 _db 内存区的已分配块
+        var blockTypeKey = (Byte)blockType;
+        SortedSet<Int32> numSet;
+        lock (_blocks)
+        {
+            numSet = new SortedSet<Int32>(
+                _blocks.Keys
+                    .Where(k => (Byte)(k >> 16) == blockTypeKey)
+                    .Select(k => (Int32)(k & 0xFFFF)));
+        }
+        if (blockType == S7BlockType.DB)
+        {
+            lock (_memLock)
+            {
+                foreach (var k in _db.Keys) numSet.Add(k);
+            }
+        }
+        var blockNums = numSet.ToList();
+
+        var recLen = 4; // 每条记录 4 字节
+        var recCount = blockNums.Count;
+        var buf = new Byte[8 + recLen * recCount];
+
+        // SZL 头（8字节）
+        buf[0] = 0x00; buf[1] = 0x22;
+        buf[2] = (Byte)(szlIndex >> 8); buf[3] = (Byte)(szlIndex & 0xFF);
+        buf[4] = (Byte)(recLen >> 8); buf[5] = (Byte)(recLen & 0xFF);
+        buf[6] = (Byte)(recCount >> 8); buf[7] = (Byte)(recCount & 0xFF);
+
+        for (var i = 0; i < recCount; i++)
+        {
+            var off = 8 + i * recLen;
+            var blockNum = blockNums[i];
+            buf[off]     = (Byte)(blockNum >> 8);
+            buf[off + 1] = (Byte)(blockNum & 0xFF);
+            buf[off + 2] = 0x01; // flags: block exists
+            buf[off + 3] = 0x01; // language: STL
+        }
+
+        return buf;
     }
     #endregion
 
@@ -149,6 +248,16 @@ public class S7Server : NetServer<S7Session>
 public class S7Session : NetSession<S7Server>
 {
     private Boolean _logined;
+
+    // 上传会话状态
+    private UInt32 _uploadJobId;
+    private Byte[]? _uploadData;
+    private Int32 _uploadOffset;
+
+    // 下载会话状态
+    private S7BlockType _downloadType;
+    private Int32 _downloadNumber;
+    private readonly List<Byte> _downloadBuffer = [];
 
     /// <summary>客户端连接时</summary>
     protected override void OnConnected()
@@ -187,7 +296,6 @@ public class S7Session : NetSession<S7Server>
         if (cotp.Read(tpkt.Data))
         {
             WriteLog("<={0}", cotp.ToString());
-
             switch (cotp.Type)
             {
                 case PduType.Data:
@@ -199,8 +307,6 @@ public class S7Session : NetSession<S7Server>
                 case PduType.ConnectionRequest:
                     OnConnectionRequest(cotp);
                     break;
-                //case PduType.ConnectionConfirmed:
-                //    break;
                 default:
                     break;
             }
@@ -242,6 +348,11 @@ public class S7Session : NetSession<S7Server>
                     };
 
                     var pm = msg.Parameters.FirstOrDefault();
+                    if (pm == null)
+                    {
+                        Send(rs.ToCOTP().ToPacket(true));
+                        break;
+                    }
                     switch (pm.Code)
                     {
                         case S7Functions.ReadVar:
@@ -263,6 +374,29 @@ public class S7Session : NetSession<S7Server>
                             var pcp = pm as PlcControlParameter;
                             WriteLog("PlcStart 收到 Mode={0}，状态 -> Run", pcp?.Mode);
                             Host.CpuStatus = S7CpuStatus.Run;
+                            break;
+                        case S7Functions.StartUpload:
+                            var suParam = OnStartUpload(pm as UploadRawParameter);
+                            if (suParam != null) rs.Parameters.Add(suParam);
+                            break;
+                        case S7Functions.Upload:
+                            var upParam = OnUpload(pm as UploadRawParameter);
+                            if (upParam != null) rs.Parameters.Add(upParam);
+                            break;
+                        case S7Functions.EndUpload:
+                            // 只需返回空 AckData 确认
+                            _uploadData = null;
+                            _uploadOffset = 0;
+                            _uploadJobId = 0;
+                            break;
+                        case S7Functions.StartDownload:
+                            OnStartDownload(pm as UploadRawParameter);
+                            break;
+                        case S7Functions.Download:
+                            OnDownloadChunk(pm as UploadRawParameter);
+                            break;
+                        case S7Functions.EndDownload:
+                            OnEndDownload();
                             break;
                         case S7Functions.Setup:
                         default:
@@ -350,6 +484,105 @@ public class S7Session : NetSession<S7Server>
 
         return rs;
     }
+
+    #region 块传输处理
+    private static UInt32 _nextJobId = 1;
+
+    UploadRawParameter? OnStartUpload(UploadRawParameter? req)
+    {
+        if (req == null) return null;
+
+        // 解析请求：paramBytes[3]=fileId, [4]=blockType, [5..9]=blockNumAscii(5位), [10]=destFS
+        var raw = req.RawBytes;
+        if (raw.Length < 10) return null;
+
+        var blockTypeByte = raw[4];
+        var blockNumStr = System.Text.Encoding.ASCII.GetString(raw, 5, 5);
+        if (!Int32.TryParse(blockNumStr, out var blockNum)) blockNum = 0;
+        var blockType = (S7BlockType)blockTypeByte;
+
+        var data = Host.GetBlock(blockType, blockNum);
+        data ??= [];
+        _uploadData = data;
+        _uploadOffset = 0;
+        _uploadJobId = _nextJobId++;
+
+        WriteLog("StartUpload: {0}{1} size={2} jobId=0x{3:X8}", blockType, blockNum, data.Length, _uploadJobId);
+
+        // 响应 RawBytes: [0]=0x00, [1..4]=jobId, [5..6]=dataLen
+        var rsp = new Byte[7];
+        rsp[0] = 0x00;
+        rsp[1] = (Byte)(_uploadJobId >> 24); rsp[2] = (Byte)(_uploadJobId >> 16);
+        rsp[3] = (Byte)(_uploadJobId >> 8);  rsp[4] = (Byte)_uploadJobId;
+        rsp[5] = (Byte)(data.Length >> 8);   rsp[6] = (Byte)(data.Length & 0xFF);
+        return new UploadRawParameter(S7Functions.StartUpload, rsp);
+    }
+
+    UploadRawParameter? OnUpload(UploadRawParameter? req)
+    {
+        if (req == null || _uploadData == null) return null;
+
+        // 每帧最大 PDU - 开销（使用固定 220 字节避免 PDU 协商依赖）
+        const Int32 ChunkSize = 220;
+        var remaining = _uploadData.Length - _uploadOffset;
+        var toSend = Math.Min(ChunkSize, remaining);
+        var moreData = (_uploadOffset + toSend) < _uploadData.Length;
+
+        var chunk = new Byte[toSend];
+        if (toSend > 0)
+            Array.Copy(_uploadData, _uploadOffset, chunk, 0, toSend);
+        _uploadOffset += toSend;
+
+        // 响应 RawBytes: [0]=0x00, [1]=moreData(0x01/0x00), [2..3]=dataLen, [4+]=data
+        var rsp = new Byte[4 + toSend];
+        rsp[0] = 0x00;
+        rsp[1] = moreData ? (Byte)0x01 : (Byte)0x00;
+        rsp[2] = (Byte)(toSend >> 8); rsp[3] = (Byte)(toSend & 0xFF);
+        if (toSend > 0)
+            Array.Copy(chunk, 0, rsp, 4, toSend);
+
+        WriteLog("Upload 数据块 size={0} moreData={1}", toSend, moreData);
+        return new UploadRawParameter(S7Functions.Upload, rsp);
+    }
+
+    void OnStartDownload(UploadRawParameter? req)
+    {
+        if (req == null) return;
+
+        var raw = req.RawBytes;
+        if (raw.Length < 10) return;
+
+        var blockTypeByte = raw[4];
+        var blockNumStr = System.Text.Encoding.ASCII.GetString(raw, 5, 5);
+        if (!Int32.TryParse(blockNumStr, out var blockNum)) blockNum = 0;
+
+        _downloadType = (S7BlockType)blockTypeByte;
+        _downloadNumber = blockNum;
+        _downloadBuffer.Clear();
+        WriteLog("StartDownload: {0}{1}", _downloadType, _downloadNumber);
+    }
+
+    void OnDownloadChunk(UploadRawParameter? req)
+    {
+        if (req == null) return;
+        // 客户端 Download 帧 RawBytes: [0]=moreData, [1]=reserved, [2]=len_hi, [3+]=data
+        var raw = req.RawBytes;
+        if (raw.Length <= 3) return;
+        var dataStart = 3;
+        var dataLen = raw.Length - dataStart;
+        for (var i = 0; i < dataLen; i++)
+            _downloadBuffer.Add(raw[dataStart + i]);
+        WriteLog("Download 数据块 size={0} bufTotal={1}", dataLen, _downloadBuffer.Count);
+    }
+
+    void OnEndDownload()
+    {
+        var data = _downloadBuffer.ToArray();
+        Host.SetBlock(_downloadType, _downloadNumber, data);
+        WriteLog("EndDownload: {0}{1} 已保存 {2} 字节", _downloadType, _downloadNumber, data.Length);
+        _downloadBuffer.Clear();
+    }
+    #endregion
 
     WriteResponse? OnWrite(WriteRequest? request)
     {

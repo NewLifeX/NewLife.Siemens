@@ -107,8 +107,11 @@ public class S7Message : IAccessor
 
         while (ms.Position < ms.Length)
         {
-            var kind = (S7Functions)reader.ReadByte();
-            ms.Seek(-1, SeekOrigin.Current);
+            // 直接从流中偷看功能码字节，不经过 Binary reader，避免触发 Binary.EndOfStream 标志
+            var kindByte = ms.ReadByte();
+            if (kindByte < 0) break;
+            ms.Position--;  // 回退，让参数读取器重新读取功能码（此时 Binary.EndOfStream 保持 false）
+            var kind = (S7Functions)(byte)kindByte;
             switch (kind)
             {
                 case S7Functions.Setup:
@@ -149,6 +152,16 @@ public class S7Message : IAccessor
                     var pcp = new PlcControlParameter();
                     if (pcp.Read(reader))
                         Parameters.Add(pcp);
+                    break;
+                case S7Functions.StartUpload:
+                case S7Functions.Upload:
+                case S7Functions.EndUpload:
+                case S7Functions.StartDownload:
+                case S7Functions.Download:
+                case S7Functions.EndDownload:
+                    var upr = new UploadRawParameter((S7Functions)0, []);
+                    if (upr.Read(reader))
+                        Parameters.Add(upr);
                     break;
                 default:
                     // 未知功能码（含块传输协议）：跳过剩余字节，避免抛出异常

@@ -159,6 +159,34 @@ public class S7PLCTests
         Assert.Equal(S7CpuStatus.Run, _server!.CpuStatus);
     }
 
+    [TestOrder(14)]
+    [Fact]
+    public async Task ReadCpuStatusAsync_AfterPlcStop_ReturnsStop()
+    {
+        Assert.NotNull(_client);
+
+        _client!.AllowPlcControl = true;
+        await _client.PlcStopAsync();
+        Thread.Sleep(100);
+
+        var status = await _client.ReadCpuStatusAsync();
+        Assert.Equal(S7CpuStatus.Stop, status);
+    }
+
+    [TestOrder(15)]
+    [Fact]
+    public async Task ReadCpuStatusAsync_AfterPlcStart_ReturnsRun()
+    {
+        Assert.NotNull(_client);
+
+        _client!.AllowPlcControl = true;
+        await _client.PlcHotRestartAsync();
+        Thread.Sleep(100);
+
+        var status = await _client.ReadCpuStatusAsync();
+        Assert.Equal(S7CpuStatus.Run, status);
+    }
+
     #endregion
 
     #region ReadStruct / WriteStruct
