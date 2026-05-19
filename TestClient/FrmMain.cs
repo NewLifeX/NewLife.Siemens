@@ -1,4 +1,5 @@
 ﻿using NewLife;
+using NewLife.IoT.Drivers;
 using NewLife.IoT.ThingModels;
 using NewLife.Log;
 using NewLife.Serialization;
@@ -100,7 +101,7 @@ public partial class FrmMain : Form
 
             var rs = _driver.Write(_node, point, value);
 
-            XTrace.WriteLine(rs.ToJson(true));
+            XTrace.WriteLine($"写入结果：IsSuccess={rs.IsSuccess}, AffectedCount={rs.AffectedCount}");
         }
         catch (Exception ex)
         {
@@ -127,9 +128,9 @@ public partial class FrmMain : Form
             XTrace.WriteLine($"读取点位：{pointAdd}, 类型：{type}, 长度：{length}");
 
             // 读取
-            var dic = _driver.Read(_node, new[] { point });
+            var result = _driver.Read(_node, new[] { point });
 
-            XTrace.WriteLine(dic.ToJson(true));
+            XTrace.WriteLine(result.ToJson(true));
         }
         catch (Exception ex)
         {

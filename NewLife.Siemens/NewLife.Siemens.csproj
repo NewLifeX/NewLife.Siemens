@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>netstandard2.1;netstandard2.0;net461;net45</TargetFrameworks>
     <AssemblyTitle>西门子PLC协议</AssemblyTitle>
@@ -38,15 +38,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.203">
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.300">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NewLife.Core" Version="11.15.2026.501" />
-    <PackageReference Include="NewLife.IoT" Version="2.7.2026.501" />
+    <PackageReference Include="NewLife.Core" Version="11.15.2026.517-beta0720" />
+    <PackageReference Include="NewLife.IoT" Version="3.0.2026.518-beta1452" />
   </ItemGroup>
 
   <ItemGroup>

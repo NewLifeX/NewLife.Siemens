@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NewLife.IoT" Version="2.7.2026.501" />
+    <ProjectReference Include="..\..\NewLife.IoT\NewLife.IoT\NewLife.IoT.csproj" />
   </ItemGroup>
 
   <ItemGroup>

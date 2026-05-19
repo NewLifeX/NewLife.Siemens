@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NewLife.Siemens\NewLife.Siemens.csproj" />
+    <ProjectReference Include="..\..\NewLife.IoT\NewLife.IoT\NewLife.IoT.csproj" />
   </ItemGroup>
 
 </Project>

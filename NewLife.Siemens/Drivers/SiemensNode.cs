@@ -18,4 +18,7 @@ public class SiemensNode : INode
     /// <summary>参数</summary>
     public IDriverParameter? Parameter { get; set; }
 
+    /// <summary>是否已连接</summary>
+    public Boolean IsConnected { get; set; } = true;
+
 }

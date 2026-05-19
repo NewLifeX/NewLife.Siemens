@@ -54,8 +54,9 @@ public class SiemensS7Driver : DriverBase
     /// </summary>
     /// <param name="device">通道</param>
     /// <param name="parameter">参数</param>
+    /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public override INode Open(IDevice device, IDriverParameter? parameter)
+    public override async Task<INode> OpenAsync(IDevice device, IDriverParameter? parameter, CancellationToken cancellationToken = default)
     {
         if (parameter is not SiemensParameter pm) throw new ArgumentNullException(nameof(parameter));
 
@@ -73,6 +74,7 @@ public class SiemensS7Driver : DriverBase
 
         var node = new SiemensNode
         {
+            Driver = this,
             Address = address,
             Device = device,
             Parameter = pm,
@@ -92,11 +94,11 @@ public class SiemensS7Driver : DriverBase
                         Timeout = 5000,
                     };
                     if (Log != null && Log.Level <= LogLevel.Debug) _plc.Log = Log;
-
-                    _plc.OpenAsync().GetAwaiter().GetResult();
                 }
             }
         }
+
+        await _plc.OpenAsync().ConfigureAwait(false);
 
         Interlocked.Increment(ref _nodes);
 
@@ -107,7 +109,8 @@ public class SiemensS7Driver : DriverBase
     /// 关闭设备驱动
     /// </summary>
     /// <param name="node"></param>
-    public override void Close(INode node)
+    /// <param name="cancellationToken">取消令牌</param>
+    public override Task CloseAsync(INode node, CancellationToken cancellationToken = default)
     {
         if (Interlocked.Decrement(ref _nodes) <= 0)
         {
@@ -115,6 +118,7 @@ public class SiemensS7Driver : DriverBase
             _plc.TryDispose();
             _plc = null;
         }
+        return TaskEx.CompletedTask;
     }
 
     /// <summary>
@@ -122,15 +126,18 @@ public class SiemensS7Driver : DriverBase
     /// </summary>
     /// <param name="node">节点对象，可存储站号等信息，仅驱动自己识别</param>
     /// <param name="points">点位集合</param>
+    /// <param name="cancellationToken">取消令牌</param>
     /// <returns></returns>
-    public override IDictionary<String, Object?> Read(INode node, IPoint[] points)
+    public override Task<ReadResult> ReadAsync(INode node, IPoint[] points, CancellationToken cancellationToken = default)
     {
-        var dic = new Dictionary<String, Object?>();
-
-        if (points == null || points.Length == 0) return dic;
+        if (points == null || points.Length == 0)
+            return Task.FromResult(ReadResult.Success([], []));
         if (_plc == null) throw new Exception("PLC未打开！");
 
         var spec = node.Device?.Specification;
+        var resultPoints = new List<IPoint>();
+        var resultValues = new List<Object?>();
+
         foreach (var point in points)
         {
             var addr = GetAddress(point);
@@ -146,6 +153,7 @@ public class SiemensS7Driver : DriverBase
 
             var data = _plc.ReadBytes(plcAddress, point.GetLength());
 
+            Object? value;
             // 借助物模型转换数据类型
             if (point.GetNetType() != null)
             {
@@ -153,22 +161,24 @@ public class SiemensS7Driver : DriverBase
                 if (point.GetNetType() == typeof(string))
                 {
                     //默认去除返回的3C1E开始的通讯分隔符
-                    dic[name] = data.ToStr(Encoding.UTF8, 2);
+                    value = data.ToStr(Encoding.UTF8, 2);
                 }
                 else
                 {
                     if (spec != null)
-                        dic[name] = spec.Decode(data, point);
+                        value = spec.Decode(data, point);
                     else
-                        dic[name] = point.Convert(data.Swap(true, true));
-
+                        value = point.Convert(data.Swap(true, true));
                 }
             }
             else
-                dic[name] = data;
+                value = data;
+
+            resultPoints.Add(point);
+            resultValues.Add(value);
         }
 
-        return dic;
+        return Task.FromResult(ReadResult.Success(resultPoints.ToArray(), resultValues.ToArray()));
     }
 
     /// <summary>
@@ -192,56 +202,66 @@ public class SiemensS7Driver : DriverBase
     /// 写入数据
     /// </summary>
     /// <param name="node">节点对象，可存储站号等信息，仅驱动自己识别</param>
-    /// <param name="point">点位</param>
-    /// <param name="value">数值</param>
-    public override Object? Write(INode node, IPoint point, Object? value)
+    /// <param name="requests">写入请求数组，每项含目标点位和值</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    public override Task<WriteResult> WriteAsync(INode node, WriteRequest[] requests, CancellationToken cancellationToken = default)
     {
-        var addr = GetAddress(point);
-        if (addr.IsNullOrWhiteSpace()) return null;
-        if (value == null) return null;
         if (_plc == null) throw new Exception("PLC未打开！");
 
-        // 借助物模型转换数据类型
         var spec = node.Device?.Specification;
-        if (value != null && value is not Byte[])
+        var count = 0;
+        foreach (var request in requests)
         {
-            // 普通数值转为字节数组
-            if (spec != null)
-                value = spec.Encode(value, point);
-            else
-                value = point.GetBytes(value)?.Swap(true, true);
-        }
+            var point = request.Point;
+            var value = request.Value;
+            if (point == null) continue;
 
-        // 操作字节数组，不用设置bitNumber，但是解析需要带上
-        if (addr.IndexOf('.') == -1) addr += ".0";
+            var addr = GetAddress(point);
+            if (addr.IsNullOrWhiteSpace()) continue;
+            if (value == null) continue;
 
-        var plcAddress = new PLCAddress(addr);
-
-        Byte[]? bytes = null;
-        if (value is Byte[] v)
-            bytes = v;
-        else
-        {
-            if (point.Type.IsNullOrEmpty()) throw new ArgumentNullException(nameof(point.Type));
-
-            bytes = point.Type.ToLower() switch
+            // 借助物模型转换数据类型
+            if (value is not Byte[])
             {
-                "boolean" or "bool" => BitConverter.GetBytes(value.ToBoolean()),
-                "short" => BitConverter.GetBytes(Int16.Parse(value + "")),
-                "int" => BitConverter.GetBytes(value.ToInt()),
-                "float" => BitConverter.GetBytes(Single.Parse(value + "")),
-                "byte" => BitConverter.GetBytes(Byte.Parse(value + "")),
-                "long" => BitConverter.GetBytes(Int64.Parse(value + "")),
-                "double" => BitConverter.GetBytes(value.ToDouble()),
-                "time" => BitConverter.GetBytes(value.ToDateTime().Ticks),
-                "string" or "text" => (value + "").GetBytes(),
-                _ => throw new ArgumentException($"数据value不是字节数组或有效类型[{point.Type}]！"),
-            };
+                // 普通数值转为字节数组
+                if (spec != null)
+                    value = spec.Encode(value, point);
+                else
+                    value = point.GetBytes(value)?.Swap(true, true);
+            }
+
+            // 操作字节数组，不用设置bitNumber，但是解析需要带上
+            if (addr.IndexOf('.') == -1) addr += ".0";
+
+            var plcAddress = new PLCAddress(addr);
+
+            Byte[]? bytes = null;
+            if (value is Byte[] v)
+                bytes = v;
+            else
+            {
+                if (point.Type.IsNullOrEmpty()) throw new ArgumentNullException(nameof(point.Type));
+
+                bytes = point.Type.ToLower() switch
+                {
+                    "boolean" or "bool" => BitConverter.GetBytes(value.ToBoolean()),
+                    "short" => BitConverter.GetBytes(Int16.Parse(value + "")),
+                    "int" => BitConverter.GetBytes(value.ToInt()),
+                    "float" => BitConverter.GetBytes(Single.Parse(value + "")),
+                    "byte" => BitConverter.GetBytes(Byte.Parse(value + "")),
+                    "long" => BitConverter.GetBytes(Int64.Parse(value + "")),
+                    "double" => BitConverter.GetBytes(value.ToDouble()),
+                    "time" => BitConverter.GetBytes(value.ToDateTime().Ticks),
+                    "string" or "text" => (value + "").GetBytes(),
+                    _ => throw new ArgumentException($"数据value不是字节数组或有效类型[{point.Type}]！"),
+                };
+            }
+
+            _plc.WriteBytes(plcAddress, bytes);
+            count++;
         }
 
-        _plc.WriteBytes(plcAddress, bytes);
-
-        return "OK";
+        return Task.FromResult(WriteResult.SuccessBatch(count));
     }
     #endregion
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using NewLife.IoT.Drivers;
 using NewLife.Log;
 using NewLife.Siemens.Drivers;
 using NewLife.Siemens.Models;
@@ -198,8 +199,7 @@ public class DriverIntegrationTests
         var points = new[] { new TestPoint { Name = "speed", Address = "DB1.DBW0", Type = null, Length = 2 } };
         var result = _driver!.Read(_node!, points);
 
-        Assert.True(result.ContainsKey("speed"));
-        var raw = result["speed"] as Byte[];
+        var raw = result.GetValue("speed") as Byte[];
         Assert.NotNull(raw);
         // 500 = 0x01F4，大端 → {0x01, 0xF4}
         Assert.Equal(2, raw!.Length);
@@ -221,9 +221,9 @@ public class DriverIntegrationTests
             new TestPoint { Name = "p2", Address = "DB1.DBW2", Type = null, Length = 2 },
         };
         var result = _driver!.Read(_node!, points);
-        Assert.Equal(2, result.Count);
-        Assert.True(result.ContainsKey("p1"));
-        Assert.True(result.ContainsKey("p2"));
+        Assert.Equal(2, result.Points.Length);
+        Assert.NotNull(result.GetValue("p1"));
+        Assert.NotNull(result.GetValue("p2"));
     }
 
     [TestOrder(12)]
@@ -235,8 +235,7 @@ public class DriverIntegrationTests
         // Type 为空 → 返回原始 4 字节
         var points = new[] { new TestPoint { Name = "g", Address = "DB1.DBD10", Type = null, Length = 4 } };
         var result = _driver!.Read(_node!, points);
-        Assert.True(result.ContainsKey("g"));
-        var raw = result["g"] as Byte[];
+        var raw = result.GetValue("g") as Byte[];
         Assert.Equal(4, raw!.Length);
     }
 
@@ -247,7 +246,7 @@ public class DriverIntegrationTests
         Assert.NotNull(_driver);
         Assert.NotNull(_node);
         var result = _driver!.Read(_node!, []);
-        Assert.Empty(result);
+        Assert.Empty(result.Points);
     }
 
     [TestOrder(14)]
@@ -257,7 +256,7 @@ public class DriverIntegrationTests
         Assert.NotNull(_driver);
         Assert.NotNull(_node);
         var result = _driver!.Read(_node!, null!);
-        Assert.Empty(result);
+        Assert.Empty(result.Points);
     }
     #endregion
 
@@ -277,7 +276,7 @@ public class DriverIntegrationTests
 
         // 读回验证（Type=null 返回原始 Byte[]）
         var result = _driver.Read(_node!, [readPoint]);
-        var raw = result["val"] as Byte[];
+        var raw = result.GetValue("val") as Byte[];
         Assert.NotNull(raw);
         Assert.Equal(2, raw!.Length);
         // 大端 {0x03, 0xE8} → 1000
@@ -296,7 +295,7 @@ public class DriverIntegrationTests
         _driver!.Write(_node!, writePoint, "3.14");
 
         var result = _driver.Read(_node!, [readPoint]);
-        var raw = result["temp"] as Byte[];
+        var raw = result.GetValue("temp") as Byte[];
         Assert.NotNull(raw);
         Assert.Equal(4, raw!.Length);
     }
@@ -308,9 +307,9 @@ public class DriverIntegrationTests
         Assert.NotNull(_driver);
         Assert.NotNull(_node);
         var point = new TestPoint { Name = "x", Address = "DB1.DBW30", Type = "short", Length = 2 };
-        // null value：应返回 null（无操作）
+        // null value：应返回写入点数为 0
         var result = _driver!.Write(_node!, point, null);
-        Assert.Null(result);
+        Assert.Equal(0, result.AffectedCount);
     }
     #endregion
 
