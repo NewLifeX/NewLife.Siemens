@@ -11,10 +11,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\NewLife.IoT\NewLife.IoT\NewLife.IoT.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\NewLife.Siemens\NewLife.Siemens.csproj" />
   </ItemGroup>
 

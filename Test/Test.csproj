@@ -9,7 +9,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NewLife.Siemens\NewLife.Siemens.csproj" />
-    <ProjectReference Include="..\..\NewLife.IoT\NewLife.IoT\NewLife.IoT.csproj" />
   </ItemGroup>
 
 </Project>
