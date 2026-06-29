@@ -127,6 +127,8 @@ public partial class S7Client : DisposeBase, ILogFeature
 
     private async Task SetupConnection(Stream stream, CancellationToken cancellationToken)
     {
+        var needsGTM = CPU is CpuType.S71200 or CpuType.S71500;
+
         var setup = new SetupMessage
         {
             MaxAmqCaller = 0x0001,
@@ -134,10 +136,25 @@ public partial class S7Client : DisposeBase, ILogFeature
             PduLength = 960,
         };
 
+        // S7-1200/1500 固件 4.0+ 需要在 Setup 参数后附加 5 字节 GTM 扩展，
+        // 声明客户端为通用 GTM 类型（0x0000），PLC 将响应其实际类型（0x0001=S7-1200, 0x0002=S7-1500）
+        if (needsGTM)
+        {
+            setup.HasGtm = true;
+            setup.GtmData = [0x00, 0x00, 0x00, 0x00, 0x00];
+            WriteLog("SetupConnection: 发送GTM扩展（CPU={0}）", CPU);
+        }
+
         var rs = await InvokeAsync(setup, cancellationToken).ConfigureAwait(false);
         if (rs == null) return;
 
-        if (rs is SetupMessage pm) MaxPDUSize = pm.PduLength;
+        if (rs is SetupMessage pm)
+        {
+            MaxPDUSize = pm.PduLength;
+
+            if (pm.HasGtm)
+                WriteLog("SetupConnection: PLC响应GTM扩展 GtmData={0}", pm.GtmData.ToHex());
+        }
     }
 
     /// <summary>获取网络流，检查并具备断线重连能力</summary>

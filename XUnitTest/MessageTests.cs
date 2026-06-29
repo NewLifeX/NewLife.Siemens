@@ -94,6 +94,113 @@ public class MessageTests
         Assert.Equal(0x03, bytes[6]);
         Assert.Equal(0xC0, bytes[7]);
     }
+
+    [Fact(DisplayName = "SetupMessage GTM 扩展写入")]
+    public void SetupMessage_WithGTM_Write()
+    {
+        var setup = new SetupMessage
+        {
+            MaxAmqCaller = 0x0001,
+            MaxAmqCallee = 0x0001,
+            PduLength = 960,
+            HasGtm = true,
+            GtmData = [0x00, 0x00, 0x00, 0x00, 0x00],
+        };
+
+        var writer = new Binary { IsLittleEndian = false };
+        setup.Write(writer);
+        var bytes = writer.GetBytes();
+
+        // 标准8字节 + GTM扩展5字节 = 13字节
+        Assert.Equal(13, bytes.Length);
+        Assert.Equal(0xF0, bytes[0]);
+        Assert.Equal(0x00, bytes[1]);
+        Assert.Equal(0x00, bytes[2]);
+        Assert.Equal(0x01, bytes[3]); // MaxAmqCaller hi
+        Assert.Equal(0x00, bytes[4]);
+        Assert.Equal(0x01, bytes[5]); // MaxAmqCallee lo
+        Assert.Equal(0x03, bytes[6]); // PduLength hi
+        Assert.Equal(0xC0, bytes[7]); // PduLength lo
+        // GTM 扩展（5字节全0）
+        Assert.Equal(0x00, bytes[8]);
+        Assert.Equal(0x00, bytes[9]);
+        Assert.Equal(0x00, bytes[10]);
+        Assert.Equal(0x00, bytes[11]);
+        Assert.Equal(0x00, bytes[12]);
+    }
+
+    [Fact(DisplayName = "SetupMessage GTM 扩展读写往返")]
+    public void SetupMessage_WithGTM_Roundtrip()
+    {
+        var setup = new SetupMessage
+        {
+            MaxAmqCaller = 0x0001,
+            MaxAmqCallee = 0x0001,
+            PduLength = 480,
+            HasGtm = true,
+            GtmData = [0x00, 0x00, 0x00, 0x01, 0x00], // PLC 响应：S7-1200
+        };
+
+        var writer = new Binary { IsLittleEndian = false };
+        setup.Write(writer);
+        var bytes = writer.GetBytes();
+
+        // 读取回来
+        var setup2 = new SetupMessage();
+        setup2.Read(new Binary { Stream = new MemoryStream(bytes), IsLittleEndian = false });
+
+        Assert.Equal(S7Functions.Setup, setup2.Code);
+        Assert.Equal(0x0001, setup2.MaxAmqCaller);
+        Assert.Equal(0x0001, setup2.MaxAmqCallee);
+        Assert.Equal(480, setup2.PduLength);
+        Assert.True(setup2.HasGtm);
+        Assert.Equal(5, setup2.GtmData.Length);
+        Assert.Equal(0x00, setup2.GtmData[0]);
+        Assert.Equal(0x00, setup2.GtmData[1]);
+        Assert.Equal(0x00, setup2.GtmData[2]);
+        Assert.Equal(0x01, setup2.GtmData[3]);
+        Assert.Equal(0x00, setup2.GtmData[4]);
+    }
+
+    [Fact(DisplayName = "SetupMessage 无GTM时保持向后兼容")]
+    public void SetupMessage_WithoutGTM_NoExtension()
+    {
+        var setup = new SetupMessage
+        {
+            MaxAmqCaller = 0x0001,
+            MaxAmqCallee = 0x0001,
+            PduLength = 960,
+            // HasGtm 默认 false
+        };
+
+        var writer = new Binary { IsLittleEndian = false };
+        setup.Write(writer);
+        var bytes = writer.GetBytes();
+
+        // 标准8字节，无GTM扩展
+        Assert.Equal(8, bytes.Length);
+
+        var setup2 = new SetupMessage();
+        setup2.Read(new Binary { Stream = new MemoryStream(bytes), IsLittleEndian = false });
+
+        Assert.False(setup2.HasGtm);
+        Assert.Empty(setup2.GtmData);
+    }
+
+    [Fact(DisplayName = "SetupMessage S7-1500 GTM 类型解析")]
+    public void SetupMessage_GTM_S71500_Type()
+    {
+        // PLC 响应 S7-1500 的 GTM 数据
+        var raw = new Byte[] { 0xF0, 0x00, 0x00, 0x01, 0x00, 0x01, 0x01, 0xE0, 0x00, 0x00, 0x00, 0x02, 0x00 };
+
+        var setup = new SetupMessage();
+        setup.Read(new Binary { Stream = new MemoryStream(raw), IsLittleEndian = false });
+
+        Assert.Equal(0x01E0, setup.PduLength); // 480
+        Assert.True(setup.HasGtm);
+        // GTM 第4字节=0x02 表示 S7-1500
+        Assert.Equal(0x02, setup.GtmData[3]);
+    }
     #endregion
 
     #region RequestItem
