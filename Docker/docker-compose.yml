@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  s7server:
+    build:
+      context: ..
+      dockerfile: Docker/Dockerfile
+    ports:
+      - "102:102"
+    restart: unless-stopped
+    # S7Server 模拟器启动（需在 S7Server 项目中加入 Main 入口或使用 Test 项目）
+    # 当前配置为运行交叉兼容测试
+    command: dotnet test XUnitTest/XUnitTest.csproj --filter "Category=CrossCompatibility"
+
+  benchmark:
+    build:
+      context: ..
+      dockerfile: Docker/Dockerfile
+    profiles:
+      - benchmark
+    command: dotnet run -c Release --project BenchmarkTest -- --filter *CrossLib*

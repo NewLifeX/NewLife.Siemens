@@ -1,5 +1,25 @@
 # NewLife.Siemens 版本更新记录
 
+## v1.2.2026.0630 (2026-06-30)
+
+### 测试与质量
+- **竞品交叉兼容测试**：新增 `S7CrossCompatibilityTests`（8 个用例），验证 NewLife.Siemens S7Server 与 S7netplus 的互操作性
+  - N2 模式（S7netplus → 本库 S7Server）：连接读取、写入回读、字节级一致性、批量读写 4 个完整交叉测试
+  - N3 模式（自通信）：超 PDU 分段、位操作、多 CPU 类型 TSAP 协商
+- **跨库性能对比基准**：新增 `CrossLibBenchmarks`（8 项基准），对比本库与 S7netplus 在地址解析、消息构建、读写延迟方面的性能
+- **S7netplus 交叉验证**：引入 S7netplus 0.20.0 作为测试与基准依赖
+
+### 基础设施
+- **GitHub Actions CI**：新增 `.github/workflows/dotnet.yml`，push/PR 触发 ubuntu + windows 双平台构建与测试
+- **Docker 开发环境**：新增 `Docker/` 目录，含 Dockerfile、docker-compose.yml 及 README
+
+### 文档
+- **S7Plus 与 Siemens Web API 技术分析**：新增 `Doc/S7Plus与WebAPI分析.md`，深度分析后建议不做，保持 S7 Classic 定位
+- **竞品分析报告更新**：修正 GTM 和密码保护两处过期数据（❌ → ✅），更新差距分析和行动建议
+- **NuGet 包发布说明更新**：`PackageReleaseNotes` 覆盖全部新增功能
+
+---
+
 ## v1.2.2026.0502 (2026-05-02)
 
 ### 协议与架构

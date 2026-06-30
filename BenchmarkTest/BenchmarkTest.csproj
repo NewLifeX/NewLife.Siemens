@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.14.1" />
+    <PackageReference Include="S7netplus" Version="0.20.0" />
   </ItemGroup>
 
   <ItemGroup>
