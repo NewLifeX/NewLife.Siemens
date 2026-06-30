@@ -1,4 +1,5 @@
 using NewLife.Siemens.Messages;
+using NewLife.Siemens.Models;
 
 namespace NewLife.Siemens.Protocols;
 
@@ -199,6 +200,106 @@ public partial class S7Client
 
         var rs = await RequestAsync(msg, cancellationToken).ConfigureAwait(false);
         return rs?.Parameters.OfType<UserDataParameter>().FirstOrDefault();
+    }
+    #endregion
+
+    #region 密码认证
+    /// <summary>向 PLC 发送会话密码以获取操作权限（S7-1200/1500）</summary>
+    /// <param name="password">TIA Portal 中设置的 8 位密码（ASCII，不足8位自动空格补齐）</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>认证后的保护级别（NoProtection=成功获取完全权限）</returns>
+    /// <remarks>
+    /// 使用 S7 UserData CPU 功能组（Function=0x00, SubFunction=0x01=SetPassword）发送密码。
+    /// 密码为 8 字节固定长度，不足 8 字符时右侧空格补齐。
+    /// 认证失败时 PLC 返回原保护级别不变，可据此判断密码是否正确。
+    ///
+    /// 注意：
+    /// - 仅 S7-1200/1500 固件 2.0+ 支持此功能
+    /// - 需先在 TIA Portal 中为 CPU 配置访问级别和密码
+    /// - 连接关闭后认证状态自动清除
+    /// </remarks>
+    public async Task<ProtectionLevel> SetPasswordAsync(String password, CancellationToken cancellationToken = default)
+    {
+        if (String.IsNullOrEmpty(password))
+            throw new ArgumentNullException(nameof(password));
+
+        // 密码固定 8 字节，ASCII 编码，不足右侧空格补齐
+        var pwdBytes = new Byte[8];
+        var ascii = System.Text.Encoding.ASCII.GetBytes(password);
+        var copyLen = Math.Min(ascii.Length, 8);
+        Array.Copy(ascii, 0, pwdBytes, 0, copyLen);
+        for (var i = copyLen; i < 8; i++)
+            pwdBytes[i] = 0x20; // 空格补齐
+
+        WriteLog("SetPassword: 发送密码认证（{0} 字符）", password.Length);
+
+        var param = new UserDataParameter
+        {
+            ExtraByte = 0x01,
+            Function = 0x00,     // CPU 功能组（请求）
+            SubFunction = 0x01,  // SetPassword
+            Data = pwdBytes,
+        };
+
+        var rs = await InvokeUserDataAsync(param, cancellationToken).ConfigureAwait(false);
+        if (rs == null)
+            throw new InvalidOperationException("SetPassword：PLC 无响应");
+
+        // 响应数据：FF 09 00 04 [level] [reserved] [reserved] [reserved]
+        var level = ProtectionLevel.NoProtection;
+        if (rs.Data is { Length: >= 4 })
+        {
+            level = (ProtectionLevel)(rs.Data[0] & 0x03);
+            WriteLog("SetPassword: 认证后保护级别={0}", level);
+        }
+
+        return level;
+    }
+
+    /// <summary>清除当前会话的密码认证状态，恢复 PLC 到原始保护级别</summary>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <remarks>
+    /// 使用 CPU 功能组 SubFunction=0x02（ClearPassword）。
+    /// 连接关闭时认证状态自动清除，通常无需显式调用。
+    /// </remarks>
+    public async Task ClearPasswordAsync(CancellationToken cancellationToken = default)
+    {
+        WriteLog("ClearPassword: 清除密码认证");
+
+        var param = new UserDataParameter
+        {
+            ExtraByte = 0x01,
+            Function = 0x00,     // CPU 功能组（请求）
+            SubFunction = 0x02,  // ClearPassword
+        };
+
+        var rs = await InvokeUserDataAsync(param, cancellationToken).ConfigureAwait(false);
+        if (rs == null)
+            WriteLog("ClearPassword: PLC 无响应（可能已断开）");
+    }
+
+    /// <summary>读取 PLC 当前保护级别（无需密码）</summary>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <returns>当前保护级别</returns>
+    public async Task<ProtectionLevel> ReadProtectionLevelAsync(CancellationToken cancellationToken = default)
+    {
+        WriteLog("ReadProtectionLevel: 查询保护级别");
+
+        // 使用 CPU 功能组 SubFunction=0x03 或读取 SZL 0x0232
+        // 部分固件版本通过 SZL 0x0232 Index 0x0004 返回保护信息
+        var data = await ReadSzlAsync(0x0232, 0x0004, cancellationToken).ConfigureAwait(false);
+
+        // SZL 0232 Index 0004 格式：
+        // [0..3]=szlId+index, [4..5]=recLen, [6..7]=recCount
+        // [8]=level, [9]=reserved, ...
+        if (data is { Length: >= 9 })
+        {
+            var level = (ProtectionLevel)(data[8] & 0x03);
+            WriteLog("ReadProtectionLevel: 当前级别={0}", level);
+            return level;
+        }
+
+        return ProtectionLevel.NoProtection;
     }
     #endregion
 }

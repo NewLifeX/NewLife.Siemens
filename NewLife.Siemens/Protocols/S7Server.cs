@@ -105,6 +105,12 @@ public class S7Server : NetServer<S7Session>
     /// <summary>模拟的 CPU 运行状态（初始为 Run）</summary>
     public S7CpuStatus CpuStatus { get; internal set; } = S7CpuStatus.Run;
 
+    /// <summary>模拟的 CPU 保护级别（默认无保护）</summary>
+    public ProtectionLevel ProtectionLevel { get; set; } = ProtectionLevel.NoProtection;
+
+    /// <summary>模拟的 CPU 密码（8字节ASCII，空=无密码）。仅当 ProtectionLevel != NoProtection 时生效</summary>
+    public String? SimulatedPassword { get; set; }
+
     /// <summary>模拟SZL数据字典（Key=szlId左移16位或szlIndex，Value=原始SZL记录字节）</summary>
     private readonly Dictionary<UInt32, Byte[]> _szlData = [];
 
@@ -689,6 +695,54 @@ public class S7Session : NetSession<S7Server>
                     ReturnCode = 0xFF,
                     TransportSize = 0x09,
                     Data = szlData,
+                };
+            }
+        }
+
+        // Function=0x00 → CPU 功能组（密码认证）
+        else if (request.Function == 0x00)
+        {
+            if (request.SubFunction == 0x01) // SetPassword
+            {
+                var pwd = request.Data is { Length: >= 8 }
+                    ? System.Text.Encoding.ASCII.GetString(request.Data, 0, 8).TrimEnd()
+                    : null;
+                WriteLog("SetPassword: 收到密码认证（{0}）", pwd ?? "(空)");
+
+                // 验证密码
+                var expected = Host.SimulatedPassword?.TrimEnd();
+                var success = Host.ProtectionLevel == ProtectionLevel.NoProtection
+                    || String.Equals(pwd, expected, StringComparison.Ordinal);
+
+                var rspData = new Byte[4];
+                rspData[0] = success ? (Byte)ProtectionLevel.NoProtection : (Byte)Host.ProtectionLevel;
+                rspData[1] = 0x00;
+                rspData[2] = 0x00;
+                rspData[3] = 0x00;
+
+                WriteLog("SetPassword: 认证{0}，返回级别={1}", success ? "成功" : "失败", (ProtectionLevel)rspData[0]);
+
+                return new UserDataParameter
+                {
+                    ExtraByte = 0x01,
+                    Function = 0x80,    // CPU 功能组响应
+                    SubFunction = 0x01,
+                    ReturnCode = 0xFF,
+                    TransportSize = 0x09,
+                    Data = rspData,
+                };
+            }
+            if (request.SubFunction == 0x02) // ClearPassword
+            {
+                WriteLog("ClearPassword: 清除密码认证");
+                return new UserDataParameter
+                {
+                    ExtraByte = 0x01,
+                    Function = 0x80,
+                    SubFunction = 0x02,
+                    ReturnCode = 0xFF,
+                    TransportSize = 0x09,
+                    Data = [],
                 };
             }
         }

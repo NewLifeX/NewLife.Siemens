@@ -39,6 +39,15 @@ public partial class S7Client : DisposeBase, ILogFeature
     /// </remarks>
     public Boolean AllowPlcControl { get; set; }
 
+    /// <summary>PLC 会话密码（S7-1200/1500）。
+    /// 设置后 OpenAsync 会在连接建立后自动调用 SetPasswordAsync 进行认证。
+    /// null 或空字符串表示不进行密码认证。</summary>
+    /// <remarks>
+    /// 密码为 TIA Portal 中配置的 8 位 ASCII 字符串（不足8位自动空格补齐）。
+    /// 认证失败不影响连接建立，但后续操作将受 PLC 保护级别限制。
+    /// </remarks>
+    public String? Password { get; set; }
+
     private TcpClient? _client;
     private NetworkStream? _stream;
     private Int32 _sequence;
@@ -97,6 +106,20 @@ public partial class S7Client : DisposeBase, ILogFeature
             cancellationToken.ThrowIfCancellationRequested();
             await RequestConnection(stream, cancellationToken).ConfigureAwait(false);
             await SetupConnection(stream, cancellationToken).ConfigureAwait(false);
+
+            // 如果设置了密码，自动进行会话认证
+            if (!String.IsNullOrEmpty(Password))
+            {
+                WriteLog("OpenAsync: 自动密码认证（{0} 字符）", Password!.Length);
+                try
+                {
+                    await SetPasswordAsync(Password!, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    WriteLog("OpenAsync: 密码认证失败——{0}", ex.Message);
+                }
+            }
         }
         catch (Exception)
         {
