@@ -4,6 +4,7 @@ using NewLife.Siemens.Messages;
 using NewLife.Siemens.Models;
 using NewLife.Siemens.Protocols;
 using S7.Net;
+using CpuType = NewLife.Siemens.Models.CpuType;
 using DataType = NewLife.Siemens.Models.DataType;
 using VarType = NewLife.Siemens.Models.VarType;
 

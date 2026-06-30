@@ -6,6 +6,7 @@ using NewLife.Siemens.Models;
 using NewLife.Siemens.Protocols;
 using S7.Net;
 using Xunit;
+using CpuType = NewLife.Siemens.Models.CpuType;
 using DataType = NewLife.Siemens.Models.DataType;
 using VarType = NewLife.Siemens.Models.VarType;
 
@@ -71,11 +72,10 @@ public class S7CrossCompatibilityTests
     /// S7netplus 使用 `Plc(CpuType, IP, port, rack, slot)` 构造函数，支持自定义端口。
     /// </remarks>
     [Fact]
-    [DisplayName("N2-连接与读取_S7netplus可连接S7Server并读取预置数据")]
     public void N2_ConnectAndRead_S7netplus_Connects_And_Reads()
     {
         // ═══ 1. 启动 S7Server + 预置数据 ═══
-        const Int32 port = 10238;
+        const Int32 port = 10300;
         using var server = CreateServer(port);
         server.Start();
         WaitForServer(port);
@@ -96,16 +96,20 @@ public class S7CrossCompatibilityTests
         {
             Assert.True(s7net.IsConnected);
 
-            // 读取 Int16 (word)
-            var wordVal = (Int16)s7net.Read("DB1.DBW0");
+            // 读取 Int16 (word) —— S7netplus 返回 UInt16，需 Convert 转换
+            var wordVal = Convert.ToInt16(s7net.Read("DB1.DBW0"));
             Assert.Equal((Int16)2026, wordVal);
 
-            // 读取 Int32 (dword)
-            var dintVal = (Int32)s7net.Read("DB1.DBD20");
+            // 读取 Int32 (dword) —— S7netplus 返回 UInt32，需 Convert 转换
+            var dintVal = Convert.ToInt32(s7net.Read("DB1.DBD20"));
             Assert.Equal(100000, dintVal);
 
-            // 读取 Single (real)
-            var realVal = (Single)s7net.Read("DB1.DBD10");
+            // 读取 Single (real) —— S7netplus 不自动解析浮点，用 ReadBytes + 大端转小端
+            var realBytes = s7net.ReadBytes(S7.Net.DataType.DataBlock, 1, 10, 4);
+            Assert.Equal(4, realBytes.Length);
+            // S7 协议大端序 → .NET 小端序
+            Array.Reverse(realBytes);
+            var realVal = BitConverter.ToSingle(realBytes, 0);
             Assert.Equal(3.14f, realVal, 3);
 
             // 读取位
@@ -127,11 +131,10 @@ public class S7CrossCompatibilityTests
     /// 这是真正的跨库互操作验证：第三方的写 → 我们的读。
     /// </remarks>
     [Fact]
-    [DisplayName("N2-写入回读_S7netplus写入后本库S7Client可读回")]
     public void N2_WriteThenRead_OurClient_Reads_S7netplus_Written_Data()
     {
         // ═══ 1. 启动 S7Server ═══
-        const Int32 port = 10239;
+        const Int32 port = 10301;
         using var server = CreateServer(port);
         server.Start();
         WaitForServer(port);
@@ -178,10 +181,9 @@ public class S7CrossCompatibilityTests
     /// 验证两库在协议实现层面的一致性。
     /// </remarks>
     [Fact]
-    [DisplayName("N2-字节级一致_S7netplus与本库ReadBytes结果一致")]
     public void N2_ByteLevelConsistency_S7netplus_And_OurClient_SameBytes()
     {
-        const Int32 port = 10243;
+        const Int32 port = 10302;
         using var server = CreateServer(port);
         server.Start();
         WaitForServer(port);
@@ -217,11 +219,10 @@ public class S7CrossCompatibilityTests
 
     /// <summary>批量多变量读写：N2 模式下跨库一致性验证</summary>
     [Fact]
-    [DisplayName("N2-批量读写_S7Server多变量批量读写一致性")]
     public void N2_BatchReadWrite_Consistency()
     {
         // ═══ 准备 ═══
-        const Int32 port = 10240;
+        const Int32 port = 10303;
         using var server = CreateServer(port);
         server.Start();
         WaitForServer(port);
@@ -237,9 +238,9 @@ public class S7CrossCompatibilityTests
         using (var s7net = new Plc(S7.Net.CpuType.S71200, "127.0.0.1", port, 0, 0))
         {
             s7net.Open();
-            var v0 = (Int16)s7net.Read("DB3.DBW0");
-            var v2 = (Int16)s7net.Read("DB3.DBW2");
-            var v4 = (Int16)s7net.Read("DB3.DBW4");
+            var v0 = Convert.ToInt16(s7net.Read("DB3.DBW0"));
+            var v2 = Convert.ToInt16(s7net.Read("DB3.DBW2"));
+            var v4 = Convert.ToInt16(s7net.Read("DB3.DBW4"));
             s7net.Close();
 
             Assert.Equal((Int16)10, v0);
@@ -263,11 +264,12 @@ public class S7CrossCompatibilityTests
         ourClient.ReadMultipleVars(items);
 
         // 验证与本库读取一致（与 S7netplus 读取结果吻合）
-        Assert.Equal((Int16)10, items[0].Value);
-        Assert.Equal((Int16)20, items[1].Value);
-        Assert.Equal((Int16)30, items[2].Value);
-        Assert.Equal((Int16)40, items[3].Value);
-        Assert.Equal((Int16)50, items[4].Value);
+        // 注意：ReadMultipleVars 对 Word 类型返回 UInt16，需 Convert 转换比较
+        Assert.Equal((Int16)10, Convert.ToInt16(items[0].Value));
+        Assert.Equal((Int16)20, Convert.ToInt16(items[1].Value));
+        Assert.Equal((Int16)30, Convert.ToInt16(items[2].Value));
+        Assert.Equal((Int16)40, Convert.ToInt16(items[3].Value));
+        Assert.Equal((Int16)50, Convert.ToInt16(items[4].Value));
 
         ourClient.Close();
     }
@@ -277,10 +279,9 @@ public class S7CrossCompatibilityTests
 
     /// <summary>S7Server 大块数据读写超过 PDU 限制时自动分段</summary>
     [Fact]
-    [DisplayName("N3-超PDU分段_S7Server大块数据自动分段读写")]
     public void N3_LargeData_AutoSegmentation()
     {
-        const Int32 port = 10241;
+        const Int32 port = 10304;
         using var server = CreateServer(port);
         server.Start();
         WaitForServer(port);
@@ -307,10 +308,9 @@ public class S7CrossCompatibilityTests
 
     /// <summary>S7Server 位操作正确性（Set/Get Bit）</summary>
     [Fact]
-    [DisplayName("N3-位操作_S7Server位读写正确性")]
     public void N3_BitOperations_Correctness()
     {
-        const Int32 port = 10242;
+        const Int32 port = 10305;
         using var server = CreateServer(port);
         server.Start();
         WaitForServer(port);
@@ -342,15 +342,14 @@ public class S7CrossCompatibilityTests
 
     /// <summary>S7Server 不同 CPU 类型的 TSAP 协商都正常</summary>
     [Fact]
-    [DisplayName("N3-多CPU类型_不同CPU类型TSAP协商均正常")]
     public void N3_MultipleCpuTypes_TsapNegotiation()
     {
         var cpuTypes = new[] { CpuType.S7200, CpuType.S7200Smart, CpuType.S7300, CpuType.S7400, CpuType.S71200, CpuType.S71500, CpuType.Logo0BA8 };
 
         foreach (var cpuType in cpuTypes)
         {
-            // 每个 CPU 类型用不同端口避免冲突
-            var port = 10250 + (Int32)cpuType;
+            // 每个 CPU 类型用不同端口避免冲突（10320+ 避免与 S7PLCTests 等争用）
+            var port = 10320 + (Int32)cpuType;
             using var server = CreateServer(port);
             server.Start();
             WaitForServer(port);
