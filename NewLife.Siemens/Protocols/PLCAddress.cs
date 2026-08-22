@@ -157,6 +157,27 @@ public class PLCAddress
                 address = Int32.Parse(input[2..]);
                 varType = VarType.DWord;
                 return;
+            case "VB":
+                // Variable memory byte (S7-200)
+                dataType = DataType.DataBlock;
+                dbNumber = 1;
+                address = Int32.Parse(input[2..]);
+                varType = VarType.Byte;
+                return;
+            case "VW":
+                // Variable memory word (S7-200)
+                dataType = DataType.DataBlock;
+                dbNumber = 1;
+                address = Int32.Parse(input[2..]);
+                varType = VarType.Word;
+                return;
+            case "VD":
+                // Variable memory double-word (S7-200)
+                dataType = DataType.DataBlock;
+                dbNumber = 1;
+                address = Int32.Parse(input[2..]);
+                varType = VarType.DWord;
+                return;
             default:
                 switch (input[..1])
                 {
@@ -176,6 +197,12 @@ public class PLCAddress
                     case "M":
                         // Memory
                         dataType = DataType.Memory;
+                        varType = VarType.Bit;
+                        break;
+                    case "V":
+                        // Variable memory bit (S7-200)
+                        dataType = DataType.DataBlock;
+                        dbNumber = 1;
                         varType = VarType.Bit;
                         break;
                     case "T":

@@ -379,4 +379,61 @@ public class PLCAddressTests
         Assert.Throws<InvalidDataException>(() => new PLCAddress("X0.0"));
     }
     #endregion
+
+    #region V-area addresses (S7-200 variable memory)
+    [Fact]
+    public void VMemory_VB()
+    {
+        var addr = new PLCAddress("VB200");
+        Assert.Equal(DataType.DataBlock, addr.DataType);
+        Assert.Equal(1, addr.DbNumber);
+        Assert.Equal(200, addr.StartByte);
+        Assert.Equal(VarType.Byte, addr.VarType);
+        Assert.Equal(-1, addr.BitNumber);
+    }
+
+    [Fact]
+    public void VMemory_VW()
+    {
+        var addr = new PLCAddress("VW100");
+        Assert.Equal(DataType.DataBlock, addr.DataType);
+        Assert.Equal(1, addr.DbNumber);
+        Assert.Equal(100, addr.StartByte);
+        Assert.Equal(VarType.Word, addr.VarType);
+        Assert.Equal(-1, addr.BitNumber);
+    }
+
+    [Fact]
+    public void VMemory_VD()
+    {
+        var addr = new PLCAddress("VD200");
+        Assert.Equal(DataType.DataBlock, addr.DataType);
+        Assert.Equal(1, addr.DbNumber);
+        Assert.Equal(200, addr.StartByte);
+        Assert.Equal(VarType.DWord, addr.VarType);
+        Assert.Equal(-1, addr.BitNumber);
+    }
+
+    [Fact]
+    public void VMemory_Bit()
+    {
+        var addr = new PLCAddress("V200.0");
+        Assert.Equal(DataType.DataBlock, addr.DataType);
+        Assert.Equal(1, addr.DbNumber);
+        Assert.Equal(200, addr.StartByte);
+        Assert.Equal(VarType.Bit, addr.VarType);
+        Assert.Equal(0, addr.BitNumber);
+    }
+
+    [Fact]
+    public void VMemory_Bit7()
+    {
+        var addr = new PLCAddress("V100.7");
+        Assert.Equal(DataType.DataBlock, addr.DataType);
+        Assert.Equal(1, addr.DbNumber);
+        Assert.Equal(100, addr.StartByte);
+        Assert.Equal(VarType.Bit, addr.VarType);
+        Assert.Equal(7, addr.BitNumber);
+    }
+    #endregion
 }
