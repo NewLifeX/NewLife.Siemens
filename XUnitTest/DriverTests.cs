@@ -352,10 +352,15 @@ internal class TestDevice : NewLife.IoT.IDevice
     public NewLife.IoT.ThingSpecification.ThingSpec? Specification { get; set; }
     public NewLife.IoT.ThingModels.IPoint[]? Points { get; set; }
     public IDictionary<String, Delegate>? Services { get; set; }
-    public System.Threading.Tasks.Task Start() => System.Threading.Tasks.Task.CompletedTask;
-    public void Stop() { }
-    public NewLife.IoT.Models.IDeviceInfo[] SetOnline(NewLife.IoT.Models.IDeviceInfo[] devices) => [];
-    public NewLife.IoT.Models.IDeviceInfo[] SetOffline(String[] codes) => [];
+
+    public System.Threading.Tasks.Task StartAsync(CancellationToken cancellationToken) => System.Threading.Tasks.Task.CompletedTask;
+    public System.Threading.Tasks.Task StopAsync(CancellationToken cancellationToken) => System.Threading.Tasks.Task.CompletedTask;
+    public System.Threading.Tasks.Task<NewLife.IoT.Models.IDeviceInfo[]> SetOnlineAsync(NewLife.IoT.Models.IDeviceInfo[] devices, CancellationToken cancellationToken) => System.Threading.Tasks.Task.FromResult<NewLife.IoT.Models.IDeviceInfo[]>([]);
+    public System.Threading.Tasks.Task<NewLife.IoT.Models.IDeviceInfo[]> SetOfflineAsync(String[] devices, CancellationToken cancellationToken) => System.Threading.Tasks.Task.FromResult<NewLife.IoT.Models.IDeviceInfo[]>([]);
+    public System.Threading.Tasks.Task<Int32> PostPropertyAsync(String deviceCode, Object items, CancellationToken cancellationToken) => System.Threading.Tasks.Task.FromResult(0);
+    public System.Threading.Tasks.Task<Int32> PostDataAsync(String deviceCode, NewLife.IoT.ThingModels.DataModel[] items, CancellationToken cancellationToken) => System.Threading.Tasks.Task.FromResult(0);
+    public System.Threading.Tasks.Task<Int32> PostEventAsync(String deviceCode, NewLife.IoT.ThingModels.EventModel[] items, CancellationToken cancellationToken) => System.Threading.Tasks.Task.FromResult(0);
+
     public void PostProperty() { }
     public void SetProperty(String name, Object? value) { }
     public Boolean AddData(String name, String value) => true;
