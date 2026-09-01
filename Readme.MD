@@ -34,6 +34,8 @@ Nuget：NewLife.Siemens
 | 批量多变量读写（ReadMultipleVars） | ✅ 已完成 | 单次 PDU 打包多个变量，自动分批 |
 | SZL 诊断读取（CPU 状态、模块信息） | ✅ 已完成 | ReadSzlAsync / ReadCpuInfoAsync |
 | PLC 时钟读写 | ✅ 已完成 | ReadClockAsync / WriteClockAsync |
+| GTM 全局类型消息支持（S7-1200/1500） | ✅ 已完成 | 全局类型消息（GTM）读写 |
+| 密码保护连接与认证 | ✅ 已完成 | ProtectionLevel 模型，S7Client/S7Server 均支持 |
 
 ## 主要特点
 
