@@ -269,7 +269,7 @@ The benchmark suite covers:
 | Block upload/download | ✅ | ❌ | ❌ | ❌ |
 | License | MIT | MIT | MIT | Commercial |
 | Multi-target TFMs | 4 | 2 | 2 | 7+ |
-| Package size | 413 KB | 372 KB | 64 KB | 9.5 MB |
+| Package size | 427 KB | 372 KB | 64 KB | 9.5 MB |
 
 > See `Doc/竞品分析报告.md` for detailed competitive analysis (Chinese).
 
@@ -351,7 +351,7 @@ NewLife is a layered ecosystem of independently versioned open-source projects. 
 | [GitCandy](https://github.com/NewLifeX/GitCandy) | Self-hosted Git source code management system. | — |
 | [LuckyClover](https://github.com/NewLifeX/LuckyClover) | Installs the matching .NET runtime automatically when launched from an older host. | — |
 
-> Badges show the primary package of each project; theme, extension and satellite packages are listed on their NuGet pages.The 30+ packages not listed here (FTP, LoRa, Office extensions, protocol drivers and more) are available under the [NewLifeX organization](https://github.com/NewLifeX) and on [newlifex.com](https://newlifex.com).
+> Badges show the primary package of each project; theme, extension and satellite packages are listed on their NuGet pages. The 30+ packages not listed here (FTP, LoRa, Office extensions, protocol drivers and more) are available under the [NewLifeX organization](https://github.com/NewLifeX) and on [newlifex.com](https://newlifex.com).
 
 ## Team
 

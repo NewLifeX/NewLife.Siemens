@@ -5,28 +5,92 @@ on:
     tags: [ v* ]
   workflow_dispatch:
 
+# 必须同时声明：缺 packages: write 会让 GitHub Packages 推送 403，缺 contents: write 无法创建 Release
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   build-publish:
-
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        # SourceLink 需要完整提交历史才能生成源码链接
+        fetch-depth: 0
     - name: Setup dotNET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: |
-          6.x
-          7.x
-          8.x
-          9.x
-          10.x
-    - name: Restore
+        dotnet-version: 8.0.x
+        cache: true
+        cache-dependency-path: '**/*.csproj'
+    - name: Get Version
+      run: echo "VERSION=$(date '+%Y.%m%d')" >> "$GITHUB_ENV"
+    - name: Pack
+      run: dotnet pack --version-suffix "$VERSION" -c Release -o out NewLife.Siemens/NewLife.Siemens.csproj
+    - name: Publish to GitHub Packages
+      id: ghpackages
+      # 备用镜像渠道，失败只告警，不阻断 NuGet.org 正式发布
+      continue-on-error: true
+      run: dotnet nuget push "out/*.nupkg" --skip-duplicate --source https://nuget.pkg.github.com/NewLifeX/index.json --api-key ${{ github.token }}
+    - name: Publish to NuGet.org
+      id: nuget
+      run: dotnet nuget push "out/*.nupkg" --skip-duplicate --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.nugetKey }}
+    - name: Create GitHub Release
+      id: release
+      # 仅 tag 推送时创建；手工触发（master 无 tag）只发包
+      if: startsWith(github.ref, 'refs/tags/')
+      # 观察期：失败只告警，不影响已完成的发包；结尾 Publish Summary 会显式标红
+      continue-on-error: true
+      env:
+        GH_TOKEN: ${{ github.token }}
       run: |
-        dotnet restore NewLife.Siemens/NewLife.Siemens.csproj
-    - name: Build
+        set -euo pipefail
+        tag="$GITHUB_REF_NAME"
+        version="${tag#v}"
+
+        # 幂等：同 tag 已有 Release 直接跳过，失败重跑不会报错
+        if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          echo "Release $tag 已存在，跳过"
+          exit 0
+        fi
+
+        # 发布说明优先取 ChangeLog.md 中当前版本段落（标题形如 "## v1.3.2026.1024 (2026-10-24)"）
+        awk -v v="$version" '
+          {
+            if (!found) {
+              if ($0 ~ "^##[ \t]+v?" v "([ \t(]|$)") { found = 1; print; next }
+            } else {
+              if ($0 ~ "^##[ \t]") exit
+              print
+            }
+          }
+        ' ChangeLog.md > release-notes.md || true
+
+        args=(--repo "$GITHUB_REPOSITORY" --title "$tag" --verify-tag)
+        if [ -s release-notes.md ]; then
+          args+=(--notes-file release-notes.md)
+          echo "发布说明取自 ChangeLog.md 的 $version 段落"
+        else
+          args+=(--generate-notes)
+          echo "ChangeLog.md 未找到 $version 段落，改用自动生成说明"
+        fi
+
+        gh release create "$tag" "${args[@]}" out/*.nupkg out/*.snupkg
+
+    - name: Publish Summary
+      if: always()
       run: |
-        dotnet pack --no-restore --version-suffix $(date "+%Y.%m%d") -c Release -o out NewLife.Siemens/NewLife.Siemens.csproj
-    - name: Publish
-      run: |
-        dotnet nuget push ./out/*.nupkg --skip-duplicate --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.nugetKey }}
+        {
+          echo "### 发布结果"
+          echo ""
+          echo "| 渠道 | 结果 |"
+          echo "| --- | --- |"
+          echo "| GitHub Packages | ${{ steps.ghpackages.outcome }} |"
+          echo "| NuGet.org | ${{ steps.nuget.outcome }} |"
+          echo "| GitHub Release | ${{ steps.release.outcome }} |"
+          echo ""
+          echo "> GitHub Release 仅 tag 推送时创建；手工触发只发包。"
+        } >> "$GITHUB_STEP_SUMMARY"

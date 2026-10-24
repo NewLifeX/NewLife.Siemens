@@ -28,7 +28,7 @@
     <RepositoryUrl>https://github.com/NewLifeX/NewLife.Siemens</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>物联网;IoT;边缘计算;Edge;新生命团队;NewLife;PLC;$(AssemblyName)</PackageTags>
-    <PackageReleaseNotes>支持S7-1200/1500 GTM全局类型消息扩展；新增密码保护连接与认证(ProtectionLevel)；竞品交叉兼容测试(S7netplus)；跨库性能基准与BenchmarkDotNet基准；Docker开发环境与GitHub Actions CI；英文README与S7Plus/WebAPI技术分析文档</PackageReleaseNotes>
+    <PackageReleaseNotes>升级 NewLife.Core 12.0 与 NewLife.IoT 3.2；TPKT 编解码器迁移到 IMessageCodec 消息协议栈；CI 重构为 GitHub Packages + NuGet.org + GitHub Release 三通道发布；中英文 README 章节对齐</PackageReleaseNotes>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -45,8 +45,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="NewLife.Core" Version="11.19.2026.901" />
-    <PackageReference Include="NewLife.IoT" Version="3.1.2026.801" />
+    <PackageReference Include="NewLife.Core" Version="12.0.2026.1024" />
+    <PackageReference Include="NewLife.IoT" Version="3.2.2026.1024" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using NewLife;
@@ -44,7 +44,7 @@ public class BasicTest
 
         // Parse back
         var tpkt = new TPKT();
-        tpkt.Read(new Packet(bytes));
+        tpkt.Read(new ArrayPacket(bytes));
         Assert.Equal(3, tpkt.Version);
 
         var cotp2 = new COTP();

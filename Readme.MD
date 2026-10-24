@@ -217,6 +217,116 @@ Console.WriteLine($"PLC时间={plcTime:yyyy-MM-dd HH:mm:ss}");
 await client.WriteClockAsync(DateTime.Now);
 ```
 
+### PLC 控制（安全开关）
+
+```csharp
+client.AllowPlcControl = true; // 必须显式开启
+
+await client.PlcStopAsync();        // 停机
+await client.PlcHotRestartAsync();  // 热启动
+await client.PlcColdStartAsync();   // 冷启动
+```
+
+### 结构体映射
+
+```csharp
+// 定义与 TIA Portal DB 布局一致的结构体
+struct MotorData
+{
+    public Boolean Running;
+    public Single Speed;
+    public Int16 Temperature;
+}
+
+// 一行代码读回
+var motor = client.ReadStruct<MotorData>("DB1");
+
+// 一行代码写入
+client.WriteStruct("DB1", motor);
+```
+
+### 内置 PLC 模拟器（用于测试）
+
+```csharp
+var server = new S7Server { Port = 0 };
+server.Start();
+
+// 预置测试数据
+server.SetValue("DB1.DBW0", (Int16)12345);
+server.SetValue("M0.0", true);
+
+var client = new S7Client(CpuType.S71200, "127.0.0.1", server.Port);
+await client.OpenAsync();
+
+var value = client.Read<Int16>("DB1.DBW0"); // 12345
+```
+
+---
+
+## 性能基准
+
+本地运行基准测试：
+
+```shell
+dotnet run -c Release --project BenchmarkTest
+```
+
+基准套件覆盖：
+
+- **PLCAddress 解析** — 地址字符串解析吞吐
+- **S7Message 序列化** — 消息构建/解析速度（含 GTM）
+- **类型化 Read&lt;T&gt;/Write** — 配合 S7Server 的端到端类型转换
+
+## 与同类库对比
+
+| 特性 | NewLife.Siemens | S7netplus | Sharp7 | HslCommunication |
+|---------|:---:|:---:|:---:|:---:|
+| PLC 系列覆盖 | ✅ 全部 | ✅ 全部 | ⚠️ 有限 | ✅ 全部 |
+| 自动重连 | ✅ | ❌ | ❌ | ✅ |
+| 全异步 API | ✅ | ⚠️ 部分 | ❌ | ✅ |
+| IoT 驱动接口 | ✅ | ❌ | ❌ | ❌ |
+| 内置 PLC 模拟器 | ✅ | ❌ | ❌ | ❌ |
+| ReadStruct&lt;T&gt; | ✅ | ❌ | ❌ | ✅ |
+| GTM 支持 | ✅ | ✅ | ❌ | ✅ |
+| SZL 诊断 | ✅ | ❌ | ❌ | ❌ |
+| PLC 时钟读写 | ✅ | ❌ | ❌ | ✅ |
+| 程序块上传/下载 | ✅ | ❌ | ❌ | ❌ |
+| 许可证 | MIT | MIT | MIT | 商业授权 |
+| 多目标框架 | 4 | 2 | 2 | 7+ |
+| 包体积 | 427 KB | 372 KB | 64 KB | 9.5 MB |
+
+> 详细竞品分析见 `Doc/竞品分析报告.md`。
+
+---
+
+## 架构
+
+```
+┌─────────────────────────────────────────────────────┐
+│              Layer 5: IoT Driver                    │
+│  SiemensS7Driver / SiemensParameter / SiemensNode   │
+└──────────────────────┬──────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────┐
+│              Layer 4: S7 Client                     │
+│  S7Client (OpenAsync / ReadBytes / WriteBytes)      │
+└──────┬───────────────────────┬──────────────────────┘
+       │                       │
+┌──────▼──────┐   ┌────────────▼──────────────────────┐
+│ Layer 3:    │   │       Layer 2: COTP               │
+│ S7Message   │   │  COTP (CR/CC/DT frames)           │
+│ SetupMessage│   │  TsapAddress                      │
+│ ReadRequest │   └────────────┬──────────────────────┘
+│ WriteRequest│                │
+└─────────────┘    ┌───────────▼──────────────────────┐
+                   │       Layer 1: TPKT              │
+                   │  TPKT (ISO-on-TCP 4-byte header) │
+                   │  TPKTCodec (stream framing)      │
+                   └───────────┬──────────────────────┘
+                               │
+                      TCP Socket (port 102)
+```
+
 ---
 
 ## 生态版图
@@ -287,3 +397,18 @@ NewLife 生态按依赖分层，各项目独立版本、独立发版。下面的
 ![智能大石头](https://newlifex.com/stone.jpg)
 
 </details>
+
+## 许可证
+
+MIT — 可自由用于商业闭源应用。
+
+## 社区
+
+- 网站：https://newlifex.com
+- GitHub：https://github.com/NewLifeX
+- NuGet：https://www.nuget.org/profiles/NewLifeX
+- QQ 群：1600800 / 1600838
+
+---
+
+*新生命开发团队 — 自 2002 年构建物联网基础设施*

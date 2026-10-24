@@ -202,7 +202,7 @@ public class COTP
         Write(ms);
 
         ms.Position = 0;
-        var pk = new Packet(ms);
+        var pk = new ArrayPacket(ms.ToArray());
         if (withTPKT) return new TPKT { Data = pk }.ToPacket();
 
         return pk;

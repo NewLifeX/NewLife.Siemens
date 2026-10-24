@@ -1,5 +1,24 @@
 # NewLife.Siemens 版本更新记录
 
+## v1.3.2026.1024 (2026-10-24)
+
+### 依赖升级
+- **NewLife.Core 12.0**：升级到 12.0.2026.1024。v12 整删旧帧引擎（`PacketCodec`/`PacketFramer`）、处理器链（`Pipeline`/`Handler`）与 `Packet` 类型
+- **NewLife.IoT 3.2**：升级到 3.2.2026.1024
+
+### 协议与架构
+- **TPKT 编解码器迁移**：`TPKTCodec` 由 `MessageCodec<TPKT>` 改为实现 `IMessageCodec`/`IMessageMatcher`，`TPKT` 实现 `IMessage`，`S7Server` 通过 `Protocol` 属性接入帧泵；帧未到齐时声明 `NeedFullFrame`，整帧到齐后一次性绑定内存体
+- **`Packet` 替换**：`COTP.ToPacket` 改用 `ArrayPacket`（v12 已删除 `Packet` 类型）
+
+### 基础设施
+- **CI 工作流重构**：`test.yml` 以 Ubuntu 为主、Windows 对照，并增加全解决方案编译与基准冒烟作业；`publish.yml` 同时发布 GitHub Packages 与 NuGet.org，并在打 tag 时创建 GitHub Release（发布说明取自本文件对应版本段落）；`publish-beta.yml` 同步双渠道；移除重复的 `dotnet.yml`
+
+### 文档
+- **README 中英对齐**：中文版补齐性能基准、与同类库对比、架构、许可证、社区等章节，英文版修正生态版图注记排版；两语言版本的生态版图与团队介绍与 NewLife.Core 逐字一致
+- **架构设计**：更新 TPKT/TPKTCodec 的编解码器定位说明
+
+---
+
 ## v1.3.2026.0902 (2026-09-02)
 
 ### 协议与功能

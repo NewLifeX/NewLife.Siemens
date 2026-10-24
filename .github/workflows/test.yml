@@ -8,8 +8,39 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  # 单元测试（不含 WinForms 示例工程），优先 Ubuntu，Windows 作为兼容性对照
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup dotNET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+        cache: true
+        cache-dependency-path: '**/*.csproj'
+    - name: Test
+      run: dotnet test XUnitTest/XUnitTest.csproj -c Release --logger "trx;LogFileName=test.trx" --results-directory TestResults
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results-${{ matrix.os }}
+        path: TestResults
+        if-no-files-found: ignore
+
+  # 全解决方案编译校验。TestClient 是 net6.0-windows 的 WinForms 工程，只能在 Windows 上编译
+  build-solution:
+    name: build solution (windows)
+    runs-on: windows-latest
+    timeout-minutes: 30
 
     steps:
     - uses: actions/checkout@v4
@@ -17,13 +48,26 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: |
-          6.x
-          7.x
-          8.x
-          9.x
-          10.x
+          6.0.x
+          8.0.x
+        cache: true
+        cache-dependency-path: '**/*.csproj'
     - name: Build
-      run: dotnet build -c Release
+      run: dotnet build NewLife.Siemens.sln -c Release
 
-    - name: Test
-      run: dotnet test -c Release
+  # 基准测试冒烟：dry 模式只验证基准工程可编译、可启动，不执行完整测量
+  benchmark-smoke:
+    name: benchmark smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup dotNET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+        cache: true
+        cache-dependency-path: '**/*.csproj'
+    - name: Benchmark dry run
+      run: dotnet run -c Release --project BenchmarkTest -- --filter '*PlcAddress*' --job dry

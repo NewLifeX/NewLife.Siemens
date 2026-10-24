@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using NewLife;
 using NewLife.Data;
 using NewLife.Siemens.Protocols;
@@ -29,7 +29,7 @@ public class COTPTests
     {
         var str = "03 00 00 16 11 e0 00 00 00 01 00 c1 02 10 00 c2 02 03 00 c0 01 0a";
         var buf = str.ToHex();
-        var pk = new Packet(buf);
+        var pk = new ArrayPacket(buf);
 
         // 前面有TPKT头
         var tpkt = new TPKT();
@@ -65,7 +65,7 @@ public class COTPTests
     [Fact]
     public void Decode_200smart_CR()
     {
-        var pk = new Packet(plcHead1_200smart);
+        var pk = new ArrayPacket(plcHead1_200smart);
 
         // 前面有TPKT头
         var tpkt = new TPKT();
@@ -99,7 +99,7 @@ public class COTPTests
     [Fact]
     public void Decode_200smart_Data()
     {
-        var pk = new Packet(plcHead2_200smart);
+        var pk = new ArrayPacket(plcHead2_200smart);
 
         // 前面有TPKT头
         var tpkt = new TPKT();
@@ -135,7 +135,7 @@ public class COTPTests
     {
         var str = "03 00 00 16 11 d0 00 01 00 07 00 c0 01 0a c1 02 10 00 c2 02 03 00";
         var buf = str.ToHex();
-        var pk = new Packet(buf);
+        var pk = new ArrayPacket(buf);
 
         // 前面有TPKT头
         var tpkt = new TPKT();
@@ -170,7 +170,7 @@ public class COTPTests
     public void DecodeDT()
     {
         Byte[] plcHead2_200smart = [3, 0, 0, 25, 2, 240, 128, 50, 1, 0, 0, 204, 193, 0, 8, 0, 0, 240, 0, 0, 1, 0, 1, 3, 192];
-        var pk = new Packet(plcHead2_200smart);
+        var pk = new ArrayPacket(plcHead2_200smart);
 
         // 前面有TPKT头
         var tpkt = new TPKT();
@@ -309,7 +309,7 @@ public class COTPTests
         var cotp = new COTP
         {
             Type = PduType.Data,
-            Data = new Packet(new Byte[] { 1, 2, 3 })
+            Data = new ArrayPacket(new Byte[] { 1, 2, 3 })
         };
         var str = cotp.ToString();
         Assert.Contains("Data", str);
@@ -403,7 +403,7 @@ public class COTPTests
             Type = PduType.Data,
             LastDataUnit = true,
             Number = 0,
-            Data = new Packet(payload)
+            Data = new ArrayPacket(payload)
         };
 
         var pk = cotp.ToPacket(false);
@@ -425,7 +425,7 @@ public class COTPTests
         {
             Type = PduType.Data,
             LastDataUnit = true,
-            Data = new Packet(payload)
+            Data = new ArrayPacket(payload)
         };
 
         var pk = cotp.ToPacket(true);
@@ -433,7 +433,7 @@ public class COTPTests
 
         // Parse TPKT first
         var tpkt = new TPKT();
-        tpkt.Read(new Packet(bytes));
+        tpkt.Read(new ArrayPacket(bytes));
         Assert.Equal(3, tpkt.Version);
 
         // Then COTP

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using NewLife;
 using NewLife.Data;
 using NewLife.Siemens.Protocols;
@@ -63,7 +63,7 @@ public class TPKTTests
     {
         // Build a TPKT with 2 bytes of data
         var raw = new Byte[] { 3, 0, 0, 6, 0xAA, 0xBB };
-        var pk = new Packet(raw);
+        var pk = new ArrayPacket(raw);
 
         var tpkt = new TPKT();
         tpkt.Read(pk);
@@ -84,7 +84,7 @@ public class TPKTTests
     {
         // A TPKT with only header (Length = 4, no payload)
         var raw = new Byte[] { 3, 0, 0, 4 };
-        var pk = new Packet(raw);
+        var pk = new ArrayPacket(raw);
 
         var tpkt = new TPKT();
         tpkt.Read(pk);
@@ -100,7 +100,7 @@ public class TPKTTests
         var payload = new Byte[] { 0x01, 0x02, 0x03 };
         var tpkt = new TPKT
         {
-            Data = new Packet(payload)
+            Data = new ArrayPacket(payload)
         };
 
         var pk = tpkt.ToPacket();
@@ -134,13 +134,13 @@ public class TPKTTests
     public void Roundtrip_WriteRead()
     {
         var payload = new Byte[] { 0xDE, 0xAD, 0xBE, 0xEF };
-        var tpkt = new TPKT { Data = new Packet(payload) };
+        var tpkt = new TPKT { Data = new ArrayPacket(payload) };
 
         var pk = tpkt.ToPacket();
         var bytes = pk.ToArray();
 
         var tpkt2 = new TPKT();
-        tpkt2.Read(new Packet(bytes));
+        tpkt2.Read(new ArrayPacket(bytes));
 
         Assert.Equal(3, tpkt2.Version);
         Assert.Equal(8, tpkt2.Length);

@@ -244,8 +244,7 @@ public class S7Server : NetServer<S7Session>
     {
         Port = 102;
         ProtocolType = NetType.Tcp;
-
-        Add(new TPKTCodec());
+        Protocol = new TPKTCodec();
     }
     #endregion
 }

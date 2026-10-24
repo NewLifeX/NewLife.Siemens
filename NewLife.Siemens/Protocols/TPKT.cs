@@ -1,4 +1,5 @@
 ﻿using NewLife.Data;
+using NewLife.Messaging;
 
 namespace NewLife.Siemens.Protocols;
 
@@ -9,7 +10,7 @@ namespace NewLife.Siemens.Protocols;
 /// 一般与COTP一起发送，当作Header段。
 /// 我们常用的RDP协议（remote desktop protocol，windows的远程桌面协议）也是基于TPKT的，TPKT的默认TCP端口为102（RDP为3389）
 /// </remarks>
-public class TPKT
+public class TPKT : Message
 {
     #region 属性
     /// <summary>版本</summary>
@@ -21,8 +22,12 @@ public class TPKT
     /// <summary>长度。包括当前TPKT头和后续数据</summary>
     public UInt16 Length { get; set; }
 
-    /// <summary>数据</summary>
-    public IPacket? Data { get; set; }
+    /// <summary>数据。与消息负载 <see cref="Message.Payload"/> 同步</summary>
+    public IPacket? Data
+    {
+        get => Payload;
+        set => SetBody(value);
+    }
     #endregion
 
     #region 读写
@@ -75,6 +80,12 @@ public class TPKT
 
         //return pk;
     }
+    #endregion
+
+    #region 消息契约
+    /// <summary>根据请求创建配对的响应消息。S7 链路不使用消息级应答配对，恒返回 null</summary>
+    /// <returns>恒为 null</returns>
+    public override IMessage? CreateReply() => null;
     #endregion
 
     /// <summary>读取TPKT数据</summary>
