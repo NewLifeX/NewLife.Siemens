@@ -47,13 +47,12 @@ jobs:
     - name: Setup dotNET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: |
-          6.0.x
-          8.0.x
+        # .slnx 需要 9.0.2xx+ 的 SDK 才能解析
+        dotnet-version: 10.0.x
         cache: true
         cache-dependency-path: '**/*.csproj'
     - name: Build
-      run: dotnet build NewLife.Siemens.sln -c Release
+      run: dotnet build NewLife.Siemens.slnx -c Release
 
   # 基准测试冒烟：dry 模式只验证基准工程可编译、可启动，不执行完整测量
   benchmark-smoke:

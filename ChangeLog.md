@@ -12,6 +12,7 @@
 
 ### 基础设施
 - **CI 工作流重构**：`test.yml` 以 Ubuntu 为主、Windows 对照，并增加全解决方案编译与基准冒烟作业；`publish.yml` 同时发布 GitHub Packages 与 NuGet.org，并在打 tag 时创建 GitHub Release（发布说明取自本文件对应版本段落）；`publish-beta.yml` 同步双渠道；移除重复的 `dotnet.yml`
+- **解决方案文件升级**：`NewLife.Siemens.sln` 迁移为 `.slnx` 新格式（构建需 .NET SDK 9.0.2xx+）
 
 ### 文档
 - **README 中英对齐**：中文版补齐性能基准、与同类库对比、架构、许可证、社区等章节，英文版修正生态版图注记排版；两语言版本的生态版图与团队介绍与 NewLife.Core 逐字一致
