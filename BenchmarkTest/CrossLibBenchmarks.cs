@@ -79,7 +79,7 @@ public class CrossLibBenchmarks
     public void GlobalCleanup()
     {
         _s7netClient?.Close();
-        _s7netClient?.Dispose();
+        (_s7netClient as IDisposable)?.Dispose();
         _ourClient?.Close();
         _ourClient?.Dispose();
         _server?.Dispose();

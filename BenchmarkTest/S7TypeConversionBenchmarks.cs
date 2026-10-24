@@ -25,9 +25,9 @@ public class S7TypeConversionBenchmarks
         _server.SetValue("DB1.DBW0", (Int16)12345);
         _server.SetValue("DB1.DBD4", 3.14159f);
         _server.SetValue("DB1.DBD8", (Int32)99999);
-        _server.SetValue("M0.0", true);
+        _server.SetValue("M0.0", new Byte[] { 1 });
 
-        _client = new S7Client(Models.CpuType.S71200, "127.0.0.1", _server.Port);
+        _client = new S7Client(NewLife.Siemens.Models.CpuType.S71200, "127.0.0.1", _server.Port);
         _client.OpenAsync().GetAwaiter().GetResult();
     }
 

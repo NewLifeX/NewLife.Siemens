@@ -1,4 +1,5 @@
 using BenchmarkDotNet.Attributes;
+using NewLife.Data;
 using NewLife.Siemens.Messages;
 using NewLife.Siemens.Models;
 using NewLife.Siemens.Protocols;
@@ -36,7 +37,7 @@ public class S7MessageBenchmarks
             Address = 0,
         });
         readReq.SetParameter(readParam);
-        _readRequestBytes = readReq.ToCOTP().ToPacket(true).ReadBytes();
+        _readRequestBytes = readReq.ToCOTP().ToPacket(true).ToArray();
 
         // 构造 WriteRequest 消息字节
         var writeReq = new S7Message { Kind = S7Kinds.Job };
@@ -53,12 +54,12 @@ public class S7MessageBenchmarks
         });
         writeParam.DataItems.Add(new DataItem { Code = ReadWriteErrorCode.Success, TransportSize = 0x04, Data = [0x01, 0x02] });
         writeReq.SetParameter(writeParam);
-        _writeRequestBytes = writeReq.ToCOTP().ToPacket(true).ReadBytes();
+        _writeRequestBytes = writeReq.ToCOTP().ToPacket(true).ToArray();
 
         // 构造标准 Setup 响应（8字节参数）
         var setupRsp = new S7Message { Kind = S7Kinds.AckData };
         setupRsp.SetParameter(new SetupMessage { MaxAmqCaller = 0x0001, MaxAmqCallee = 0x0001, PduLength = 480 });
-        _setupResponseBytes = setupRsp.ToCOTP().ToPacket(true).ReadBytes();
+        _setupResponseBytes = setupRsp.ToCOTP().ToPacket(true).ToArray();
 
         // 构造 GTM Setup 响应（13字节参数）
         var gtmSetupRsp = new S7Message { Kind = S7Kinds.AckData };
@@ -70,7 +71,7 @@ public class S7MessageBenchmarks
             HasGtm = true,
             GtmData = [0x00, 0x00, 0x00, 0x01, 0x00],
         });
-        _gtmSetupResponseBytes = gtmSetupRsp.ToCOTP().ToPacket(true).ReadBytes();
+        _gtmSetupResponseBytes = gtmSetupRsp.ToCOTP().ToPacket(true).ToArray();
     }
 
     /// <summary>构造 ReadRequest 消息（含 TPKT+COTP+S7+ReadRequestItem）</summary>
@@ -90,7 +91,7 @@ public class S7MessageBenchmarks
             Address = 0,
         });
         msg.SetParameter(readParam);
-        return msg.ToCOTP().ToPacket(true).ReadBytes();
+        return msg.ToCOTP().ToPacket(true).ToArray();
     }
 
     /// <summary>构造 GTM Setup 请求（13字节参数）</summary>
@@ -106,7 +107,7 @@ public class S7MessageBenchmarks
             HasGtm = true,
             GtmData = [0x00, 0x00, 0x00, 0x00, 0x00],
         });
-        return msg.ToCOTP().ToPacket(true).ReadBytes();
+        return msg.ToCOTP().ToPacket(true).ToArray();
     }
 
     /// <summary>解析 ReadRequest 响应（从 TPKT 帧到 S7Message）</summary>
@@ -114,7 +115,7 @@ public class S7MessageBenchmarks
     public S7Message Parse_ReadResponse()
     {
         var tpkt = new TPKT();
-        tpkt.Read(_readRequestBytes); // 复用同样结构的字节
+        tpkt.Read(new ArrayPacket(_readRequestBytes)); // 复用同样结构的字节
         var cotp = new COTP();
         cotp.Read(tpkt.Data!);
         var msg = new S7Message();
@@ -127,7 +128,7 @@ public class S7MessageBenchmarks
     public S7Message Parse_SetupResponse()
     {
         var tpkt = new TPKT();
-        tpkt.Read(_setupResponseBytes);
+        tpkt.Read(new ArrayPacket(_setupResponseBytes));
         var cotp = new COTP();
         cotp.Read(tpkt.Data!);
         var msg = new S7Message();
@@ -140,7 +141,7 @@ public class S7MessageBenchmarks
     public S7Message Parse_GTM_SetupResponse()
     {
         var tpkt = new TPKT();
-        tpkt.Read(_gtmSetupResponseBytes);
+        tpkt.Read(new ArrayPacket(_gtmSetupResponseBytes));
         var cotp = new COTP();
         cotp.Read(tpkt.Data!);
         var msg = new S7Message();
